@@ -21,7 +21,7 @@
 
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright 2010 Nexenta Systems, Inc. All rights reserved.
+ * Copyright 2011 Nexenta Systems, Inc. All rights reserved.
  * Copyright (c) 2011 by Delphix. All rights reserved.
  */
 
@@ -1090,7 +1090,7 @@ badlabel:
 			 *		global zone	    non-global zone
 			 * --------------------------------------------------
 			 * zoned=on	mountpoint (no)	    mountpoint (yes)
-			 *		sharenfs (no)	    sharenfs (no)
+			 *		sharenfs (no)	    sharenfs (yes)
 			 *		sharesmb (no)	    sharesmb (no)
 			 *
 			 * zoned=off	mountpoint (yes)	N/A
@@ -1106,8 +1106,13 @@ badlabel:
 					(void) zfs_error(hdl, EZFS_ZONED,
 					    errbuf);
 					goto error;
-				} else if (prop == ZFS_PROP_SHARENFS ||
-				    prop == ZFS_PROP_SHARESMB) {
+				} else if (prop == ZFS_PROP_SHARESMB) {
+					/*
+					 * FIXME: SMB share is temporary unsuported in
+					 * non-global zones. They'll be enabled when
+					 * SMB zoned server will be integrated to the
+					 * illumos-gate
+					 */
 					zfs_error_aux(hdl, dgettext(TEXT_DOMAIN,
 					    "'%s' cannot be set in "
 					    "a non-global zone"), propname);
