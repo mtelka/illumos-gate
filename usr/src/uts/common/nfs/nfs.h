@@ -992,6 +992,7 @@ extern time_t	rfs4_grace_period;
 extern nvlist_t	*rfs4_dss_paths, *rfs4_dss_oldpaths;
 
 
+extern zone_key_t	rfs4_zone_key;
 extern kstat_named_t	*global_svstat_ptr[];
 extern krwlock_t	rroklock;
 extern vtype_t		nf_to_vt[];
@@ -2347,9 +2348,6 @@ extern bool_t rfs4_check_delegated(int mode, vnode_t *, bool_t trunc);
  * if no delegation is present.
  */
 extern int rfs4_delegated_getattr(vnode_t *, vattr_t *, int, cred_t *);
-extern void rfs4_hold_deleg_policy(void);
-extern void rfs4_rele_deleg_policy(void);
-
 extern int do_xattr_exists_check(vnode_t *, ulong_t *, cred_t *);
 
 extern ts_label_t	*nfs_getflabel(vnode_t *, struct exportinfo *);

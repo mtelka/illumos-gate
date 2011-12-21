@@ -19,6 +19,9 @@
  * CDDL HEADER END
  */
 /*
+ * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
+ */
+/*
  * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
@@ -46,10 +49,8 @@
 
 #define	MAX_READ_DELEGATIONS 5
 
-krwlock_t rfs4_deleg_policy_lock;
 srv_deleg_policy_t rfs4_deleg_policy = SRV_NEVER_DELEGATE;
 static int rfs4_deleg_wlp = 5;
-kmutex_t rfs4_deleg_lock;
 static int rfs4_deleg_disabled;
 static int rfs4_max_setup_cb_tries = 5;
 
@@ -152,23 +153,23 @@ uaddr2sockaddr(int af, char *ua, void *ap, in_port_t *pp)
  * value of "new_policy"
  */
 void
-rfs4_set_deleg_policy(srv_deleg_policy_t new_policy)
+rfs4_set_deleg_policy(nfs4_srv_t *nsrv4, srv_deleg_policy_t new_policy)
 {
-	rw_enter(&rfs4_deleg_policy_lock, RW_WRITER);
+	rw_enter(&nsrv4->deleg_policy_lock, RW_WRITER);
 	rfs4_deleg_policy = new_policy;
-	rw_exit(&rfs4_deleg_policy_lock);
+	rw_exit(&nsrv4->deleg_policy_lock);
 }
 
 void
-rfs4_hold_deleg_policy(void)
+rfs4_hold_deleg_policy(nfs4_srv_t *nsrv4)
 {
-	rw_enter(&rfs4_deleg_policy_lock, RW_READER);
+	rw_enter(&nsrv4->deleg_policy_lock, RW_READER);
 }
 
 void
-rfs4_rele_deleg_policy(void)
+rfs4_rele_deleg_policy(nfs4_srv_t *nsrv4)
 {
-	rw_exit(&rfs4_deleg_policy_lock);
+	rw_exit(&nsrv4->deleg_policy_lock);
 }
 
 
@@ -1268,6 +1269,7 @@ rfs4_delegation_policy(open_delegation_type4 dtype,
 rfs4_deleg_state_t *
 rfs4_grant_delegation(delegreq_t dreq, rfs4_state_t *sp, int *recall)
 {
+	nfs4_srv_t *nsrv4;
 	rfs4_file_t *fp = sp->rs_finfo;
 	open_delegation_type4 dtype;
 	int no_delegation;
@@ -1275,14 +1277,16 @@ rfs4_grant_delegation(delegreq_t dreq, rfs4_state_t *sp, int *recall)
 	ASSERT(rfs4_dbe_islocked(sp->rs_dbe));
 	ASSERT(rfs4_dbe_islocked(fp->rf_dbe));
 
+	nsrv4 = zone_getspecific(rfs4_zone_key, curzone);
+
 	/* Is the server even providing delegations? */
 	if (rfs4_deleg_policy == SRV_NEVER_DELEGATE || dreq == DELEG_NONE)
 		return (NULL);
 
 	/* Check to see if delegations have been temporarily disabled */
-	mutex_enter(&rfs4_deleg_lock);
+	mutex_enter(&nsrv4->deleg_lock);
 	no_delegation = rfs4_deleg_disabled;
-	mutex_exit(&rfs4_deleg_lock);
+	mutex_exit(&nsrv4->deleg_lock);
 
 	if (no_delegation)
 		return (NULL);
@@ -1518,11 +1522,13 @@ rfs4_check_delegated_byfp(int mode, rfs4_file_t *fp,
 bool_t
 rfs4_check_delegated(int mode, vnode_t *vp, bool_t trunc)
 {
+	nfs4_srv_t *nsrv4;
 	rfs4_file_t *fp;
 	bool_t create = FALSE;
 	bool_t rc = FALSE;
 
-	rfs4_hold_deleg_policy();
+	nsrv4 = zone_getspecific(rfs4_zone_key, curzone);
+	rfs4_hold_deleg_policy(nsrv4);
 
 	/* Is delegation enabled? */
 	if (rfs4_deleg_policy != SRV_NEVER_DELEGATE) {
@@ -1535,7 +1541,7 @@ rfs4_check_delegated(int mode, vnode_t *vp, bool_t trunc)
 			rfs4_file_rele(fp);
 		}
 	}
-	rfs4_rele_deleg_policy();
+	rfs4_rele_deleg_policy(nsrv4);
 	return (rc);
 }
 
@@ -1883,18 +1889,24 @@ rfs4_is_deleg(rfs4_state_t *sp)
 void
 rfs4_disable_delegation(void)
 {
-	mutex_enter(&rfs4_deleg_lock);
+	nfs4_srv_t *nsrv4;
+
+	nsrv4 = zone_getspecific(rfs4_zone_key, curzone);
+	mutex_enter(&nsrv4->deleg_lock);
 	rfs4_deleg_disabled++;
-	mutex_exit(&rfs4_deleg_lock);
+	mutex_exit(&nsrv4->deleg_lock);
 }
 
 void
 rfs4_enable_delegation(void)
 {
-	mutex_enter(&rfs4_deleg_lock);
+	nfs4_srv_t *nsrv4;
+
+	nsrv4 = zone_getspecific(rfs4_zone_key, curzone);
+	mutex_enter(&nsrv4->deleg_lock);
 	ASSERT(rfs4_deleg_disabled > 0);
 	rfs4_deleg_disabled--;
-	mutex_exit(&rfs4_deleg_lock);
+	mutex_exit(&nsrv4->deleg_lock);
 }
 
 void

@@ -71,8 +71,8 @@ typedef struct rfs4_dupreq {
 #define	NFS4_DUP_INUSE		5
 
 extern rfs4_drc_t *nfs4_drc;
-extern uint32_t nfs4_drc_max;
-extern uint32_t nfs4_drc_hash;
+extern const uint32_t nfs4_drc_max;
+extern const uint32_t nfs4_drc_hash;
 
 rfs4_drc_t *rfs4_init_drc(uint32_t, uint32_t);
 void rfs4_fini_drc(rfs4_drc_t *);

@@ -19,6 +19,7 @@
  * CDDL HEADER END
  */
 /*
+ * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 
@@ -71,7 +72,7 @@ int rfs4_debug;
 
 static uint32_t rfs4_database_debug = 0x00;
 
-static void rfs4_ss_clid_write(rfs4_client_t *cp, char *leaf);
+static void rfs4_ss_clid_write(nfs4_srv_t *nsrv4, rfs4_client_t *cp, char *leaf);
 static void rfs4_ss_clid_write_one(rfs4_client_t *cp, char *dir, char *leaf);
 static void rfs4_dss_clear_oldstate(rfs4_servinst_t *sip);
 static void rfs4_ss_chkclid_sip(rfs4_client_t *cp, rfs4_servinst_t *sip);
@@ -273,7 +274,6 @@ rfs4_copy_reply(nfs_resop4 *dst, nfs_resop4 *src)
 #define	ADDRHASH(key) ((unsigned long)(key) >> 3)
 
 /* Used to serialize create/destroy of rfs4_server_state database */
-kmutex_t	rfs4_state_lock;
 static rfs4_database_t *rfs4_server_state = NULL;
 
 /* Used to serialize lookups of clientids */
@@ -716,17 +716,17 @@ rfs4_ss_init(void)
 }
 
 static void
-rfs4_ss_fini(void)
+rfs4_ss_fini(nfs4_srv_t *nsrv4)
 {
 	rfs4_servinst_t *sip;
 
-	mutex_enter(&rfs4_servinst_lock);
+	mutex_enter(&nsrv4->servinst_lock);
 	sip = rfs4_cur_servinst;
 	while (sip != NULL) {
 		rfs4_dss_clear_oldstate(sip);
 		sip = sip->next;
 	}
-	mutex_exit(&rfs4_servinst_lock);
+	mutex_exit(&nsrv4->servinst_lock);
 }
 
 /*
@@ -808,7 +808,7 @@ rfs4_dss_readstate(int npaths, char **paths)
  * granted permission to perform reclaims.
  */
 void
-rfs4_ss_chkclid(rfs4_client_t *cp)
+rfs4_ss_chkclid(nfs4_srv_t *nsrv4, rfs4_client_t *cp)
 {
 	rfs4_servinst_t *sip;
 
@@ -829,7 +829,7 @@ rfs4_ss_chkclid(rfs4_client_t *cp)
 	 * Start at the current instance, and walk the list backwards
 	 * to the first.
 	 */
-	mutex_enter(&rfs4_servinst_lock);
+	mutex_enter(&nsrv4->servinst_lock);
 	for (sip = rfs4_cur_servinst; sip != NULL; sip = sip->prev) {
 		rfs4_ss_chkclid_sip(cp, sip);
 
@@ -837,7 +837,7 @@ rfs4_ss_chkclid(rfs4_client_t *cp)
 		if (cp->rc_can_reclaim)
 			break;
 	}
-	mutex_exit(&rfs4_servinst_lock);
+	mutex_exit(&nsrv4->servinst_lock);
 }
 
 static void
@@ -887,7 +887,7 @@ rfs4_ss_chkclid_sip(rfs4_client_t *cp, rfs4_servinst_t *sip)
  * the server-generated short-hand clientid.
  */
 void
-rfs4_ss_clid(rfs4_client_t *cp)
+rfs4_ss_clid(nfs4_srv_t *nsrv4, rfs4_client_t *cp)
 {
 	const char *kinet_ntop6(uchar_t *, char *, size_t);
 	char leaf[MAXNAMELEN], buf[INET6_ADDRSTRLEN];
@@ -919,7 +919,7 @@ rfs4_ss_clid(rfs4_client_t *cp)
 
 	(void) snprintf(leaf, MAXNAMELEN, "%s-%llx", buf,
 	    (longlong_t)cp->rc_clientid);
-	rfs4_ss_clid_write(cp, leaf);
+	rfs4_ss_clid_write(nsrv4, cp, leaf);
 }
 
 /*
@@ -928,7 +928,7 @@ rfs4_ss_clid(rfs4_client_t *cp)
  * multiple directories.
  */
 static void
-rfs4_ss_clid_write(rfs4_client_t *cp, char *leaf)
+rfs4_ss_clid_write(nfs4_srv_t *nsrv4, rfs4_client_t *cp, char *leaf)
 {
 	rfs4_servinst_t *sip;
 
@@ -942,7 +942,7 @@ rfs4_ss_clid_write(rfs4_client_t *cp, char *leaf)
 	 * to all instances' paths. Start at the current instance, and
 	 * walk the list backwards to the first.
 	 */
-	mutex_enter(&rfs4_servinst_lock);
+	mutex_enter(&nsrv4->servinst_lock);
 	for (sip = rfs4_cur_servinst; sip != NULL; sip = sip->prev) {
 		int i, npaths = sip->dss_npaths;
 
@@ -957,7 +957,7 @@ rfs4_ss_clid_write(rfs4_client_t *cp, char *leaf)
 			rfs4_ss_clid_write_one(cp, dss_path->path, leaf);
 		}
 	}
-	mutex_exit(&rfs4_servinst_lock);
+	mutex_exit(&nsrv4->servinst_lock);
 }
 
 /*
@@ -1160,20 +1160,20 @@ rfs4_clear_client_state(struct nfs4clrst_args *clr)
  * service is provided.
  */
 void
-rfs4_state_init()
+rfs4_state_init(nfs4_srv_t *nsrv4)
 {
 	int start_grace;
 	extern boolean_t rfs4_cpr_callb(void *, int);
 	char *dss_path = NFS4_DSS_VAR_DIR;
 
-	mutex_enter(&rfs4_state_lock);
+	mutex_enter(&nsrv4->state_lock);
 
 	/*
 	 * If the server state database has already been initialized,
 	 * skip it
 	 */
 	if (rfs4_server_state != NULL) {
-		mutex_exit(&rfs4_state_lock);
+		mutex_exit(&nsrv4->state_lock);
 		return;
 	}
 
@@ -1191,7 +1191,7 @@ rfs4_state_init()
 		rfs4_start_time++;
 
 	/* DSS: distributed stable storage: initialise served paths list */
-	rfs4_dss_pathlist = NULL;
+	nsrv4->dss_pathlist = NULL;
 
 	/*
 	 * Create the first server instance, or a new one if the server has
@@ -1200,10 +1200,10 @@ rfs4_state_init()
 	 * clients' recovery window.
 	 */
 	start_grace = 0;
-	rfs4_servinst_create(start_grace, 1, &dss_path);
+	rfs4_servinst_create(nsrv4, start_grace, 1, &dss_path);
 
 	/* reset the "first NFSv4 request" status */
-	rfs4_seen_first_compound = 0;
+	nsrv4->seen_first_compound = 0;
 
 	/*
 	 * Add a CPR callback so that we can update client
@@ -1403,7 +1403,7 @@ rfs4_state_init()
 
 	rfs4_client_clrst = rfs4_clear_client_state;
 
-	mutex_exit(&rfs4_state_lock);
+	mutex_exit(&nsrv4->state_lock);
 }
 
 
@@ -1414,18 +1414,20 @@ rfs4_state_init()
 void
 rfs4_state_fini()
 {
+	nfs4_srv_t *nsrv4;
 	rfs4_database_t *dbp;
 
-	mutex_enter(&rfs4_state_lock);
+	nsrv4 = zone_getspecific(rfs4_zone_key, curzone);
+	mutex_enter(&nsrv4->state_lock);
 
 	if (rfs4_server_state == NULL) {
-		mutex_exit(&rfs4_state_lock);
+		mutex_exit(&nsrv4->state_lock);
 		return;
 	}
 
 	rfs4_client_clrst = NULL;
 
-	rfs4_set_deleg_policy(SRV_NEVER_DELEGATE);
+	rfs4_set_deleg_policy(nsrv4, SRV_NEVER_DELEGATE);
 	dbp = rfs4_server_state;
 	rfs4_server_state = NULL;
 
@@ -1440,7 +1442,7 @@ rfs4_state_fini()
 	/* First stop all of the reaper threads in the database */
 	rfs4_database_shutdown(dbp);
 	/* clean up any dangling stable storage structures */
-	rfs4_ss_fini();
+	rfs4_ss_fini(nsrv4);
 	/* Now actually destroy/release the database and its tables */
 	rfs4_database_destroy(dbp);
 
@@ -1453,13 +1455,13 @@ rfs4_state_fini()
 	rfs4_file_cache_time = 0;
 	rfs4_deleg_state_cache_time = 0;
 
-	mutex_exit(&rfs4_state_lock);
+	mutex_exit(&nsrv4->state_lock);
 
 	/* destroy server instances and current instance ptr */
-	rfs4_servinst_destroy_all();
+	rfs4_servinst_destroy_all(nsrv4);
 
 	/* reset the "first NFSv4 request" status */
-	rfs4_seen_first_compound = 0;
+	nsrv4->seen_first_compound = 0;
 
 	/* DSS: distributed stable storage */
 	if (rfs4_dss_oldpaths)
@@ -1581,6 +1583,7 @@ rfs4_client_expiry(rfs4_entry_t u_entry)
 static void
 rfs4_dss_remove_cpleaf(rfs4_client_t *cp)
 {
+	nfs4_srv_t *nsrv4;
 	rfs4_servinst_t *sip;
 	char *leaf = cp->rc_ss_pn->leaf;
 
@@ -1590,12 +1593,13 @@ rfs4_dss_remove_cpleaf(rfs4_client_t *cp)
 	 * from all server instances.
 	 */
 
-	mutex_enter(&rfs4_servinst_lock);
+	nsrv4 = zone_getspecific(rfs4_zone_key, curzone);
+	mutex_enter(&nsrv4->servinst_lock);
 	for (sip = rfs4_cur_servinst; sip != NULL; sip = sip->prev) {
 		/* remove the leaf file associated with this server instance */
 		rfs4_dss_remove_leaf(sip, NFS4_DSS_STATE_LEAF, leaf);
 	}
-	mutex_exit(&rfs4_servinst_lock);
+	mutex_exit(&nsrv4->servinst_lock);
 }
 
 static void
@@ -1663,6 +1667,9 @@ rfs4_client_create(rfs4_entry_t u_entry, void *arg)
 	struct sockaddr *ca;
 	cid *cidp;
 	scid_confirm_verf *scvp;
+	nfs4_srv_t *nsrv4;
+
+	nsrv4 = zone_getspecific(rfs4_zone_key, curzone);
 
 	/* Get a clientid to give to the client */
 	cidp = (cid *)&cp->rc_clientid;
@@ -1724,7 +1731,7 @@ rfs4_client_create(rfs4_entry_t u_entry, void *arg)
 	 * rfs4_servinst_assign(). In this case it's not strictly necessary.
 	 */
 	rfs4_dbe_hold(cp->rc_dbe);
-	rfs4_servinst_assign(cp, rfs4_cur_servinst);
+	rfs4_servinst_assign(nsrv4, cp, rfs4_cur_servinst);
 	rfs4_dbe_rele(cp->rc_dbe);
 
 	return (TRUE);
@@ -3998,10 +4005,13 @@ rfs4_file_walk_callout(rfs4_entry_t u_entry, void *e)
 void
 rfs4_clean_state_exi(struct exportinfo *exi)
 {
-	mutex_enter(&rfs4_state_lock);
+	nfs4_srv_t *nsrv4;
+
+	nsrv4 = zone_getspecific(rfs4_zone_key, curzone);
+	mutex_enter(&nsrv4->state_lock);
 
 	if (rfs4_server_state == NULL) {
-		mutex_exit(&rfs4_state_lock);
+		mutex_exit(&nsrv4->state_lock);
 		return;
 	}
 
@@ -4010,5 +4020,5 @@ rfs4_clean_state_exi(struct exportinfo *exi)
 	rfs4_dbe_walk(rfs4_deleg_state_tab, rfs4_deleg_state_walk_callout, exi);
 	rfs4_dbe_walk(rfs4_file_tab, rfs4_file_walk_callout, exi);
 
-	mutex_exit(&rfs4_state_lock);
+	mutex_exit(&nsrv4->state_lock);
 }

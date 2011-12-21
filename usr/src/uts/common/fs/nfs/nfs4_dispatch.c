@@ -46,13 +46,13 @@ rfs4_drc_t *nfs4_drc = NULL;
 /*
  * The default size of the duplicate request cache
  */
-uint32_t nfs4_drc_max = 8 * 1024;
+const uint32_t nfs4_drc_max = 8 * 1024;
 
 /*
  * The number of buckets we'd like to hash the
  * replies into.. do not change this on the fly.
  */
-uint32_t nfs4_drc_hash = 541;
+const uint32_t nfs4_drc_hash = 541;
 
 static void rfs4_resource_err(struct svc_req *req, COMPOUND4args *argsp);
 
