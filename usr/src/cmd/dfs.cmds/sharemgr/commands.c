@@ -2190,7 +2190,7 @@ show_group(sa_group_t group, int verbose, int properties, char *proto,
 			iszfs = 1;
 			sa_free_attr_string(zfs);
 		}
-		share = sa_get_share(group, NULL);
+
 		if (subgroup == NULL)
 			(void) printf("%s", groupname);
 		else

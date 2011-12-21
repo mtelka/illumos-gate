@@ -28,6 +28,7 @@
 #include <string.h>
 #include <strings.h>
 #include <errno.h>
+#include <zone.h>
 #include <libshare.h>
 #include "libshare_impl.h"
 #include <libintl.h>
@@ -792,6 +793,13 @@ sa_get_zfs_shares(sa_handle_t handle, char *groupname)
 		 */
 
 		if (!zfs_is_mounted(zlist[i], NULL))
+			continue;
+
+		/*
+		 * Ignore "zoned" datasets in global zone.
+		 */
+		if (getzoneid() == GLOBAL_ZONEID &&
+		    zfs_prop_get_int(zlist[i], ZFS_PROP_ZONED))
 			continue;
 
 		nfs = nfs_inherited = B_FALSE;
