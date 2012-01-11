@@ -749,7 +749,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	flk_invoke_callbacks(flcb, FLK_BEFORE_SLEEP);
 	nfs_rw_exit(&rnp->r_lkserlock);
 
-	error = nlm_wait_lock(g, wait_handle);
+	error = nlm_wait_lock(g, wait_handle, (bool_t) INTR(vp));
 	wait_handle = NULL; /* nlm_wait_lock destroys wait_handle */
 
 	/*

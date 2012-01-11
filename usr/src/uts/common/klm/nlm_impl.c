@@ -1280,7 +1280,7 @@ nlm_deregister_wait_lock(struct nlm_globals *g, void *handle)
  * Wait for a lock, then remove from the wait list.
  */
 int
-nlm_wait_lock(struct nlm_globals *g, void *handle)
+nlm_wait_lock(struct nlm_globals *g, void *handle, bool_t is_intr)
 {
 	struct nlm_waiting_lock *nw = handle;
 	struct nlm_host *host = nw->nw_host;
@@ -1292,17 +1292,18 @@ nlm_wait_lock(struct nlm_globals *g, void *handle)
 	 */
 	mutex_enter(&g->lock);
 	if (nw->nw_state == NLM_WS_BLOCKED) {
-		int rc;
-
-		rc = cv_wait_sig(&nw->nw_cond, &g->lock);
-		if (rc == 0)
-			error = EINTR;
+		if (!is_intr)
+			cv_wait(&nw->nw_cond, &g->lock);
+		else {
+			if (cv_wait_sig(&nw->nw_cond, &g->lock) == 0)
+				error = EINTR;
+		}
 	}
 
 	TAILQ_REMOVE(&g->nlm_wlocks, nw, nw_link);
 	mutex_exit(&g->lock);
 
-	if (error == 0) { /* Got cv_signal */
+	if (error == 0) { /* Got cv_signal or didn't block */
 		/*
 		 * The granted message may arrive after the
 		 * interrupt/timeout but before we manage to lock the
