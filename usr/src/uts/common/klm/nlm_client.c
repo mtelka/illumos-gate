@@ -216,7 +216,7 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
 				break;
 			} else {
 				/* Failed to reclaim share */
-				nlm_untrack_share(hostp, nsp->ns_vp, nsp->ns_shr);
+				nlm_shres_untrack(hostp, nsp->ns_vp, nsp->ns_shr);
 				nlm_local_shrcancel(nsp->ns_vp, nsp->ns_shr);
 			}
 
