@@ -331,9 +331,10 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 {
 	struct nlm_globals *g;
 	struct flock64 fl;
-	struct nlm_host *host;
+	struct nlm_host *host = NULL;
 	struct netbuf *addr;
 	struct nlm_vhold *nvp = NULL;
+	nlm_rpc_t *rpcp = NULL;
 	char *netid;
 	char *name;
 	int error, flags;
@@ -358,6 +359,26 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_lockargs *, argp);
+
+	/*
+	 * If we may need to do _msg_ call needing an RPC
+	 * callback, get the RPC client handle now,
+	 * so we know if we can bind to the NLM service on
+	 * this client.
+	 *
+	 * Note: host object carries transport type.
+	 * One client using multiple transports gets
+	 * separate sysids for each of its transports.
+	 * Note: for blocking callback we take RPC handle
+	 * in nlm_block() function.
+	 */
+	if (res_cb != NULL) {
+		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
+		if (error != 0) {
+			status = nlm4_denied_nolocks;
+			goto doreply;
+		}
+	}
 
 	/*
 	 * During the "grace period", only allow reclaim.
@@ -460,29 +481,23 @@ doreply:
 	 */
 	if (reply_cb != NULL) {
 		/* i.e. nlm_lock_1_reply */
-		if (0 == (*reply_cb)(sr->rq_xprt, resp)) {
+		if (!(*reply_cb)(sr->rq_xprt, resp))
 			svcerr_systemerr(sr->rq_xprt);
-		}
 	}
-	if (res_cb != NULL) {
-		nlm_rpc_t *rpcp;
+	if (res_cb != NULL && rpcp != NULL) {
+		enum clnt_stat stat;
 
-		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
-		if (error == 0) {
-			enum clnt_stat stat;
+		/* i.e. nlm_lock_res_1_cb */
+		stat = (*res_cb)(resp, NULL, rpcp->nr_handle);
+		if (stat != RPC_SUCCESS) {
+			struct rpc_err err;
 
-			/* i.e. nlm_lock_res_1_cb */
-			stat = (*res_cb)(resp, NULL, rpcp->nr_handle);
-			if (stat != RPC_SUCCESS) {
-				struct rpc_err err;
-
-				CLNT_GETERR(rpcp->nr_handle, &err);
-				NLM_ERR("NLM: do_lock CB, stat=%d err=%d\n",
-				    stat, err.re_errno);
-			}
-
-			nlm_host_rele_rpc(host, rpcp);
+			CLNT_GETERR(rpcp->nr_handle, &err);
+			NLM_ERR("NLM: do_lock CB, stat=%d err=%d\n",
+			    stat, err.re_errno);
 		}
+
+		nlm_host_rele_rpc(host, rpcp);
 	}
 
 	/*
