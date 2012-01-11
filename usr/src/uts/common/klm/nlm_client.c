@@ -368,7 +368,8 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 	if (error != 0) {
 		NLM_ERR("nlm_frlock_setlk: Failed to set local lock. "
 		    "[err=%d]\n", error);
-		/* XXX[DK]: unlock remote lock? */
+		(void) nlm_call_unlock(vp, flkp, hostp, fhp, vers);
+		error = ENOLCK;
 	}
 
 	return (error);
@@ -1120,11 +1121,6 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 		goto out;
 	}
 
-	/*
-	 * Do the NLM_SHARE RPC.
-	 * XXX: Check flags & (FREAD | FWRITE) ?
-	 */
-
 	nfs_add_locking_id(vp, curproc->p_pid, RLMPL_OWNER,
 	    shr->s_owner, shr->s_own_len);
 
@@ -1141,11 +1137,10 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	if (error != 0) {
 		/*
 		 * Oh oh, we really don't expect an error here.
-		 * XXX: release the remote lock?  Or what?
-		 * Ignore the local error for now...
 		 */
 		NLM_ERR("NLM: set locally, err %d\n", error);
-		error = 0;
+		(void) nlm_call_unshare(vp, &shlk, host, fh, vers);
+		error = ENOSYS;
 	}
 
 	/* Start monitoring this host. */
