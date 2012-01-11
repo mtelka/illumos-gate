@@ -681,7 +681,8 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	struct nlm_host *host;
 
 	host = kmem_zalloc(sizeof (*host), KM_SLEEP);
-	mutex_init(&host->nh_lock, "nh_lock", MUTEX_DEFAULT, NULL);
+	mutex_init(&host->nh_lock, NULL, MUTEX_DEFAULT, NULL);
+	cv_init(&host->nh_rpcb_cv, NULL, CV_DEFAULT, NULL);
 	host->nh_refs = 1;
 
 	host->nh_name = strdup(name);
@@ -691,6 +692,7 @@ nlm_create_host(struct nlm_globals *g, char *name,
 
 	host->nh_state = 0;
 	host->nh_monstate = NLM_UNMONITORED;
+	host->nh_rpcb_state = NRPCB_NEED_UPDATE;
 
 	TAILQ_INIT(&host->nh_vnodes);
 	TAILQ_INIT(&host->nh_pending);

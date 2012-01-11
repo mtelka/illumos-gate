@@ -226,6 +226,12 @@ typedef struct nlm_rpc {
 } nlm_rpc_t;
 TAILQ_HEAD(nlm_rpch_list, nlm_rpc);
 
+enum nlm_rpcb_state {
+	NRPCB_NEED_UPDATE = 0,
+	NRPCB_UPDATE_INPROGRESS,
+	NRPCB_UPDATED,
+};
+
 struct nlm_host {
 	kmutex_t	nh_lock;
 	volatile uint_t	nh_refs;	/* (a) reference count */
@@ -236,7 +242,10 @@ struct nlm_host {
 	struct netbuf	nh_addr;	/* (c) remote address of host */
 	int32_t		nh_sysid;	/* (c) our allocaed system ID */
 	int		nh_state;	/* (s) last seen NSM state of host */
+	kcondvar_t nh_rpcb_cv;
+	enum nlm_rpcb_state nh_rpcb_state;
 	enum nlm_host_state nh_monstate; /* (l) local NSM monitoring state */
+	time_t      nh_rpcb_update_time;
 	time_t		nh_idle_timeout; /* (s) Time at which host is idle */
 	struct nlm_rpch_list nh_rpchc; /* RPC handles cache */
 	struct nlm_vnode_list nh_vnodes;	/* (l) active vnodes */
