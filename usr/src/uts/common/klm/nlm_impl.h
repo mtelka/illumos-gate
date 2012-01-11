@@ -39,6 +39,7 @@
 
 #include <sys/cmn_err.h>
 #include <sys/queue.h>
+#include <sys/avl.h>
 
 #define	RPC_MSGOUT(args...)	cmn_err(CE_NOTE, args)
 
@@ -163,11 +164,10 @@ extern clock_t nlm_grace_threshold;
  * (See nlm_destroy_client_locks)
  */
 struct nlm_vnode {
-	TAILQ_ENTRY(nlm_vnode) nv_link;	/* (l) hosts list of vnodes */
 	vnode_t *nv_vp;			/* (c) the held vnode */
 	int nv_refs;			/* (l) references */
+	avl_node_t nv_tree;
 };
-TAILQ_HEAD(nlm_vnode_list, nlm_vnode);
 
 enum nlm_wait_state {
 	NLM_WS_UNKNOWN = 0,
@@ -248,7 +248,7 @@ struct nlm_host {
 	enum nlm_host_state nh_monstate; /* (l) local NSM monitoring state */
 	time_t		nh_idle_timeout; /* (s) Time at which host is idle */
 	struct nlm_rpch_list nh_rpchc; /* RPC handles cache */
-	struct nlm_vnode_list nh_vnodes;	/* (l) active vnodes */
+	avl_tree_t nh_vnodes;
 	struct nlm_async_lock_list nh_pending; /* (l) server-side waits */
 };
 TAILQ_HEAD(nlm_host_list, nlm_host);

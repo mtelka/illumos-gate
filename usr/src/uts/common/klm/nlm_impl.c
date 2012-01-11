@@ -147,6 +147,7 @@ static void nlm_svc_release_nsm(struct nlm_nsm *);
  */
 static int nlm_vnode_ctor(void *, void *, int);
 static void nlm_vnode_dtor(void *, void *);
+static int nlm_vnode_cmp(const void *, const void *);
 
 /*
  * Acquire the next sysid for remote locks not handled by the NLM.
@@ -361,6 +362,21 @@ nlm_vnodes_init(void)
 }
 
 static int
+nlm_vnode_cmp(const void *p1, const void *p2)
+{
+	const struct nlm_vnode *nvp1 = (const struct nlm_vnode *)p1;
+	const struct nlm_vnode *nvp2 = (const struct nlm_vnode *)p2;
+	int ret;
+
+	if (nvp1->nv_vp < nvp2->nv_vp)
+		return (-1);
+	if (nvp1->nv_vp > nvp2->nv_vp)
+		return (1);
+
+	return (0);
+}
+
+static int
 nlm_vnode_ctor(void *datap, void *cdrarg, int kmflags)
 {
 	struct nlm_vnode *nvp = (struct nlm_vnode *)datap;
@@ -383,7 +399,7 @@ nlm_vnode_dtor(void *datap, void *cdrarg)
  * NOTE: Holds vnode.
  */
 static vnode_t *
-nlm_netobj_to_vnode(struct netobj *np)
+nlm_fh_to_vnode(struct netobj *fh)
 {
 	fhandle_t *fhp;
 
@@ -392,11 +408,11 @@ nlm_netobj_to_vnode(struct netobj *np)
 	 * Note that it could be an NFSv2 for NFSv3 handle,
 	 * which means the size might vary.  (don't copy)
 	 */
-	if (np->n_len < sizeof (*fhp))
+	if (fh->n_len < sizeof (*fhp))
 		return (NULL);
 
 	/* We know this is aligned (kmem_alloc) */
-	fhp = (fhandle_t *)np->n_bytes;
+	fhp = (fhandle_t *)fh->n_bytes;
 	return (lm_fhtovp(fhp));
 }
 
@@ -408,38 +424,45 @@ nlm_netobj_to_vnode(struct netobj *np)
  * NOTE: hostp->nh_lock must be locked.
  */
 static struct nlm_vnode *
-nlm_vnode_find_locked(struct nlm_host *hostp, const vnode_t *vp)
+nlm_vnode_find_locked(struct nlm_host *hostp,
+    vnode_t *vp, avl_index_t *wherep)
 {
-	struct nlm_vnode *nv;
+	struct nlm_vnode *nvp, key;
+	avl_index_t pos;
 
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
-	TAILQ_FOREACH(nv, &hostp->nh_vnodes, nv_link)
-		if (nv->nv_vp == vp)
-			return (nv);
 
-	return (NULL);
+	bzero(&key, sizeof (key));
+	key.nv_vp = vp;
+
+	nvp = avl_find(&hostp->nh_vnodes, &key, &pos);
+	if (nvp != NULL)
+		nvp->nv_refs++;
+	if (wherep != NULL)
+		*wherep = pos;
+
+	return (nvp);
 }
 
 /*
  * Find nlm_vnode by given netobj
  */
 struct nlm_vnode *
-nlm_vnode_find(struct nlm_host *hostp, struct netobj *np)
+nlm_vnode_find(struct nlm_host *hostp, struct netobj *fh)
 {
-	struct nlm_vnode *nv;
+	struct nlm_vnode *nvp;
 	vnode_t *vp;
 
-	vp = nlm_netobj_to_vnode(np);
+	vp = nlm_fh_to_vnode(fh);
 	if (vp == NULL)
 		return (NULL);
 
 	mutex_enter(&hostp->nh_lock);
-	nv = nlm_vnode_find_locked(hostp, vp);
-	if (nv == NULL)
-		VN_RELE(vp);
-
+	nvp = nlm_vnode_find_locked(hostp, vp, NULL);
 	mutex_exit(&hostp->nh_lock);
-	return (nv);
+
+	VN_RELE(vp);
+	return (nvp);
 }
 
 /*
@@ -447,46 +470,48 @@ nlm_vnode_find(struct nlm_host *hostp, struct netobj *np)
  * See comments at struct nlm_vnode def.
  */
 struct nlm_vnode *
-nlm_vnode_findcreate(struct nlm_host *hostp, struct netobj *np)
+nlm_vnode_findcreate(struct nlm_host *hostp, struct netobj *fh)
 {
-	fhandle_t *fhp;
 	vnode_t *vp;
-	struct nlm_vnode *nv, *new_nv;
+	struct nlm_vnode *nvp, *new_nvp = NULL;
+	avl_index_t where;
 
-	vp = nlm_netobj_to_vnode(np);
+	vp = nlm_fh_to_vnode(fh);
 	if (vp == NULL)
 		return (NULL);
 
 	mutex_enter(&hostp->nh_lock);
-	nv = nlm_vnode_find_locked(hostp, vp);
+	nvp = nlm_vnode_find_locked(hostp, vp, NULL);
 	mutex_exit(&hostp->nh_lock);
-	if (nv != NULL)
-		return (nv);
+	if (nvp != NULL)
+		goto out;
 
 	/* nlm_vnode wasn't found, then create a new one */
-	new_nv = kmem_cache_alloc(nlm_vnode_cache, KM_SLEEP);
+	new_nvp = kmem_cache_alloc(nlm_vnode_cache, KM_SLEEP);
 	mutex_enter(&hostp->nh_lock);
-	nv = nlm_vnode_find_locked(hostp, vp);
-	if (nv == NULL) {
-		nv = new_nv;
-		nv->nv_vp = vp;
-		nv->nv_refs = 1;
-		TAILQ_INSERT_TAIL(&hostp->nh_vnodes, nv, nv_link);
-		mutex_exit(&hostp->nh_lock);
-		return (nv);
-	}
 
 	/*
-	 * Found existing entry.  We already did a VN_HOLD
-	 * when we created this entry. Just bump refs.
+	 * Check if another thread already has created
+	 * the same nlm_vnode.
 	 */
-	nv->nv_refs++;
-	mutex_exit(&hostp->nh_lock);
-	new_nv->nv_refs = 0;
-	kmem_cache_free(nlm_vnode_cache, new_nv);
-	VN_RELE(vp);
+	nvp = nlm_vnode_find_locked(hostp, vp, &where);
+	if (nvp == NULL) {
+		nvp = new_nvp;
+		new_nvp = NULL;
 
-	return (nv);
+		nvp->nv_vp = vp;
+		nvp->nv_refs = 1;
+		VN_HOLD(nvp->nv_vp);
+		avl_insert(&hostp->nh_vnodes, nvp, where);
+	}
+
+	mutex_exit(&hostp->nh_lock);
+	if (new_nvp != NULL)
+		kmem_cache_free(nlm_vnode_cache, new_nvp);
+
+out:
+	VN_RELE(vp);
+	return (nvp);
 }
 
 void
@@ -563,8 +588,6 @@ nlm_free_async_lock(struct nlm_async_lock *af)
 		CLNT_RELEASE(af->af_rpc);
 	xdr_free((xdrproc_t)xdr_nlm4_testargs, (void *)&af->af_granted);
 #endif
-	if (af->af_vp)
-		VN_RELE(af->af_vp);
 	kmem_free(af, sizeof (*af));
 }
 
@@ -642,7 +665,7 @@ nlm_destroy_client_pending(struct nlm_host *host)
 static void
 nlm_destroy_client_locks(struct nlm_host *host)
 {
-	struct nlm_vnode *nv;
+	struct nlm_vnode *nvp;
 	struct flock64 fl;
 	int flags;
 
@@ -653,9 +676,11 @@ nlm_destroy_client_locks(struct nlm_host *host)
 	fl.l_sysid = host->nh_sysid;
 	flags = F_REMOTELOCK | FREAD | FWRITE;
 
-	TAILQ_FOREACH(nv, &host->nh_vnodes, nv_link) {
-		(void) VOP_FRLOCK(nv->nv_vp, F_SETLK, &fl,
+	nvp = avl_first(&host->nh_vnodes);
+	while (nvp != NULL) {
+		(void) VOP_FRLOCK(nvp->nv_vp, F_SETLK, &fl,
 		    flags, 0, NULL, CRED(), NULL);
+		nvp = AVL_NEXT(&host->nh_vnodes, nvp);
 	}
 }
 
@@ -830,7 +855,10 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	host->nh_rpcb_state = NRPCB_NEED_UPDATE;
 	host->nh_rpcb_sn = 1;
 
-	TAILQ_INIT(&host->nh_vnodes);
+	avl_create(&host->nh_vnodes, nlm_vnode_cmp,
+	    sizeof (struct nlm_vnode),
+	    offsetof(struct nlm_vnode, nv_tree));
+
 	TAILQ_INIT(&host->nh_pending);
 	TAILQ_INIT(&host->nh_rpchc);
 
