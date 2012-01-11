@@ -114,6 +114,8 @@ static int nlm_call_share(vnode_t *, struct shrlock *,
     struct nlm_host *, struct netobj *, int, int);
 static int nlm_call_unshare(struct vnode *, struct shrlock *,
 	struct nlm_host *, struct netobj *, int);
+static int nlm_reclaim_share(struct nlm_host *, vnode_t *,
+    struct shrlock *, uint32_t);
 static int nlm_local_shrlock(vnode_t *, struct shrlock *, int, int);
 static void nlm_local_shrcancel(vnode_t *, struct shrlock *);
 
@@ -130,6 +132,7 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
 	int32_t state;
 	int error, sysid;
 	struct locklist *llp_head, *llp;
+	struct nlm_shres *nsp_head, *nsp;
 	bool_t restart;
 
 	sysid = nlm_host_get_sysid(hostp) | LM_SYSID_CLIENT;
@@ -138,7 +141,7 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
 		restart = FALSE;
 		state = nlm_host_get_state(hostp);
 
-		DTRACE_PROBE3(reclaim__start, struct nlm_globals *, g,
+		DTRACE_PROBE3(reclaim__iter, struct nlm_globals *, g,
 		    struct nlm_host *, hostp, int, state);
 
 		/*
@@ -178,7 +181,7 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
 				llp = llp->ll_next;
 				continue;
 			} else if (error == ERESTART) {
-				restart = FALSE;
+				restart = TRUE;
 				break;
 			} else {
 				/*
@@ -201,11 +204,26 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
 			continue;
 		}
 
-		DTRACE_PROBE1(reclaim__end, int, error);
+		nsp_head = nsp = nlm_get_active_shres(hostp);
+		while (nsp != NULL) {
+			error = nlm_reclaim_share(hostp, nsp->ns_vp,
+			    nsp->ns_shr, state);
 
-		/*
-		 * TODO: recover share reservations
-		 */
+			if (error == 0) {
+				nsp = nsp->ns_next;
+				continue;
+			} else if (error = ERESTART) {
+				break;
+			} else {
+				/* Failed to reclaim share */
+				nlm_untrack_share(hostp, nsp->ns_vp, nsp->ns_shr);
+				nlm_local_shrcancel(nsp->ns_vp, nsp->ns_shr);
+			}
+
+			nsp = nsp->ns_next;
+		}
+
+		nlm_free_shrlist(nsp_head);
 	} while (state != nlm_host_get_state(hostp));
 }
 
@@ -1188,9 +1206,30 @@ out:
 	return (error);
 }
 
-/*
- * XXX: share recovery stuff?
- */
+static int
+nlm_reclaim_share(struct nlm_host *hostp, vnode_t *vp,
+    struct shrlock *shr, uint32_t orig_state)
+{
+	struct netobj lm_fh;
+	int error, state;
+	rpcvers_t vers;
+
+	state = nlm_host_get_state(hostp);
+	if (state != orig_state) {
+		/*
+		 * It seems that NLM server rebooted while
+		 * we were busy with recovery.
+		 */
+		return (ERESTART);
+	}
+
+	error = nlm_init_fh_by_vp(vp, &lm_fh, &vers);
+	if (error != 0)
+		return (error);
+
+	return (nlm_call_share(vp, shr, hostp, &lm_fh,
+		vers, 1));
+}
 
 /*
  * Set local share information for some NFS server.
