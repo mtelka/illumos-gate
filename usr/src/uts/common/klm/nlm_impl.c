@@ -887,6 +887,9 @@ nlm_host_find_by_sysid(struct nlm_globals *g, int sysid)
 void
 nlm_host_release(struct nlm_globals *g, struct nlm_host *host)
 {
+	if (host == NULL)
+		return;
+
 	if (0 == atomic_dec_uint_nv(&host->nh_refs)) {
 		/* Start idle timer */
 		host->nh_idle_timeout = ddi_get_lbolt() +
