@@ -488,7 +488,7 @@ nlm_vhold_find_locked(struct nlm_host *hostp,
 	nvp = avl_find(&hostp->nh_vholds, &key, &pos);
 	if (nvp != NULL) {
 		nvp->nv_refs++;
-		nvp->nv_flags &= ~NV_JUSTBORN;
+		nvp->nv_flags &= ~NLM_NH_JUSTBORN;
 	}
 	if (wherep != NULL)
 		*wherep = pos;
@@ -542,7 +542,7 @@ nlm_vhold_findcreate(struct nlm_host *hostp, vnode_t *vp)
 
 		nvp->nv_vp = vp;
 		nvp->nv_refs = 1;
-		nvp->nv_flags = NV_JUSTBORN;
+		nvp->nv_flags = NLM_NH_JUSTBORN;
 		VN_HOLD(nvp->nv_vp);
 		avl_insert(&hostp->nh_vholds, nvp, where);
 	}
@@ -615,10 +615,10 @@ nlm_vhold_release(struct nlm_host *hostp,
 
 	nvp->nv_refs--;
 	if (check_locks)
-		nvp->nv_flags |= NV_CHECKLOCKS;
+		nvp->nv_flags |= NLM_NH_CHECKLOCKS;
 
 	if (nvp->nv_refs > 0 ||
-	    !(nvp->nv_flags & (NV_JUSTBORN | NV_CHECKLOCKS))) {
+	    !(nvp->nv_flags & (NLM_NH_JUSTBORN | NLM_NH_CHECKLOCKS))) {
 		/*
 		 * Either some one uses given nlm_vhold or we wasn't
 		 * asked to check local locks on it. Just return,
@@ -645,7 +645,7 @@ nlm_vhold_release(struct nlm_host *hostp,
 	 * check whether "just born" nlm_vhold really has any locks.
 	 * This is done only once.
 	 */
-	nvp->nv_flags &= ~NV_CHECKLOCKS;
+	nvp->nv_flags &= ~NLM_NH_CHECKLOCKS;
 	if (nlm_host_has_locks_on_vnode(hostp, nvp->nv_vp)) {
 		/*
 		 * Given host has locks or share reservations

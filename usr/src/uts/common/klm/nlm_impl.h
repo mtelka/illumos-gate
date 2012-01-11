@@ -153,8 +153,8 @@ extern clock_t nlm_grace_threshold;
 	cmn_err(CE_WARN, __VA_ARGS__)
 
 enum {
-	NV_JUSTBORN   = 0x01,
-	NV_CHECKLOCKS = 0x02
+	NLM_NH_JUSTBORN   = 0x01,
+	NLM_NH_CHECKLOCKS = 0x02
 };
 
 /*
@@ -175,9 +175,9 @@ enum {
  *             incremented in nlm_vhold_find[_fh]/nlm_vhold_findcreate[_fh]
  *             and decremented nlm_vhold_release.
  *   nv_flags - nlm_vhold ORed flags:
- *     NV_JUSTBORN: nlm_vhold is just born. It's a very first time
+ *     NLM_NH_JUSTBORN: nlm_vhold is just born. It's a very first time
  *                  anyone uses it.
- *     NV_CHECKLOCKS: denotes that nlm_vhold_relese() must check whether
+ *     NLM_NH_CHECKLOCKS: denotes that nlm_vhold_relese() must check whether
  *                    there're any locks in os/flock on given vnode
  *                    taken by given host. If there're no such locks,
  *                    nlm_vhold will be freed and vnode it holds will
