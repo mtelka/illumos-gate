@@ -1,11 +1,3 @@
-
-Status:
-
-NLM client code almost ready. (at least lock/unlock)
-Zones supprot were significantly improved.
-Server code and monitor/unmonitor functions need more work.
-
-
 NOTES:
 1) It's a bit confusing that we have two modules: klmmod and klmops
 where klmops depends from klmmod
@@ -15,70 +7,76 @@ It seems pointless to separate klmpos from klmmod. May be it's better
 to join them in one module? Actually I don't see any benefit in separation
 of these two modules, the only thing we get from it is dependency hell.
 
-2) klmmod.c has lm_safelock and lm_safemap functions.
-The first one checks if it's "safe" to make lock request
-and the second one checks if it's "safe" to mmap something
-(i.e. if lock areas don't overlap with mmap areas).
-Actually these functions are NFSv3 specific (well, at least the first one),
-why don't we move it to NFSv3 and call them, say,
-nfs3_safelock and nfs3_safemap?
+2) Share reservations on the client are not supported at the moment.
+The problem with them is that Illumos kernel has no any API that performs
+to know whether there're any share reservations on the system that were
+made by the given sysid. And it's not easy to implement one, because
+share reservations are maintained as a per-vnode linked lists, so to
+answer the question wheter any vnode has any share reservations by given
+sysid, we would have to iterate through all vnodes on the system. It's
+not good at all. 
+Probably the appropriate way to solve this problem is to maintain list
+of share reservations inside NLM, particularly hold them in nlm_host
+structure. The maintaining of this list will be a bit tricky, we'll have
+to handle UNSHARE operation properly, in almost the same way del_share()
+does. It's not a "clean" solution, but it'll work.
 
-3) nlm_impl.c contains nlm_next_sysid variable. This variables is
-used for obtaining unique sysid for each NLM host. The problem is
-this variable is shared between all zones and "uniqueness" of sysid
-is weakly guarantied because we simply increment it each time we need
-new sysid.
-At first sight there is no problems, because it's 32 bit variable and
-possibility that we'll have UINT_MAX hosts is very low. But there're 
-two things I don't like:
- a) actually it 24 bit variable, because os/flock.c code has NLM_SYSID_CLIENT
-    flag which combined with sysid when we need to ask flock subsystem if
-    given client has any locks. For example:
-    nlm_sysid_has_locks(NLM_SYSID_CLIENT | host->nh_sysid).
- b) It is shared between all zones. Zones can be used for high loeded
-    testing. For example tester/developer/system administrator can write
-    a script that adds/removes new hosts with very high frequency (just for testing)
-    in several (or in a lot of) zones.
-So there is a possibily that nlm_next_sysid
-  a) will not fit in 24 bits (and it's really bad, because we have NLM_SYSID_CLIENT flag)
-  b) will not unique (for example when sysid with number 1 is still active, counter
-     overflows and at few steps we get sysid with number 1 again and it won't be unique)
+3) For now some essentials parameters of NLM such as grace period time
+or retransmission timeout can be configured at compile time only.
+lockd user-space daemon passes these parameters to kernel space.
+For this moment there's no way to configure these parameters inside
+lockd, so they are set statically. May be in future it'll be possible
+to configure them via SMF.
 
-4) I think in future it's better to replace TAILQ list implementation taken from
+4) There's an interesting pitfall in NLM/NSM notification mechanism.
+When new lock appears either on the client or on the server side, NLM
+starts to monitor the remote host so that if it'll reboot, local statd
+will tell us about that. To start monitor remote host, NLM sends its hostname
+to the local statd daemon. NSM (statd) distinguish one host from another
+simply by comparing host names, so that if remote host reboots, statd on the 
+remote host sends a notification RPC to our statd. Notification RPC contains
+a name of rebooted host, so our statd just finds if we monitor this host
+by comparing its name with names of hosts in the monitred hosts list.
+
+The interesting part is how NLM gets the host name of the host it wants
+to monitor. On the server side it takes the hostname from RPC request and
+it's absolutely ok. On the client side it takes the hostname from NFS's
+servinfo_t structure containing some information about remote NFS server
+we're talking to. The problem with this approach is that the hostname field
+in servinfo_t is filled from user-space, so that if for example user says:
+% mount -F nfs -o vers=3 10.1.1.1:/rpool/nfs_share <mountpoint>
+hostname in servinfo_t will be "10.1.1.1" and NLM will take it as well.
+Now consider the following situation: there two machines
+a) A (10.1.1.1) is an NLM server machine (hostname=server)
+b) B (10.1.1.2) is an NLM client machine (hostname=client).
+
+Machine B takes a lock on the server. Machine A takes from RPC request
+B's hostname and starts to monitor host with name "client". In its turn
+machine B starts to monitor machine A and takes its hostname from the
+corresponding servinfo_t structure and it starts to monitor the host
+with name "10.1.1.1". Then machine A reboots and it sends a notification
+to machine B saying that the host with name "server" has been rebooted.
+Statd on machine B receives the notification and tries to find if it
+monitors host with name "server" and it appears that it doesn't. The only
+host it monitors is "10.1.1.1". Notification will be ignored.
+
+This situation can be avoided if all NFS mount calls are done by the
+hostname istead of IP address. For example the situation described above
+can be corrected by:
+% mount -F nfs -o vers=3 server:/rpool/nfs_share <mountpoint>
+
+NOTE: I noticed that the same problem exist on BSD, linux and on Solaris 
+with closed source klmmod.
+
+5) There're two private calls to local statd: 
+   NSMADDRPROC1_REG/NSMADDRPROC1_UNREG. It seems closed source
+   klmmod used them. We need to figure out why and how to use them.
+
+5) Sometimes monitor requests to local statd fail. That happens because
+SM_MON call handler in local statd can take more time that NLM expects.
+It seems that the problem is somewhere inside selfcheck.c:self_check() function.
+
+6) I think in future it's better to replace TAILQ list implementation taken from
    BSD systems with Solaris'es lists just because they are widely used through the code.
    I think it's not neccessary to multiply entities.
-
-5) May be some day we can separate nlm_impl.c on client and server parts?
-
-
-
-Random things I noticed:
-
-I think we need NLM sysid values to be unique across all zones.
-(So don't make nlm_next_sysid into a per-zone value.)
-
-The os/flock.c code expects sysids to be unique system-wide,
-i.e. _not_ just unique per-zone.
-
-I think we also want a separate sysid for every tuple of
-client + netaddr, or server + netaddr.
-
-Does the lock manager need to "hold" vnodes active
-when there are locks granted to clients?
-(I think it does need to, yes.)
-
-
-I'm not sure which way I like the service stubs done.
-Started with nlm_prot_svc.c (generated, and *.sed)
-but now I like nlm_prog[234].c better.
-
-Local statmon callbacks:
-
-  NLM_SM_NOTIFY1 = 17, in old LM: PRV_CRASH, lm_crash
-	Called when one of our clients reboots.
-	Throw away locks held by this client.
-	They can come back to reclaim them.
-  NLM_SM_NOTIFY2 = 18, in old LM: PRV_RECOVERY, lm_recovery
-	Called when one of our servers reboots.
-	Do "recovery" (try to reclaim our locks).
 
