@@ -357,6 +357,9 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 		xflags = NLM_X_BLOCKING;
 	}
 
+	nfs_add_locking_id(vp, curproc->p_pid, RLMPL_PID,
+	    (char *)&curproc->p_pid, sizeof (pid_t));
+
 	error = nlm_call_lock(vp, flkp, hostp, fhp, flcb, vers, xflags);
 	if (error != 0)
 		return (error);
@@ -579,9 +582,7 @@ nlm_local_getlk(vnode_t *vp, struct flock64 *fl, int flags)
  * many local threads are contending for the same lock), we must use a
  * blocking operation when registering with the local lock manager.
  * We expect that any actual wait will be rare and short hence we
- * ignore signals for this.  (XXX not yet signals)
- *
- * XXX: was nlm_record_lock()
+ * ignore signals for this.
  */
 static int
 nlm_local_setlk(vnode_t *vp, struct flock64 *fl, int flags)
@@ -801,7 +802,6 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 	bzero(&cargs, sizeof (cargs));
 
 	xid = atomic_inc_32_nv(&nlm_xid);
-	/* XXX: Use largs->cookie here? (same xid) */
 	cargs.cookie.n_len = sizeof (xid);
 	cargs.cookie.n_bytes = (char *)&xid;
 	cargs.block	= largs->block;
@@ -1107,6 +1107,9 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	 * Do the NLM_SHARE RPC.
 	 * XXX: Check flags & (FREAD | FWRITE) ?
 	 */
+
+	nfs_add_locking_id(vp, curproc->p_pid, RLMPL_OWNER,
+	    shr->s_owner, shr->s_own_len);
 
 	error = nlm_call_share(vp, &shlk, host, fh, vers, FALSE);
 	if (error != 0)
