@@ -1229,6 +1229,9 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 	struct nlm_host *host, struct netobj *fh,
 	int vers, int reclaim)
 {
+	return (ENOTSUP);
+
+#if 0 /* XXX: temporary unsupported */
 	struct nlm4_shareargs args;
 	struct nlm4_shareres res;
 	struct nlm_owner_handle oh;
@@ -1313,6 +1316,7 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 	}
 
 	return (error);
+#endif
 }
 
 /*
@@ -1322,6 +1326,9 @@ static int
 nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 	struct nlm_host *host, struct netobj *fh, int vers)
 {
+	return (ENOTSUP);
+
+#if 0 /* XXX: temporary unsupported */
 	struct nlm4_shareargs args;
 	struct nlm4_shareres res;
 	struct nlm_owner_handle oh;
@@ -1402,6 +1409,7 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 	}
 
 	return (error);
+#endif
 }
 
 static void

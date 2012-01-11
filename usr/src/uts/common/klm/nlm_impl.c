@@ -1032,6 +1032,33 @@ nlm_host_has_locks(struct nlm_host *hostp)
 	        NLM_SYSID_CLIENT, FLK_QUERY_ACTIVE))
 		return (TRUE);
 
+	/*
+	 * FIXME: Share reservations on the client side are
+	 * temporary disabled. The reason is that there's no
+	 * function similar to flk_sysid_has_locks() for share
+	 * reservations, so we can not determine whether host
+	 * has any shares. Actually os/share.c can answer a question
+	 * whether particular _vnode_ has any shares. But on the
+	 * client side we don't have a track of vnodes. The problem
+	 * having collection of touched vnodes on the client side
+	 * is that client (in contrast to server) must release vnode
+	 * (by VN_RELE) ASAP, because NFS code won't be able to
+	 * unmount the filesystem with some vnodes in use, it also
+	 * has a tricy part of file removing code that would affect
+	 * us if we would track vnodes on the client. NFS file
+	 * removing functions (see nfs3_remove() as an example)
+	 * won't remove a file if its vnode is held by someone.
+	 * Instead it just renames a file and gives it randomly
+	 * generated name (for example: .nfsB701). I don't know
+	 * why it does this...
+	 * So for this moment I don't know how to check whether
+	 * host has share reservations without keeping track
+	 * of vnodes touched by the host on the client side.
+	 * Moreover, I don't know how to track vnodes on the
+	 * client side without some modification of NFSv2/NFSv3
+	 * code.
+	 */
+
 	return (FALSE);
 }
 
