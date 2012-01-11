@@ -137,7 +137,7 @@ refresh_nlm_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
 		 * on the same port we assume. Call NULL proc
 		 * to do it.
 		 */
-		stat = nlm_null_rpc(rpcp->nr_handle, NULL);
+		stat = nlm_null_rpc(rpcp->nr_handle, rpcp->nr_vers);
 		if (stat == RPC_PROCUNAVAIL)
 			ret = ESTALE;
 	}

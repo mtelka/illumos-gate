@@ -251,15 +251,13 @@ lm_svc(struct lm_svc_args *args)
 	 */
 	if (g->run_status == NLM_ST_STOPPING) {
 		err = EAGAIN;
-		goto out_unlock;
+		goto out;
 	}
 
 	/*
 	 * There is no separate "initialize" sub-call for nfssys,
 	 * and we want to do some one-time work when the first
-	 * binding comes in.  This is slightly hack-ish, but we
-	 * know that lockd binds the loopback transport first,
-	 * so we piggy back initializations on that call.
+	 * binding comes in from lockd.
 	 */
 	if (g->run_status == NLM_ST_DOWN) {
 		g->run_status = NLM_ST_STARTING;
@@ -278,6 +276,7 @@ lm_svc(struct lm_svc_args *args)
 
 		mutex_exit(&g->lock);
 		err = nlm_svc_starting(g, fp, netid, &knc);
+		mutex_enter(&g->lock);
 	} else {
 		/*
 		 * If KLM is not started and the very first endpoint lockd
@@ -285,24 +284,20 @@ lm_svc(struct lm_svc_args *args)
 		 */
 		if (g->run_status != NLM_ST_UP) {
 			err = ENOTACTIVE;
-			goto out_unlock;
+			goto out;
 		}
 		if (g->lockd_pid != curproc->p_pid) {
 			/* Check if caller has the same PID lockd does */
 			err = EPERM;
-			goto out_unlock;
+			goto out;
 		}
 
 		err = nlm_svc_add_ep(g, fp, netid, &knc);
-		mutex_exit(&g->lock);
 	}
 
-	releasef(args->fd);
-	return (err);
-
-out_unlock:
+out:
 	mutex_exit(&g->lock);
-	if (fp)
+	if (fp != NULL)
 		releasef(args->fd);
 
 	return (err);
@@ -346,7 +341,10 @@ lm_shutdown(void)
 
 /*
  * Cleanup remote locks on FS un-export.
- * See nfs_export.c:unexport()
+ *
+ * NOTE: called from nfs_export.c:unexport()
+ * when right before the share is going to
+ * be unexported.
  */
 void
 lm_unexport(struct exportinfo *exi)
@@ -386,6 +384,14 @@ lm_set_nlmid_flk(int *new_sysid)
 		*new_sysid |= (lm_global_nlmid << BITS_IN_SYSID);
 }
 
+/*
+ * It seems that closed source klmmod used
+ * this function to release knetconfig stored
+ * in mntinfo structure (see mntinfo's mi_klmconfig
+ * field).
+ * We store knetconfigs differently, thus we don't
+ * need this function.
+ */
 void
 lm_free_config(struct knetconfig *knc)
 {
@@ -394,6 +400,9 @@ lm_free_config(struct knetconfig *knc)
 /*
  * Called by NFS4 delegation code to check if there are any
  * NFSv2/v3 locks for the file, so it should not delegate.
+ *
+ * NOTE: called from NFSv4 code
+ * (see nfs4_srv_deleg.c:rfs4_bgrant_delegation())
  */
 int
 lm_vp_active(const vnode_t *vp)
@@ -406,13 +415,10 @@ lm_vp_active(const vnode_t *vp)
  * structure and functions around it (like lm_get_sysid()
  * and lm_rel_sysid()). Closed source lock manager provided
  * this structure to the modules outside and had an interface
- * to obtain and release it. It seems that the structure
- * was similar to our nlm_host structure. For compatibility
- * reasons we keep it in the open-source klmmod. It's just
- * a member of nlm_host structure and has a pointer to
- * the part host as its only field.
+ * to obtain and release it. We use struct lm_sysid as an
+ * anonymous equivalent to structure nlm_host.
  *
- * XXX: may be in future it'd be better to get rid of
+ * NOTE: may be in future it'd be better to get rid of
  * lm_sysid and use nlm_host instead (well, qutely
  * typedefed nlm_host).
  */
@@ -443,7 +449,7 @@ lm_get_sysid(struct knetconfig *knc, struct netbuf *addr,
 	if (hostp == NULL)
 		return (NULL);
 
-	return (&hostp->nh_lms);
+	return ((struct lm_sysid *)hostp);
 }
 
 /*
@@ -455,7 +461,7 @@ lm_rel_sysid(struct lm_sysid *sysid)
 	struct nlm_globals *g;
 
 	g = zone_getspecific(nlm_zone_key, curzone);
-	nlm_host_release(g, sysid->ls_host);
+	nlm_host_release(g, (struct nlm_host *)sysid);
 }
 
 /*
@@ -464,6 +470,9 @@ lm_rel_sysid(struct lm_sysid *sysid)
  *
  * Used by NFSv4 rfs4_op_lockt and smbsrv/smb_fsop_frlock,
  * both to represent non-local locks outside of klm.
+ *
+ * NOTE: called from NFSv4 and SMBFS to allocate unique
+ * sysid.
  */
 sysid_t
 lm_alloc_sysidt(void)
@@ -481,13 +490,16 @@ lm_free_sysidt(sysid_t sysid)
 sysid_t
 lm_sysidt(struct lm_sysid *lms)
 {
-	return (lms->ls_host->nh_sysid);
+	return (((struct nlm_host *)lms)->nh_sysid);
 }
 
 /*
  * Called by nfs_frlock to check lock constraints.
  * Return non-zero if the lock request is "safe", i.e.
  * the range is not mapped, not MANDLOCK, etc.
+ *
+ * NOTE: callde from NFSv3/NFSv2 frlock() functions to
+ * determine whether it's safe to add new lock.
  */
 int
 lm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
@@ -499,6 +511,8 @@ lm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
  * Called by nfs_lockcompletion to check whether it's "safe"
  * to map the file (and cache it's data).  Walks the list of
  * file locks looking for any that are not "whole file".
+ *
+ * NOTE: called from nfs_client.c:nfs_lockcompletion()
  */
 int
 lm_safemap(const vnode_t *vp)
@@ -510,6 +524,10 @@ lm_safemap(const vnode_t *vp)
  * Called by nfs_map() for the MANDLOCK case.
  * Return non-zero if the file has any locks with a
  * blocked request (sleep).
+ *
+ * NOTE: called from NFSv3/NFSv2 map() functions in
+ * order to determine whether it's safe to add new
+ * mapping.
  */
 int
 lm_has_sleep(const vnode_t *vp)

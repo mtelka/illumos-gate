@@ -315,216 +315,6 @@ nlm_kmem_reclaim(void *cdrarg)
 }
 
 /*
- * Returns TRUE if the given vnode has
- * any active or sleeping locks.
- */
-int
-nlm_vp_active(const vnode_t *vp)
-{
-	struct nlm_globals *g;
-	struct nlm_host *hostp;
-	struct nlm_vhold *nvp;
-	int active = 0;
-
-	g = zone_getspecific(nlm_zone_key, curzone);
-
-	/*
-	 * Server side NLM has locks on the given vnode
-	 * if there exist a vhold object that holds
-	 * the given vnode "vp" in one of NLM hosts.
-	 */
-	mutex_enter(&g->lock);
-	hostp = avl_first(&g->nlm_hosts_tree);
-	while (hostp != NULL) {
-		nvp = nlm_vhold_find_locked(hostp, vp);
-		if (nvp != NULL) {
-			active = 1;
-			break;
-		}
-
-		hostp = AVL_NEXT(&g->nlm_hosts_tree, hostp);
-	}
-
-	mutex_exit(&g->lock);
-	return (active);
-}
-
-/*
- * Called right before NFS export is going to
- * dissapear. The function finds all vnodes
- * belonging to the given export and cleans
- * all remote locks and share reservations
- * on them.
- */
-void
-nlm_unexport(struct exportinfo *exi)
-{
-	struct nlm_globals *g;
-	struct nlm_host *hostp;
-
-	g = zone_getspecific(nlm_zone_key, curzone);
-
-	mutex_enter(&g->lock);
-	hostp = avl_first(&g->nlm_hosts_tree);
-	while (hostp != NULL) {
-		struct nlm_vhold *nvp;
-		int sysid;
-
-		sysid = nlm_host_get_sysid(hostp);
-		mutex_enter(&hostp->nh_lock);
-		TAILQ_FOREACH(nvp, &hostp->nh_vholds_list, nv_link) {
-			vnode_t *vp;
-
-			nvp->nv_refcnt++;
-			mutex_exit(&hostp->nh_lock);
-
-			vp = nvp->nv_vp;
-
-			if (!EQFSID(&exi->exi_fsid, &vp->v_vfsp->vfs_fsid))
-				goto next_iter;
-
-			/*
-			 * Ok, it we found out that vnode vp is under
-			 * control by the exportinfo exi, now we need
-			 * to drop all locks from this vnode, let's
-			 * do it.
-			 */
-			nlm_vhold_clean(nvp, sysid);
-
-		next_iter:
-			mutex_enter(&hostp->nh_lock);
-			nvp->nv_refcnt--;
-		}
-
-		mutex_exit(&hostp->nh_lock);
-		hostp = AVL_NEXT(&g->nlm_hosts_tree, hostp);
-	}
-
-	mutex_exit(&g->lock);
-}
-
-/*
- * Allocate new unique sysid.
- * In case of failure (no available sysids)
- * return LM_NOSYSID.
- */
-sysid_t
-nlm_sysid_alloc(void)
-{
-	sysid_t ret_sysid = LM_NOSYSID;
-
-	rw_enter(&lm_lck, RW_WRITER);
-	if (nlm_sysid_nidx > LM_SYSID_MAX)
-		nlm_sysid_nidx = LM_SYSID;
-
-	if (!BT_TEST(nlm_sysid_bmap, nlm_sysid_nidx)) {
-		BT_SET(nlm_sysid_bmap, nlm_sysid_nidx);
-		ret_sysid = nlm_sysid_nidx++;
-	} else {
-		index_t id;
-
-		id = bt_availbit(nlm_sysid_bmap, NLM_BMAP_NITEMS);
-		if (id > 0) {
-			nlm_sysid_nidx = id + 1;
-			ret_sysid = id;
-			BT_SET(nlm_sysid_bmap, id);
-		}
-	}
-
-	rw_exit(&lm_lck);
-	return (ret_sysid);
-}
-
-void
-nlm_sysid_free(sysid_t sysid)
-{
-	ASSERT(sysid >= LM_SYSID && sysid <= LM_SYSID_MAX);
-
-	rw_enter(&lm_lck, RW_WRITER);
-	ASSERT(BT_TEST(nlm_sysid_bmap, sysid));
-	BT_CLEAR(nlm_sysid_bmap, sysid);
-	rw_exit(&lm_lck);
-}
-
-/*
- * Get netid string correspondig to the
- * given knetconfig.
- */
-const char *
-nlm_knc_to_netid(struct knetconfig *knc)
-{
-	int i;
-	const char *netid = NULL;
-
-	rw_enter(&lm_lck, RW_READER);
-	for (i = 0; i < NLM_KNCS; i++) {
-		struct knetconfig *knc_iter;
-
-		knc_iter = &nlm_netconfigs[i].n_knc;
-		if (knc_iter->knc_semantics == knc->knc_semantics &&
-		    strcmp(knc_iter->knc_protofmly,
-		    knc->knc_protofmly) == 0) {
-			netid = nlm_netconfigs[i].n_netid;
-			break;
-		}
-	}
-
-	rw_exit(&lm_lck);
-	return (netid);
-}
-
-/*
- * Get a knetconfig corresponding to the given netid.
- * If there's no knetconfig for this netid, ENOENT
- * is returned.
- */
-int
-nlm_knc_from_netid(const char *netid, struct knetconfig *knc)
-{
-	int i, ret;
-
-	ret = ENOENT;
-	for (i = 0; i < NLM_KNCS; i++) {
-		struct nlm_knc *nknc;
-
-		nknc = &nlm_netconfigs[i];
-		if (strcmp(netid, nknc->n_netid) == 0 &&
-		    nknc->n_knc.knc_rdev != NODEV) {
-			*knc = nknc->n_knc;
-			ret = 0;
-			break;
-		}
-	}
-
-	return (ret);
-}
-
-void
-nlm_knc_activate(struct knetconfig *knc)
-{
-	int i;
-
-	rw_enter(&lm_lck, RW_WRITER);
-	for (i = 0; i < NLM_KNCS; i++) {
-		struct knetconfig *knc_iter;
-
-		knc_iter = &nlm_netconfigs[i].n_knc;
-		if (knc_iter->knc_rdev != NODEV)
-			continue;
-
-		if (knc_iter->knc_semantics == knc->knc_semantics &&
-		    strcmp(knc_iter->knc_protofmly,
-		    knc->knc_protofmly) == 0 &&
-		    strcmp(knc_iter->knc_proto, knc->knc_proto) == 0) {
-		    knc_iter->knc_rdev = knc->knc_rdev;
-			break;
-		}
-	}
-
-	rw_exit(&lm_lck);
-}
-
-/*
  * NLM garbage collector thread (GC).
  *
  * NLM GC periodically checks whether there're any host objects
@@ -578,10 +368,10 @@ nlm_gc(struct nlm_globals *g)
 				break;
 
 			/*
-			 * NOTE: it's important to drop nlm_globals lock
-			 * before acquiring host lock, because order does
-			 * matter. nlm_globals lock _always must be
-			 * acquired before host lock and released after it.
+			 * Drop global lock while doing expensive work
+			 * on this host. We'll re-check any conditions
+			 * that might change after retaking the global
+			 * lock.
 			 */
 			mutex_exit(&g->lock);
 			mutex_enter(&hostp->nh_lock);
@@ -609,7 +399,7 @@ nlm_gc(struct nlm_globals *g)
 				continue;
 
 			/*
-			 * Either host has locks or somebody has began to
+			 * If either host has locks or somebody has began to
 			 * use it while we were outside the nlm_globals critical
 			 * section. In both cases we have to renew host's
 			 * timeout and put it to the end of LRU list.
@@ -1113,6 +903,7 @@ nlm_host_unregister(struct nlm_globals *g, struct nlm_host *hostp)
 	    (mod_hash_key_t)(uintptr_t)hostp->nh_sysid,
 	    (mod_hash_val_t)&hostp) == 0);
 	TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
+	hostp->nh_flags &= ~NLM_NH_INIDLE;
 }
 
 /*
@@ -1313,7 +1104,6 @@ nlm_create_host(struct nlm_globals *g, char *name,
 
 	TAILQ_INIT(&host->nh_vholds_list);
 	TAILQ_INIT(&host->nh_rpchc);
-	host->nh_lms.ls_host = host;
 
 	return (host);
 }
@@ -1409,8 +1199,8 @@ nlm_host_has_locks(struct nlm_host *hostp)
 		return (TRUE);
 
 	/*
-	 * FIXME: Share reservations on the client side are
-	 * temporary disabled. The reason is that there's no
+	 * FIXME: We don't handle share reservations here.
+	 * The reason is that there's no
 	 * function similar to flk_sysid_has_locks() for share
 	 * reservations, so we can not determine whether host
 	 * has any shares. Actually os/share.c can answer a question
@@ -1468,11 +1258,11 @@ nlm_netbuf_addrs_cmp(struct netbuf *nb1, struct netbuf *nb2)
 
 	switch (na1->sa.sa_family) {
 	case AF_INET:
-		res = memcmp(&na1->sin.sin_addr, &na2->sin.sin_addr,
+		res = bcmp(&na1->sin.sin_addr, &na2->sin.sin_addr,
 		    sizeof (na1->sin.sin_addr));
 		break;
 	case AF_INET6:
-		res = memcmp(&na1->sin6.sin6_addr, &na2->sin6.sin6_addr,
+		res = bcmp(&na1->sin6.sin6_addr, &na2->sin6.sin6_addr,
 		    sizeof (na1->sin6.sin6_addr));
 		break;
 	default:
@@ -1497,12 +1287,12 @@ nlm_host_cmp(const void *p1, const void *p2)
 	struct nlm_host *h2 = (struct nlm_host *)p2;
 	int res;
 
-	res = nlm_netbuf_addrs_cmp(&h1->nh_addr, &h2->nh_addr);
-	if (res != 0)
-		return (res);
-
 	res = strcmp(h1->nh_netid, h2->nh_netid);
-	return (SIGN(res));
+	if (res != 0)
+		return (SIGN(res));
+
+	res = nlm_netbuf_addrs_cmp(&h1->nh_addr, &h2->nh_addr);
+	return (res);
 }
 
 /*
@@ -1530,8 +1320,10 @@ nlm_host_find_locked(struct nlm_globals *g, const char *netid,
 		 * Host is inuse now. Remove it from idle
 		 * hosts list if needed.
 		 */
-		if (hostp->nh_refs == 0)
+		if (hostp->nh_flags & NLM_NH_INIDLE) {
 			TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
+			hostp->nh_flags &= ~NLM_NH_INIDLE;
+		}
 
 		hostp->nh_refs++;
 	}
@@ -1658,8 +1450,10 @@ nlm_host_find_by_sysid(struct nlm_globals *g, sysid_t sysid)
 	 * Host is inuse now. Remove it
 	 * from idle hosts list if needed.
 	 */
-	if (hostp->nh_refs == 0)
+	if (hostp->nh_flags & NLM_NH_INIDLE) {
 		TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
+		hostp->nh_flags &= ~NLM_NH_INIDLE;
+	}
 
 	hostp->nh_refs++;
 
@@ -1705,6 +1499,7 @@ nlm_host_release(struct nlm_globals *g, struct nlm_host *hostp)
 	    SEC_TO_TICK(g->cn_idle_tmo);
 
 	TAILQ_INSERT_TAIL(&g->nlm_idle_hosts, hostp, nh_link);
+	hostp->nh_flags |= NLM_NH_INIDLE;
 	mutex_exit(&g->lock);
 }
 
@@ -1766,9 +1561,7 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 	 * make it simpler to find the host if we are notified of a
 	 * host restart.
 	 */
-	stat = nlm_nsm_mon(&g->nlm_nsm, host->nh_name,
-	    (uint16_t)host->nh_sysid);
-
+	stat = nlm_nsm_mon(&g->nlm_nsm, host->nh_name, host->nh_sysid);
 	if (stat != RPC_SUCCESS) {
 		NLM_WARN("Failed to contact local NSM, stat=%d\n", stat);
 		mutex_enter(&g->lock);
@@ -1939,7 +1732,7 @@ nlm_slock_grant(struct nlm_globals *g,
 		    alock->l_offset	== nslp->nsl_lock.l_offset &&
 		    alock->l_len	== nslp->nsl_lock.l_len &&
 		    alock->fh.n_len	== nslp->nsl_lock.fh.n_len &&
-		    memcmp(alock->fh.n_bytes, nslp->nsl_lock.fh.n_bytes,
+		    bcmp(alock->fh.n_bytes, nslp->nsl_lock.fh.n_bytes,
 		    nslp->nsl_lock.fh.n_len) == 0) {
 			nslp->nsl_state = NLM_SL_GRANTED;
 			cv_broadcast(&nslp->nsl_cond);
@@ -2230,4 +2023,214 @@ nlm_svc_stopping(struct nlm_globals *g)
 	nlm_nsm_fini(&g->nlm_nsm);
 	g->lockd_pid = 0;
 	g->run_status = NLM_ST_DOWN;
+}
+
+/*
+ * Returns TRUE if the given vnode has
+ * any active or sleeping locks.
+ */
+int
+nlm_vp_active(const vnode_t *vp)
+{
+	struct nlm_globals *g;
+	struct nlm_host *hostp;
+	struct nlm_vhold *nvp;
+	int active = 0;
+
+	g = zone_getspecific(nlm_zone_key, curzone);
+
+	/*
+	 * Server side NLM has locks on the given vnode
+	 * if there exist a vhold object that holds
+	 * the given vnode "vp" in one of NLM hosts.
+	 */
+	mutex_enter(&g->lock);
+	hostp = avl_first(&g->nlm_hosts_tree);
+	while (hostp != NULL) {
+		nvp = nlm_vhold_find_locked(hostp, vp);
+		if (nvp != NULL) {
+			active = 1;
+			break;
+		}
+
+		hostp = AVL_NEXT(&g->nlm_hosts_tree, hostp);
+	}
+
+	mutex_exit(&g->lock);
+	return (active);
+}
+
+/*
+ * Called right before NFS export is going to
+ * dissapear. The function finds all vnodes
+ * belonging to the given export and cleans
+ * all remote locks and share reservations
+ * on them.
+ */
+void
+nlm_unexport(struct exportinfo *exi)
+{
+	struct nlm_globals *g;
+	struct nlm_host *hostp;
+
+	g = zone_getspecific(nlm_zone_key, curzone);
+
+	mutex_enter(&g->lock);
+	hostp = avl_first(&g->nlm_hosts_tree);
+	while (hostp != NULL) {
+		struct nlm_vhold *nvp;
+		int sysid;
+
+		sysid = nlm_host_get_sysid(hostp);
+		mutex_enter(&hostp->nh_lock);
+		TAILQ_FOREACH(nvp, &hostp->nh_vholds_list, nv_link) {
+			vnode_t *vp;
+
+			nvp->nv_refcnt++;
+			mutex_exit(&hostp->nh_lock);
+
+			vp = nvp->nv_vp;
+
+			if (!EQFSID(&exi->exi_fsid, &vp->v_vfsp->vfs_fsid))
+				goto next_iter;
+
+			/*
+			 * Ok, it we found out that vnode vp is under
+			 * control by the exportinfo exi, now we need
+			 * to drop all locks from this vnode, let's
+			 * do it.
+			 */
+			nlm_vhold_clean(nvp, sysid);
+
+		next_iter:
+			mutex_enter(&hostp->nh_lock);
+			nvp->nv_refcnt--;
+		}
+
+		mutex_exit(&hostp->nh_lock);
+		hostp = AVL_NEXT(&g->nlm_hosts_tree, hostp);
+	}
+
+	mutex_exit(&g->lock);
+}
+
+/*
+ * Allocate new unique sysid.
+ * In case of failure (no available sysids)
+ * return LM_NOSYSID.
+ */
+sysid_t
+nlm_sysid_alloc(void)
+{
+	sysid_t ret_sysid = LM_NOSYSID;
+
+	rw_enter(&lm_lck, RW_WRITER);
+	if (nlm_sysid_nidx > LM_SYSID_MAX)
+		nlm_sysid_nidx = LM_SYSID;
+
+	if (!BT_TEST(nlm_sysid_bmap, nlm_sysid_nidx)) {
+		BT_SET(nlm_sysid_bmap, nlm_sysid_nidx);
+		ret_sysid = nlm_sysid_nidx++;
+	} else {
+		index_t id;
+
+		id = bt_availbit(nlm_sysid_bmap, NLM_BMAP_NITEMS);
+		if (id > 0) {
+			nlm_sysid_nidx = id + 1;
+			ret_sysid = id;
+			BT_SET(nlm_sysid_bmap, id);
+		}
+	}
+
+	rw_exit(&lm_lck);
+	return (ret_sysid);
+}
+
+void
+nlm_sysid_free(sysid_t sysid)
+{
+	ASSERT(sysid >= LM_SYSID && sysid <= LM_SYSID_MAX);
+
+	rw_enter(&lm_lck, RW_WRITER);
+	ASSERT(BT_TEST(nlm_sysid_bmap, sysid));
+	BT_CLEAR(nlm_sysid_bmap, sysid);
+	rw_exit(&lm_lck);
+}
+
+/*
+ * Get netid string correspondig to the
+ * given knetconfig.
+ */
+const char *
+nlm_knc_to_netid(struct knetconfig *knc)
+{
+	int i;
+	const char *netid = NULL;
+
+	rw_enter(&lm_lck, RW_READER);
+	for (i = 0; i < NLM_KNCS; i++) {
+		struct knetconfig *knc_iter;
+
+		knc_iter = &nlm_netconfigs[i].n_knc;
+		if (knc_iter->knc_semantics == knc->knc_semantics &&
+		    strcmp(knc_iter->knc_protofmly,
+		    knc->knc_protofmly) == 0) {
+			netid = nlm_netconfigs[i].n_netid;
+			break;
+		}
+	}
+
+	rw_exit(&lm_lck);
+	return (netid);
+}
+
+/*
+ * Get a knetconfig corresponding to the given netid.
+ * If there's no knetconfig for this netid, ENOENT
+ * is returned.
+ */
+int
+nlm_knc_from_netid(const char *netid, struct knetconfig *knc)
+{
+	int i, ret;
+
+	ret = ENOENT;
+	for (i = 0; i < NLM_KNCS; i++) {
+		struct nlm_knc *nknc;
+
+		nknc = &nlm_netconfigs[i];
+		if (strcmp(netid, nknc->n_netid) == 0 &&
+		    nknc->n_knc.knc_rdev != NODEV) {
+			*knc = nknc->n_knc;
+			ret = 0;
+			break;
+		}
+	}
+
+	return (ret);
+}
+
+void
+nlm_knc_activate(struct knetconfig *knc)
+{
+	int i;
+
+	rw_enter(&lm_lck, RW_WRITER);
+	for (i = 0; i < NLM_KNCS; i++) {
+		struct knetconfig *knc_iter;
+
+		knc_iter = &nlm_netconfigs[i].n_knc;
+		if (knc_iter->knc_rdev != NODEV)
+			continue;
+
+		if (knc_iter->knc_semantics == knc->knc_semantics &&
+		    strcmp(knc_iter->knc_protofmly,
+		    knc->knc_protofmly) == 0 &&
+		    strcmp(knc_iter->knc_proto, knc->knc_proto) == 0) {
+		    knc_iter->knc_rdev = knc->knc_rdev;
+			break;
+		}
+	}
+
+	rw_exit(&lm_lck);
 }

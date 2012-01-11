@@ -401,7 +401,7 @@ program NLM_PROG {
 
 	version NLM4_VERS {
 		void
-			NLM_NULL(void) =			0;
+			NLM4_NULL(void) =			0;
 		nlm4_testres
 			NLM4_TEST(nlm4_testargs) =		1;
 		nlm4_res

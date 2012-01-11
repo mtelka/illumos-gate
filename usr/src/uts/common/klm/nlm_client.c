@@ -134,9 +134,27 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
 		    struct nlm_host *, hostp, int, state);
 
 		/*
-		 * Sleeping locks can not be reclaimed,
-		 * so the only thing we can do is to cancel
-		 * them.
+		 * We cancel all sleeping locks that were
+		 * done by the host, because we don't allow
+		 * reclamation of sleeping locks. The reason
+		 * we do this is that allowing of sleeping locks
+		 * reclation can potentially break locks recovery
+		 * order.
+		 *
+		 * Imagine that we have two client machines A and B
+		 * and an NLM server machine. A adds a non sleeping
+		 * lock to the file F and aquires this file. Machine
+		 * B in its turn adds sleeping lock to the file
+		 * F and blocks because F is already aquired by
+		 * the machine A. Then server crashes and after the
+		 * reboot it notifies its clients about the crash.
+		 * If we would allow sleeping locks reclamation,
+		 * there would be possible that machine B recovers
+		 * its lock faster than machine A (by some reason).
+		 * So that B aquires the file F after server crash and
+		 * machine A (that by some reason recovers slower) fails
+		 * to recover its non sleeping lock. Thus the original
+		 * locks order becames broken.
 		 */
 		nlm_host_cancel_slocks(g, hostp);
 
@@ -290,8 +308,6 @@ nlm_frlock_getlk(struct nlm_host *hostp, vnode_t *vp,
 		/*
 		 * Update the caller's *flkp with information
 		 * on the conflicting lock (or lack thereof).
-		 * Note: This is the only place where we
-		 * modify the caller's *flkp data.
 		 */
 		flkp->l_type = F_UNLCK;
 	} else {
@@ -364,12 +380,19 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 	if (error != 0)
 		return (error);
 
+	/*
+	 * Save the lock locally.  This should not fail,
+	 * because the server is authoritative about locks
+	 * and it just told us we have the lock!
+	 */
 	error = nlm_local_setlk(vp, flkp, flags);
 	if (error != 0) {
-		NLM_ERR("nlm_frlock_setlk: Failed to set local lock. "
+		/*
+		 * That's unexpected situation. Just ignore the error.
+		 */
+		NLM_WARN("nlm_frlock_setlk: Failed to set local lock. "
 		    "[err=%d]\n", error);
-		(void) nlm_call_unlock(vp, flkp, hostp, fhp, vers);
-		error = ENOLCK;
+		error = 0;
 	}
 
 	return (error);
@@ -512,13 +535,13 @@ nlm_has_sleep(const vnode_t *vp)
 }
 
 void
-nlm_register_lock_locally(struct vnode *vp, struct lm_sysid *ls,
+nlm_register_lock_locally(struct vnode *vp, struct nlm_host *hostp,
     struct flock64 *flk, int flags, u_offset_t offset)
 {
 	int sysid = 0;
 
-	if (ls != NULL) {
-		sysid = nlm_host_get_sysid(ls->ls_host) |
+	if (hostp != NULL) {
+		sysid = nlm_host_get_sysid(hostp) |
 			LM_SYSID_CLIENT;
 	}
 
@@ -1055,26 +1078,6 @@ nlm_init_lock(struct nlm4_lock *lock,
 	lock->l_len = fl->l_len;
 }
 
-static int
-nlm_locklist_has_unsafe_locks(struct locklist *ll)
-{
-	struct locklist *ll_next;
-	int has = 0;
-
-	while (ll) {
-		if ((ll->ll_flock.l_start != 0) ||
-		    (ll->ll_flock.l_len != 0))
-			has = 1;
-
-		ll_next = ll->ll_next;
-		VN_RELE(ll->ll_vp);
-		kmem_free(ll, sizeof (*ll));
-		ll = ll_next;
-	}
-
-	return (has);
-}
-
 /* ************************************************************** */
 
 int
@@ -1138,9 +1141,8 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 		/*
 		 * Oh oh, we really don't expect an error here.
 		 */
-		NLM_ERR("NLM: set locally, err %d\n", error);
-		(void) nlm_call_unshare(vp, &shlk, host, fh, vers);
-		error = ENOSYS;
+		NLM_WARN("nlm_shrlock: set locally, err %d\n", error);
+		error = 0;
 	}
 
 	/* Start monitoring this host. */

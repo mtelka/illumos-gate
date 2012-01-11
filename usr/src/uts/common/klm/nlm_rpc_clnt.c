@@ -202,7 +202,7 @@ enum clnt_stat
 nlm_null_rpc(CLIENT *client, rpcvers_t vers)
 {
 	if (vers == NLM4_VERS)
-		return (nlm_null_4(NULL, NULL, client));
+		return (nlm4_null_4(NULL, NULL, client));
 
 	return (nlm_null_1(NULL, NULL, client));
 }

@@ -21,9 +21,6 @@
 /*
  * Copyright (c) 1990, 2010, Oracle and/or its affiliates. All rights reserved.
  */
-/*
- * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
- */
 
 #if !defined(lint)
 #include "assym.h"
@@ -495,9 +492,6 @@ stubs_base:
 	NO_UNLOAD_STUB(klmmod, lm_alloc_sysidt, nomod_minus_one); 
 	NO_UNLOAD_STUB(klmmod, lm_free_sysidt, nomod_zero); 
 	NO_UNLOAD_STUB(klmmod, lm_sysidt, nomod_minus_one);
-	NO_UNLOAD_STUB(klmmod, lm_set_nlmid_flk, nomod_minus_one);
-	NO_UNLOAD_STUB(klmmod, nlm_frlock, nomod_minus_one);
-	NO_UNLOAD_STUB(klmmod, nlm_shrlock, nomod_minus_one);
 	END_MODULE(klmmod);
 #endif
 

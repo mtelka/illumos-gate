@@ -1462,8 +1462,8 @@ RPCMOD_OBJS +=	rpcmod.o	clnt_cots.o	clnt_clts.o \
 		xdr_rdma.o	rdma_subr.o	xdrrdma_sizeof.o
 
 KLMMOD_OBJS +=	klmmod.o \
-		nlm_rpc_handle.o \
 		nlm_impl.o \
+		nlm_rpc_handle.o \
 		nlm_dispatch.o \
 		nlm_rpc_svc.o \
 		nlm_client.o \

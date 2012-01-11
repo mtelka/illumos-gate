@@ -275,20 +275,7 @@ enum nlm_rpcb_state {
  */
 #define	NLM_NH_MONITORED 0x01
 #define	NLM_NH_RECLAIM   0x02
-
-/*
- * lm_sysid structure was used by old (closed source)
- * klmmod for (at least as it seems) the same purpose
- * we use nlm_host structure. lm_sysid can not be
- * simply removed, because it is used by the code
- * outside of klmmod. So we introduce it hear as
- * simple "compatibily layer". It's part of nlm_host
- * structure and it contains a pointer to parent
- * host.
- */
-struct lm_sysid {
-	struct nlm_host *ls_host;
-};
+#define	NLM_NH_INIDLE    0x04
 
 /*
  * NLM host object is the most major structure in NLM.
@@ -309,7 +296,6 @@ struct lm_sysid {
  *   nh_netid: netid string identifying type of transport host uses.
  *   nh_knc: host's knetconfig (used by kRPC subsystem).
  *   nh_addr: host's address (either IPv4 or IPv6).
- *   nh_lms: lm_sysid instance, for compatibility with old klmmod
  *   nh_sysid: unique sysid associated with this host.
  *   nh_state: last seen host's state reported by NSM.
  *   nh_flags: ORed host flags.
@@ -334,7 +320,6 @@ struct nlm_host {
 	char			*nh_netid;		/* (c) */
 	struct knetconfig	nh_knc;			/* (c) */
 	struct netbuf		nh_addr;		/* (c) */
-	struct lm_sysid		nh_lms;			/* (c) */
 	sysid_t			nh_sysid;		/* (c) */
 	int32_t			nh_state;		/* (z) */
 	clock_t			nh_idle_timeout;	/* (z) */
@@ -470,7 +455,7 @@ extern int nlm_shrlock(struct vnode *, int, struct shrlock *, int,
 extern int nlm_safemap(const vnode_t *);
 extern int nlm_safelock(vnode_t *, const struct flock64 *, cred_t *);
 extern int nlm_has_sleep(const vnode_t *);
-extern void nlm_register_lock_locally(struct vnode *, struct lm_sysid *,
+extern void nlm_register_lock_locally(struct vnode *, struct nlm_host *,
     struct flock64 *, int, u_offset_t);
 int nlm_vp_active(const vnode_t *vp);
 void nlm_sysid_free(sysid_t);

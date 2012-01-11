@@ -43,7 +43,11 @@ SYMBOL_SCOPE {
 		lm_sysidt;
 		lm_unexport;
 		lm_vp_active;
+# The following three functions are not mentioned in modstubs.s
+# files, because they are not an entry points to KLM. They
+# are called from klmops only.
 		nlm_frlock;
+		nlm_register_lock_locally;
 		nlm_shrlock;
 
 	local:
