@@ -1154,39 +1154,6 @@ nlm_cancel_wait_locks(struct nlm_host *host)
 	}
 }
 
-static int
-nlm_has_unsafe_locks(struct locklist *ll)
-{
-	struct locklist *ll_next;
-	int has_ulks = 0;
-
-	while (ll) {
-		if ((ll->ll_flock.l_start != 0) ||
-		    (ll->ll_flock.l_len != 0))
-			has_ulks = 0;
-
-		ll_next = ll->ll_next;
-		VN_RELE(ll->ll_vp);
-		kmem_free(ll, sizeof (*ll));
-		ll =ll_next;
-	}
-
-	return (has_ulks);
-}
-
-int
-nlm_safemap(const vnode_t *vp)
-{
-	struct locklist *ll;
-
-	ll = flk_active_locks_for_vp(vp);
-	if (nlm_has_unsafe_locks(ll))
-		return (0);
-
-	ll = flk_sleeping_locks_for_vp(vp);
-	return (nlm_has_unsafe_locks(ll) == 0);
-}
-
 /* ******************************************************************* */
 
 /*

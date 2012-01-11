@@ -28,7 +28,6 @@
 #include <nfs/nfs.h>
 #include <nfs/nfssys.h>
 #include <nfs/lm.h>
-#include <nfs/rnode.h>
 #include <rpcsvc/nlm_prot.h>
 #include "nlm_impl.h"
 
@@ -401,54 +400,6 @@ lm_cprresume(void)
 }
 
 /*
- * Called by nfs_frlock to check lock constraints.
- * Return non-zero if the lock request is "safe", i.e.
- * the range is not mapped, not MANDLOCK, etc.
- */
-int
-lm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
-{
-	rnode_t *rp = VTOR(vp);
-	struct vattr va;
-	int err;
-
-	if ((rp->r_mapcnt > 0) && (fl->l_start != 0 || fl->l_len != 0)) {
-		NLM_DEBUG(NLM_LL1, "Lock l_start=%"PRId64", "
-		    "l_len=%"PRId64" is not a safe lock on "
-		    "memory mapped file\n", fl->l_start, fl->l_len);
-		return (0);
-	}
-
-	va.va_mask = AT_MODE;
-	err = nfs3getattr(vp, &va, cr);
-	if (err) {
-		NLM_DEBUG(NLM_LL1, "Failed to get AT_MODE NFS3 file "
-		    "attribte. [ERR=%d]\n", err);
-		return (0);
-	}
-	/* NLM4 doesn't allow mandatory file locking */
-	if (MANDLOCK(vp, va.va_mode)) {
-		NLM_DEBUG(NLM_LL1, "NLM4 doesn't allow mandatory locks!\n");
-		return (0);
-	}
-
-	return (1);
-}
-
-/*
- * Called by nfs_lockcompletion to check whether it's "safe"
- * to map the file (and cache it's data).  Walks the list of
- * file locks looking for any that are not "whole file".
- */
-int
-lm_safemap(const vnode_t *vp)
-{
-	return nlm_safemap(vp);
-}
-
-
-
-/*
  * Add the nlm_id bits to the sysid (by ref).
  */
 void
@@ -456,19 +407,6 @@ lm_set_nlmid_flk(int *new_sysid)
 {
 	if (lm_global_nlmid != 0)
 		*new_sysid |= (lm_global_nlmid << BITS_IN_SYSID);
-}
-
-
-/*
- * Called by nfs_map() for the MANDLOCK case.
- * Return non-zero if the file has any locks with a
- * blocked request (sleep).
- */
-int
-lm_has_sleep(const vnode_t *vp)
-{
-	/* XXX - todo... */
-	return (0);
 }
 
 /*
@@ -543,6 +481,48 @@ lm_sysidt(struct lm_sysid *lms)
 	return (-1);
 }
 
+/*
+ * Called by nfs_frlock to check lock constraints.
+ * Return non-zero if the lock request is "safe", i.e.
+ * the range is not mapped, not MANDLOCK, etc.
+ */
+int
+lm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
+{
+	int safe;
+
+	safe = nlm_safelock(vp, fl, cr);
+	return (safe);
+}
+
+/*
+ * Called by nfs_lockcompletion to check whether it's "safe"
+ * to map the file (and cache it's data).  Walks the list of
+ * file locks looking for any that are not "whole file".
+ */
+int
+lm_safemap(const vnode_t *vp)
+{
+	int safe;
+
+	safe = nlm_safemap(vp);
+	return (safe);
+}
+
+/*
+ * Called by nfs_map() for the MANDLOCK case.
+ * Return non-zero if the file has any locks with a
+ * blocked request (sleep).
+ */
+int
+lm_has_sleep(const vnode_t *vp)
+{
+	/*
+	 * TODO[DK]: check for sleeping locks,
+	 * if any return TRUE.
+	 */
+	return (0);
+}
 
 /*
  * ****************************************************************

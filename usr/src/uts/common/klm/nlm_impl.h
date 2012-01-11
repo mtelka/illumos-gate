@@ -310,6 +310,7 @@ int nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flk,
 int nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	int flag, struct netobj *fh, int vers);
 int nlm_safemap(const vnode_t *vp);
+int nlm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr);
 
 
 /* nlm_rpc_clnt.c */

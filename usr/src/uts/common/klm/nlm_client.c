@@ -386,6 +386,57 @@ out:
 	return (error);
 }
 
+int
+nlm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
+{
+	rnode_t *rp = VTOR(vp);
+	struct vattr va;
+	int err;
+
+	if ((rp->r_mapcnt > 0) && (fl->l_start != 0 || fl->l_len != 0)) {
+		NLM_DEBUG(NLM_LL1, "Lock l_start=%"PRId64", "
+		    "l_len=%"PRId64" is not a safe lock on "
+		    "memory mapped file\n", fl->l_start, fl->l_len);
+		return (0);
+	}
+
+	va.va_mask = AT_MODE;
+	err = nfs3getattr(vp, &va, cr);
+	if (err) {
+		NLM_DEBUG(NLM_LL1, "Failed to get AT_MODE NFS3 file "
+		    "attribte. [ERR=%d]\n", err);
+		return (0);
+	}
+	/* NLM4 doesn't allow mandatory file locking */
+	if (MANDLOCK(vp, va.va_mode)) {
+		NLM_DEBUG(NLM_LL1, "NLM4 doesn't allow mandatory locks!\n");
+		return (0);
+	}
+
+	return (1);
+}
+
+int
+nlm_safemap(const vnode_t *vp)
+{
+	struct locklist *ll, *ll_next;
+	int safe = 1;
+
+	/* TODO[DK]: check sleeping locks as well */
+	ll = flk_active_locks_for_vp(vp);
+	while (ll) {
+		if ((ll->ll_flock.l_start != 0) ||
+		    (ll->ll_flock.l_len != 0))
+			safe = 0;
+
+		ll_next = ll->ll_next;
+		VN_RELE(ll->ll_vp);
+		kmem_free(ll, sizeof (*ll));
+		ll = ll_next;
+	}
+
+	return (safe);
+}
 
 /*
  * The BSD code had functions here to "reclaim" (destroy)
@@ -1024,19 +1075,6 @@ nlm_locklist_has_unsafe_locks(struct locklist *ll)
 }
 
 /* ************************************************************** */
-
-int
-nlm_safemap(const vnode_t *vp)
-{
-	struct locklist *ll;
-
-	ll = flk_active_locks_for_vp(vp);
-	if (nlm_locklist_has_unsafe_locks(ll))
-		return (0);
-
-	ll = flk_sleeping_locks_for_vp(vp);
-	return !nlm_locklist_has_unsafe_locks(ll);
-}
 
 int
 nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
