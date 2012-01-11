@@ -603,12 +603,8 @@ nlm_client_recovery(struct nlm_host *host)
 static int
 nlm_local_getlk(vnode_t *vp, struct flock64 *fl, int flags)
 {
-	int err, cmd = 0; /* get */
-
-	ASSERT(fl->l_whence == SEEK_SET);
-	err = reclock(vp, fl, cmd, flags, 0, NULL);
-
-	return (err);
+	VERIFY(fl->l_whence == SEEK_SET);
+	return (reclock(vp, fl, 0, flags, 0, NULL));
 }
 
 /*
@@ -635,13 +631,8 @@ nlm_local_getlk(vnode_t *vp, struct flock64 *fl, int flags)
 static int
 nlm_local_setlk(vnode_t *vp, struct flock64 *fl, int flags)
 {
-	int err, cmd = SETFLCK | SLPFLCK;
-
-	ASSERT(fl->l_whence == SEEK_SET);
-
-	err = reclock(vp, fl, cmd, flags, 0, NULL);
-
-	return (err);
+	VERIFY(fl->l_whence == SEEK_SET);
+	return (reclock(vp, fl, SETFLCK | SLPFLCK, flags, 0, NULL));
 }
 
 /*
