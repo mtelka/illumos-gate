@@ -208,6 +208,7 @@ krwlock_t lm_lck;
 static void nlm_copy_netbuf(struct netbuf *, struct netbuf *);
 static int nlm_netbuf_addrs_cmp(struct netbuf *, struct netbuf *);
 static void nlm_kmem_reclaim(void *);
+static void nlm_pool_shutdown(void);
 
 /*
  * NLM thread functions
@@ -2069,13 +2070,15 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 
 	g->grace_threshold = ddi_get_lbolt() +
 	    SEC_TO_TICK(g->grace_period);
-	g->run_status = NLM_ST_UP;
 
 	/* Register endpoint used for communications with local NLM */
 	error = nlm_svc_add_ep(g, fp, netid, knc);
 	if (error != 0)
 		goto shutdown_lm;
 
+	(void) svc_pool_control(NLM_SVCPOOL_ID,
+	    SVCPSET_SHUTDOWN_PROC, (void *)nlm_pool_shutdown);
+	g->run_status = NLM_ST_UP;
 	return (0);
 
 shutdown_lm:
@@ -2085,6 +2088,19 @@ shutdown_lm:
 
 	nlm_svc_stopping(g);
 	return (error);
+}
+
+/*
+ * Called when the server pool is destroyed, so that
+ * all transports are closed and no any server threads
+ * exist.
+ *
+ * Just call lm_shutdown() to shut NLM down properly.
+ */
+static void
+nlm_pool_shutdown(void)
+{
+	(void) lm_shutdown();
 }
 
 /*
