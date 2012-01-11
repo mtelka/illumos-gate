@@ -593,7 +593,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	struct netbuf *addr;
 	char *netid;
 	char *name;
-	int error, sysid;
+	int error;
 	struct flock64 fl;
 	struct nlm_async_lock *af;
 
@@ -611,8 +611,8 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 		return;
 	}
 
-	sysid = host->nh_sysid;
-	NLM_DEBUG(NLM_LL3, "nlm_do_cancel(): name = %s sysid = %d\n", name, sysid);
+	DTRACE_PROBE3(start, struct nlm_globals *, g,
+	    struct nlm_host *, host, nlm4_cancargs *, argp);
 
 	nv = nlm_vnode_find(host, &argp->alock.fh);
 	if (nv == NULL) {
@@ -625,7 +625,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 		goto out;
 	}
 
-	nlm_init_flock(&fl, &argp->alock, sysid);
+	nlm_init_flock(&fl, &argp->alock, host->nh_sysid);
 	fl.l_type = (argp->exclusive) ? F_WRLCK : F_RDLCK;
 
 	/*
@@ -686,6 +686,9 @@ out:
 			nlm_host_rele_rpc(rpcp);
 		}
 	}
+
+	DTRACE_PROBE3(end, struct nlm_globals *, g,
+	    struct nlm_host *, host, nlm4_res *, resp);
 
 	nlm_vnode_release(host, nv);
 	nlm_host_release(g, host);
