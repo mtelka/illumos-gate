@@ -5457,6 +5457,7 @@ nfs3_frlock(vnode_t *vp, int cmd, struct flock64 *bfp, int flag,
 		}
 	}
 
+	nfs_rw_exit(&rp->r_lkserlock);
 	lm_fh3.n_len = VTOFH3(vp)->fh3_length;
 	lm_fh3.n_bytes = (char *)&(VTOFH3(vp)->fh3_u.data);
 
@@ -5469,6 +5470,7 @@ nfs3_frlock(vnode_t *vp, int cmd, struct flock64 *bfp, int flag,
 	if (rc == 0)
 		nfs_lockcompletion(vp, cmd);
 
+	return (rc);
 done:
 	nfs_rw_exit(&rp->r_lkserlock);
 	return (rc);
