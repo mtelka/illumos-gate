@@ -844,7 +844,7 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 	struct nlm_globals *g;
 	struct nlm_owner_handle *oh;
 	struct nlm_host *host;
-	struct nlm_slock *nslp;
+	int error;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
@@ -857,28 +857,9 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 		return;
 	}
 
-	resp->stat.stat = nlm4_denied;
-
-	mutex_enter(&g->lock);
-	TAILQ_FOREACH(nslp, &g->nlm_slocks, nsl_link) {
-		if ((nslp->nsl_state != NLM_SL_BLOCKED) ||
-		    (nslp->nsl_host != host))
-			continue;
-
-		if (argp->alock.svid == nslp->nsl_lock.svid &&
-		    argp->alock.l_offset == nslp->nsl_lock.l_offset &&
-		    argp->alock.l_len == nslp->nsl_lock.l_len &&
-		    argp->alock.fh.n_len == nslp->nsl_lock.fh.n_len &&
-		    memcmp(argp->alock.fh.n_bytes, nslp->nsl_lock.fh.n_bytes,
-		    nslp->nsl_lock.fh.n_len) == 0) {
-			nslp->nsl_state = NLM_SL_GRANTED;
-			cv_broadcast(&nslp->nsl_cond);
-			resp->stat.stat = nlm4_granted;
-			break;
-		}
-	}
-
-	mutex_exit(&g->lock);
+	error = nlm_slock_grant(g, host, &argp->alock);
+	resp->stat.stat = (error == 0) ?
+		nlm4_granted : nlm4_denied;
 
 	/*
 	 * If we have a callback funtion, use that to

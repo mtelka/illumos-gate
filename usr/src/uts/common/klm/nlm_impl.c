@@ -165,7 +165,6 @@ static bool_t nlm_vhold_busy(struct nlm_host *, struct nlm_vhold *);
 /*
  * NLM client/server sleeping locks functions
  */
-static void nlm_slock_destroy(struct nlm_slock *);
 struct nlm_slreq *nlm_slreq_find_locked(struct nlm_host *,
     struct nlm_vhold *, struct flock64 *);
 
@@ -1645,11 +1644,41 @@ out:
 }
 
 /*
- * Destroy nlm_waiting_lock structure instance
+ * Mark client side sleeping lock as granted
+ * and wake up a process blocked on the lock.
+ * Called from server side NLM_GRANT handler.
+ *
+ * If sleeping lock is found return 0, otherwise
+ * return ENOENT.
  */
-static void
-nlm_slock_destroy(struct nlm_slock *nslp)
+int
+nlm_slock_grant(struct nlm_globals *g,
+    struct nlm_host *hostp, struct nlm4_lock *alock)
 {
+	struct nlm_slock *nslp;
+	int error = ENOENT;
+
+	mutex_enter(&g->lock);
+	TAILQ_FOREACH(nslp, &g->nlm_slocks, nsl_link) {
+		if ((nslp->nsl_state != NLM_SL_BLOCKED) ||
+		    (nslp->nsl_host != hostp))
+			continue;
+
+		if (alock->svid		== nslp->nsl_lock.svid &&
+		    alock->l_offset	== nslp->nsl_lock.l_offset &&
+		    alock->l_len	== nslp->nsl_lock.l_len &&
+		    alock->fh.n_len	== nslp->nsl_lock.fh.n_len &&
+		    memcmp(alock->fh.n_bytes, nslp->nsl_lock.fh.n_bytes,
+		        nslp->nsl_lock.fh.n_len) == 0) {
+			nslp->nsl_state = NLM_SL_GRANTED;
+			cv_broadcast(&nslp->nsl_cond);
+			error = 0;
+			break;
+		}
+	}
+
+	mutex_exit(&g->lock);
+	return (error);
 }
 
 /*

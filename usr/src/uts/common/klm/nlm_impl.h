@@ -492,6 +492,8 @@ struct nlm_slock *nlm_slock_register(struct nlm_globals *,
     struct nlm_host *, struct nlm4_lock *, struct vnode *);
 void nlm_slock_unregister(struct nlm_globals *, struct nlm_slock *);
 int nlm_slock_wait(struct nlm_globals *, struct nlm_slock *, uint_t);
+int nlm_slock_grant(struct nlm_globals *,
+    struct nlm_host *, struct nlm4_lock *);
 void nlm_host_cancel_slocks(struct nlm_globals *, struct nlm_host *);
 
 int nlm_slreq_register(struct nlm_host *,
