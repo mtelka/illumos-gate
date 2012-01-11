@@ -1346,7 +1346,7 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 	}
 
 	mutex_enter(&host->nh_lock);
-	if (host->nh_monstate != NLM_UNMONITORED) {
+	if (host->nh_monstate == NLM_MONITORED) {
 		mutex_exit(&host->nh_lock);
 		return;
 	}
