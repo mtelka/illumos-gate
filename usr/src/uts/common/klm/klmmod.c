@@ -100,9 +100,10 @@ lm_zone_init(zoneid_t zoneid)
 	g->nlm_hosts_hash = mod_hash_create_idhash("nlm_host_by_sysid",
 	    64, mod_hash_null_valdtor);
 
-	TAILQ_INIT(&g->nlm_hosts);
+	TAILQ_INIT(&g->nlm_idle_hosts);
 	TAILQ_INIT(&g->nlm_wlocks);
 
+	mutex_init(&g->lock, NULL, MUTEX_DEFAULT, NULL);
 	g->lockd_pid = 0;
 	g->run_status = NLM_ST_DOWN;
 
@@ -113,6 +114,11 @@ void
 lm_zone_fini(zoneid_t zoneid, void *data)
 {
 	struct nlm_globals *g = data;
+
+	ASSERT(avl_is_empty(&g->nlm_hosts_tree));
+	avl_destroy(&g->nlm_hosts_tree);
+	mod_hash_destroy_idhash(g->nlm_hosts_hash);
+	mutex_destroy(&g->lock);
 
 	kmem_free(g, sizeof (*g));
 }

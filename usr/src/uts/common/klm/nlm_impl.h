@@ -241,7 +241,6 @@ enum nlm_host_state {
 typedef struct nlm_rpc {
 	CLIENT		*nr_handle;
 	rpcvers_t	nr_vers;
-	clock_t     nr_ttl_timeout;
 	int         nr_sn;
 	TAILQ_ENTRY(nlm_rpc) nr_link;
 } nlm_rpc_t;
@@ -319,7 +318,6 @@ struct nlm_nsm {
 struct nlm_globals {
 	kmutex_t lock;
 	clock_t grace_threshold;
-	clock_t next_idle_check;
 	pid_t lockd_pid;
 	int nsm_state;
 	nlm_run_status_t run_status;
@@ -329,7 +327,7 @@ struct nlm_globals {
 		                        with the local NSM. */
 	avl_tree_t nlm_hosts_tree;
 	mod_hash_t *nlm_hosts_hash;
-	struct nlm_host_list nlm_hosts; /* (l) NLM hosts */
+	struct nlm_host_list nlm_idle_hosts;
 	struct nlm_waiting_lock_list nlm_wlocks; /* (l) client-side waiting locks */
 	/* options from lockd */
 	int cn_idle_tmo;
@@ -350,25 +348,6 @@ struct nlm_owner_handle {
 };
 
 /*
- * Various NLM constants
- */
-
-/*
- * NLM RPC handle time to live (in seconds). I.e. time interval
- * during which RPC handle exists in handles cache. If the ttl
- * is expired, handle is removed from cache during memory reclamation.
- */
-#define NLM_RPC_TTL_PERIOD 60
-
-/*
- * Period of time (in seconds) during which NLM RPC handle
- * is considered as "fresh". If RPC handle is not "fresh" we'll
- * check if it's possible to use it wihout reinitialization by
- * calling NULL procedure.
- */
-#define NLM_RPC_FRESH_PERIOD (2 * 60)
-
-/*
  * Number retries NLM RPC call is repeatead in case of failure.
  * (used in case of conectionless transport).
  */
@@ -379,6 +358,7 @@ struct nlm_owner_handle {
  */
 void nlm_vnodes_init(void);
 void nlm_rpc_cache_init(void);
+void nlm_rpc_cache_destroy(struct nlm_host *hostp);
 
 /*
  * RPC handles cache: nlm_rpc_handle.c

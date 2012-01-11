@@ -258,9 +258,6 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 void
 nlm_host_rele_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
 {
-	rpcp->nr_ttl_timeout = ddi_get_lbolt() +
-		SEC_TO_TICK(NLM_RPC_TTL_PERIOD);
-
 	mutex_enter(&hostp->nh_lock);
 	TAILQ_INSERT_HEAD(&hostp->nh_rpchc, rpcp, nr_link);
 	mutex_exit(&hostp->nh_lock);
@@ -291,6 +288,30 @@ nlm_rpc_cache_init(void)
 	    NULL, NULL, NULL, 0);
 }
 
+void
+nlm_rpc_cache_destroy(struct nlm_host *hostp)
+{
+	nlm_rpc_t *rpcp, *rpcp_next;
+
+	/*
+	 * There's no need to lock host's mutex here,
+	 * nlm_rpc_cache_destroy() should be called from
+	 * only one place: nlm_host_destroy, when all
+	 * resources host owns are already cleaned up.
+	 * So there shouldn't be any raises.
+	 */
+	TAILQ_FOREACH_SAFE(rpcp, rpcp_next, &hostp->nh_rpchc, nr_link) {
+		TAILQ_REMOVE(&hostp->nh_rpchc, rpcp, nr_link);
+		if (rpcp->nr_handle != NULL) {
+			AUTH_DESTROY(rpcp->nr_handle->cl_auth);
+			CLNT_DESTROY(rpcp->nr_handle);
+			rpcp->nr_handle = NULL;
+		}
+
+		kmem_cache_free(nlm_rpch_cache, rpcp);
+	}
+}
+
 static int
 nlm_rpch_ctor(void *datap, void *cdrarg, int kmflags)
 {
@@ -300,7 +321,7 @@ nlm_rpch_ctor(void *datap, void *cdrarg, int kmflags)
 	return (0);
 }
 
-void
+static void
 nlm_rpch_dtor(void *datap, void *cdrarg)
 {
 	nlm_rpc_t *rpcp = (nlm_rpc_t *)datap;

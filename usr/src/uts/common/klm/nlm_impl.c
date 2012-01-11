@@ -73,15 +73,11 @@
 #include "nlm_impl.h"
 
 /*
- * If a host is inactive (and holds no locks) for this amount of
- * seconds, we consider it idle and stop tracking it.
+ * If a host is inactive (and holds no locks)
+ * for this amount of seconds, we consider it
+ * unused, so that we unmonitor and destroy it.
  */
 #define	NLM_IDLE_TIMEOUT	30
-
-/*
- * We check the host list for idle every few seconds.
- */
-#define	NLM_IDLE_PERIOD		5
 
 /*
  * Number of attempts NLM tries to obtain RPC binding
@@ -106,12 +102,6 @@
  * value of ddi_get_lbolt() after which we are serving requests normally.
  */
 clock_t nlm_grace_threshold;
-
-/*
- * We check for idle hosts if ddi_get_lbolt() is greater than
- * nlm_next_idle_check,
- */
-static clock_t nlm_next_idle_check;
 
 /*
  * A zero timeval for sending async RPC messages.
@@ -148,6 +138,11 @@ static void nlm_svc_release_nsm(struct nlm_nsm *);
 static int nlm_vnode_ctor(void *, void *, int);
 static void nlm_vnode_dtor(void *, void *);
 static int nlm_vnode_cmp(const void *, const void *);
+
+/*
+ * NLM host functions
+ */
+static void nlm_free_idle_hosts(struct nlm_globals *g);
 
 /*
  * Acquire the next sysid for remote locks not handled by the NLM.
@@ -737,16 +732,25 @@ nlm_destroy_client_locks(struct nlm_host *host)
  * count has reached zero so it doesn't need to worry about locks.
  */
 static void
-nlm_host_destroy(struct nlm_host *host)
+nlm_host_destroy(struct nlm_host *hostp)
 {
-	if (host->nh_name)
-		strfree(host->nh_name);
-	if (host->nh_netid)
-		strfree(host->nh_netid);
+	ASSERT(hostp->nh_name != NULL);
+	ASSERT(hostp->nh_netid != NULL);
+	ASSERT(TAILQ_EMPTY(&hostp->nh_pending));
 
-	mutex_destroy(&host->nh_lock);
-	/* sysctl_ctx_free(&host->nh_sysctl); XXX */
-	kmem_free(host, sizeof (*host));
+	strfree(hostp->nh_name);
+	strfree(hostp->nh_netid);
+
+	nlm_rpc_cache_destroy(hostp);
+	ASSERT(TAILQ_EMPTY(&hostp->nh_rpchc));
+
+	ASSERT(avl_is_empty(&hostp->nh_vnodes));
+	avl_destroy(&hostp->nh_vnodes);
+
+	mutex_destroy(&hostp->nh_lock);
+	cv_destroy(&hostp->nh_rpcb_cv);
+
+	kmem_free(hostp, sizeof (*hostp));
 }
 
 void
@@ -911,45 +915,57 @@ nlm_create_host(struct nlm_globals *g, char *name,
 }
 
 /*
- * Check for idle hosts and stop monitoring them. We could also free
- * the host structure here, possibly after a larger timeout but that
- * would require some care to avoid races with
- * e.g. nlm_host_lock_count_sysctl.
+ * Iterate throught NLM idle hosts list,
+ * unmonitor and free hosts with expired
+ * idle timeout.
  */
 static void
-nlm_check_idle(void)
+nlm_free_idle_hosts(struct nlm_globals *g)
 {
-	struct nlm_globals *g;
-	struct nlm_host *host;
-	clock_t time_uptime, new_timeout;
+	struct nlm_host_list hlist_tmp;
+	struct nlm_host *hostp, *hostp_next;
+	clock_t time_uptime;
 
+	/*
+	 * hlist_tmp is a temporary list where we'll
+	 * collect all hosts that need to be unmonitored
+	 * and freed. The reason why we do this is that
+	 * host unmonitoring and freeing are not cheap operations
+	 * and we don't want to do them with g->lock acquired.
+	 */
+	TAILQ_INIT(&hlist_tmp);
 	time_uptime = ddi_get_lbolt();
-	if (time_uptime <= nlm_next_idle_check)
-		return;
-	nlm_next_idle_check = time_uptime +
-	    SEC_TO_TICK(NLM_IDLE_PERIOD);
-	new_timeout = time_uptime +
-	    SEC_TO_TICK(NLM_IDLE_TIMEOUT);
 
-	g = zone_getspecific(nlm_zone_key, curzone);
 	mutex_enter(&g->lock);
-	TAILQ_FOREACH(host, &g->nlm_hosts, nh_link) {
-		if (host->nh_monstate == NLM_MONITORED &&
-		    time_uptime > host->nh_idle_timeout) {
-			mutex_exit(&g->lock);
-			if (nlm_sysid_has_locks(host->nh_sysid) ||
-			    nlm_sysid_has_locks(NLM_SYSID_CLIENT |
-			    host->nh_sysid)) {
-				host->nh_idle_timeout = new_timeout;
-				mutex_enter(&g->lock);
-				continue;
-			}
-			nlm_host_unmonitor(g, host);
-			mutex_enter(&g->lock);
-		}
+	TAILQ_FOREACH_SAFE(hostp, hostp_next, &g->nlm_idle_hosts, nh_link) {
+		/*
+		 * nlm_idle_hosts is LRU ordered.
+		 */
+		if (time_uptime < hostp->nh_idle_timeout)
+			break;
+
+		/*
+		 * Remove host from all places it can be looked up:
+		 * - NLM hosts AVL tree (looked up via
+		 *   nlm_host_find/nlm_host_findcreate)
+		 * - NLM hosts hash table (looked up via
+		 *   nlm_host_find_by_sysid)
+		 */
+		TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
+		avl_remove(&g->nlm_hosts_tree, hostp);
+		VERIFY(mod_hash_remove(g->nlm_hosts_hash,
+		        (mod_hash_key_t)(uintptr_t)hostp->nh_sysid,
+		        (mod_hash_val_t)&hostp) == 0);
+
+		TAILQ_INSERT_TAIL(&hlist_tmp, hostp, nh_link);
 	}
 
 	mutex_exit(&g->lock);
+	TAILQ_FOREACH_SAFE(hostp, hostp_next, &hlist_tmp, nh_link) {
+		TAILQ_REMOVE(&hlist_tmp, hostp, nh_link);
+		nlm_host_unmonitor(g, hostp);
+		nlm_host_destroy(hostp);
+	}
 }
 
 /*
@@ -1038,8 +1054,11 @@ nlm_host_find_locked(struct nlm_globals *g, const char *netid,
 	bcopy(naddr, &key.nh_addr, sizeof (*naddr));
 	hostp = avl_find(&g->nlm_hosts_tree, &key, &pos);
 
-	if (hostp != NULL)
+	if (hostp != NULL) {
 		hostp->nh_refs++;
+		if (hostp->nh_refs == 1)
+			TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
+	}
 	if (wherep != NULL)
 		*wherep = pos;
 
@@ -1123,8 +1142,6 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 		(void) mod_hash_insert(g->nlm_hosts_hash,
 		    (mod_hash_key_t)(uintptr_t)newhost->nh_sysid,
 		    (mod_hash_val_t)newhost);
-
-		TAILQ_INSERT_TAIL(&g->nlm_hosts, newhost, nh_link);
 	}
 
 	mutex_exit(&g->lock);
@@ -1158,7 +1175,8 @@ nlm_host_find_by_sysid(struct nlm_globals *g, int sysid)
 	if (mod_hash_find(g->nlm_hosts_hash,
 	        (mod_hash_key_t)(uintptr_t)sysid, &hval) == 0) {
 		hostp = (struct nlm_host *)hval;
-		hostp->nh_refs++;
+		if (hostp->nh_refs++ == 0)
+			TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
 	}
 
 	mutex_exit(&g->lock);
@@ -1175,18 +1193,42 @@ nlm_host_find_by_sysid(struct nlm_globals *g, int sysid)
  * hosts should be removed (and tell statd to stop monitoring).
  */
 void
-nlm_host_release(struct nlm_globals *g, struct nlm_host *host)
+nlm_host_release(struct nlm_globals *g, struct nlm_host *hostp)
 {
-	if (host == NULL)
+	if (hostp == NULL)
 		return;
 
-	if (0 == atomic_dec_uint_nv(&host->nh_refs)) {
-		/* Start idle timer */
-		host->nh_idle_timeout = ddi_get_lbolt() +
-		    SEC_TO_TICK(NLM_IDLE_TIMEOUT);
+	mutex_enter(&g->lock);
+	hostp->nh_refs--;
+
+	/*
+	 * NLM host can not be move into an idle state
+	 * either if it has non-zero reference counter
+	 * or if it has any active/sleeping locks.
+	 *
+	 * NOTE: We don't need to check whether there're
+	 * any sleeping locks made by this host, because
+	 * each lock (doesn't matter if it's active or
+	 * sleeping) has a nlm_vnode associated with it.
+	 */
+	if (hostp->nh_refs != 0 ||
+	    !avl_is_empty(&hostp->nh_vnodes)) {
+		mutex_exit(&g->lock);
+		return;
 	}
 
-	nlm_check_idle(); /* XXX */
+	/* Start idle timer */
+	hostp->nh_idle_timeout = ddi_get_lbolt() +
+		SEC_TO_TICK(NLM_IDLE_TIMEOUT);
+
+	TAILQ_INSERT_TAIL(&g->nlm_idle_hosts, hostp, nh_link);
+	mutex_exit(&g->lock);
+
+	/*
+	 * Free and unmonitor all unused hosts
+	 * with expired idle timeout (if any)
+	 */
+	nlm_free_idle_hosts(g);
 }
 
 /*
@@ -1201,8 +1243,9 @@ nlm_host_unmonitor(struct nlm_globals *g, struct nlm_host *host)
 	enum clnt_stat stat;
 	struct nlm_nsm *nsm;
 
-	NLM_DEBUG(NLM_LL2, "NLM: unmonitoring %s (sysid %d)\n",
-	    host->nh_name, host->nh_sysid);
+	VERIFY(host->nh_refs == 0);
+	if (host->nh_monstate == NLM_UNMONITORED)
+		return;
 
 	/*
 	 * We put our assigned system ID value in the priv field to
@@ -1265,6 +1308,7 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 		mutex_exit(&host->nh_lock);
 		return;
 	}
+
 	host->nh_monstate = NLM_MONITORED;
 	mutex_exit(&host->nh_lock);
 
@@ -1559,8 +1603,6 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 	time_uptime = ddi_get_lbolt();
 	g->grace_threshold = time_uptime +
 	    SEC_TO_TICK(g->grace_period);
-	g->next_idle_check = time_uptime +
-	    SEC_TO_TICK(NLM_IDLE_PERIOD);
 	g->run_status = NLM_ST_UP;
 
 	mutex_exit(&g->lock);
@@ -1617,6 +1659,7 @@ Wait for threads using them to leave...
 	 * client lock requests. We arrange to defer closing the
 	 * sockets until the last RPC client handle is released.
 	 */
+#if 0 /* XXX */
 	mutex_enter(&g->lock);
 	nlm_cancel_all_wait_locks(g);
 
@@ -1636,7 +1679,6 @@ Wait for threads using them to leave...
 		nhost = TAILQ_NEXT(host, nh_link);
 		mutex_enter(&host->nh_lock);
 
-#if 0 /* XXX */
 		if (host->nh_srvrpc.nr_client ||
 		    host->nh_clntrpc.nr_client) {
 			if (host->nh_addr.ss_family == AF_INET)
@@ -1657,7 +1699,6 @@ Wait for threads using them to leave...
 				CLNT_CONTROL(host->nh_clntrpc.nr_client,
 				    CLSET_FD_CLOSE, 0);
 		}
-#endif	/* XXX */
 
 		mutex_exit(&host->nh_lock);
 		host = nhost;
@@ -1669,7 +1710,6 @@ Wait for threads using them to leave...
 
 	nlm_svc_release_nsm(nsm);
 
-#if 0 /* XXX */
 	if (!v4_used)
 		soclose(nlm_socket);
 	nlm_socket = NULL;
