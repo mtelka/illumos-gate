@@ -82,6 +82,7 @@ static void nlm_block(
 	nlm4_lockargs *lockargs,
 	struct nlm_host *host,
 	struct nlm_vhold *nvp,
+	nlm_rpc_t *rpcp,
 	struct flock64 *fl,
 	nlm_testargs_cb grant_cb,
 	rpcvers_t vers);
@@ -229,6 +230,7 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 	struct nlm_globals *g;
 	struct nlm_host *host;
 	struct nlm_owner_handle oh;
+	nlm_rpc_t *rpcp = NULL;
 	vnode_t *vp = NULL;
 	struct netbuf *addr;
 	char *netid;
@@ -247,6 +249,13 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 	if (host == NULL) {
 		resp->stat.stat = nlm4_denied_nolocks;
 		return;
+	}
+	if (cb != NULL) {
+		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
+		if (error != 0) {
+			resp->stat.stat = nlm4_denied_nolocks;
+			goto out;
+		}
 	}
 
 	vp = nlm_fh_to_vp(&argp->alock.fh);
@@ -295,28 +304,24 @@ out:
 	 * If we have a callback funtion, use that to
 	 * deliver the response via another RPC call.
 	 */
-	if (cb != NULL) {
-		nlm_rpc_t *rpcp;
-		int stat;
+	if (cb != NULL && rpcp != NULL) {
+		enum clnt_stat stat;
 
-		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
-		if (error == 0) {
-			/* i.e. nlm_test_res_4_cb */
-			stat = (*cb)(resp, NULL, rpcp->nr_handle);
-			if (stat != RPC_SUCCESS) {
-				struct rpc_err err;
+		/* i.e. nlm_test_res_4_cb */
+		stat = (*cb)(resp, NULL, rpcp->nr_handle);
+		if (stat != RPC_SUCCESS) {
+			struct rpc_err err;
 
-				CLNT_GETERR(rpcp->nr_handle, &err);
-				NLM_ERR("NLM: do_test CB, stat=%d err=%d\n",
-				    stat, err.re_errno);
-			}
-
-			nlm_host_rele_rpc(host, rpcp);
+			CLNT_GETERR(rpcp->nr_handle, &err);
+			NLM_ERR("NLM: do_test CB, stat=%d err=%d\n",
+			    stat, err.re_errno);
 		}
 	}
 
 	if (vp != NULL)
 		VN_RELE(vp);
+	if (rpcp != NULL)
+		nlm_host_rele_rpc(host, rpcp);
 
 	nlm_host_release(g, host);
 }
@@ -382,10 +387,8 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	 * Note: host object carries transport type.
 	 * One client using multiple transports gets
 	 * separate sysids for each of its transports.
-	 * Note: for blocking callback we take RPC handle
-	 * in nlm_block() function.
 	 */
-	if (res_cb != NULL) {
+	if (res_cb != NULL || grant_cb != NULL) {
 		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
 		if (error != 0) {
 			status = nlm4_denied_nolocks;
@@ -509,8 +512,6 @@ doreply:
 			NLM_ERR("NLM: do_lock CB, stat=%d err=%d\n",
 			    stat, err.re_errno);
 		}
-
-		nlm_host_rele_rpc(host, rpcp);
 	}
 
 	/*
@@ -532,12 +533,16 @@ doreply:
 		 * "detach" it from the RPC SVC pool, allowing it
 		 * to block indefinitely if needed.
 		 */
+		ASSERT(rpcp != NULL);
 		(void) svc_detach_thread(sr->rq_xprt);
-		nlm_block(argp, host, nvp, &fl, grant_cb, sr->rq_vers);
+		nlm_block(argp, host, nvp, rpcp, &fl, grant_cb, sr->rq_vers);
 	}
 
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
+
+	if (rpcp != NULL)
+		nlm_host_rele_rpc(host, rpcp);
 
 	nlm_vhold_release(host, nvp);
 	nlm_host_release(g, host);
@@ -552,6 +557,7 @@ static void
 nlm_block(nlm4_lockargs *lockargs,
     struct nlm_host *host,
     struct nlm_vhold *nvp,
+    nlm_rpc_t *rpcp,
     struct flock64 *flp,
     nlm_testargs_cb grant_cb,
     rpcvers_t vers)
@@ -560,7 +566,6 @@ nlm_block(nlm4_lockargs *lockargs,
 	int error;
 	enum clnt_stat stat;
 	flk_callback_t flk_cb;
-	nlm_rpc_t *rpcp;
 	struct nlm_block_cb_data cb_data;
 
 	/*
@@ -602,11 +607,6 @@ nlm_block(nlm4_lockargs *lockargs,
 		 */
 		return;
 	}
-
-	error = nlm_host_get_rpc(host, vers, &rpcp);
-	if (error != 0)
-		return;
-
 	/*
 	 * Do the "granted" call-back to the client.
 	 */
@@ -621,8 +621,6 @@ nlm_block(nlm4_lockargs *lockargs,
 		NLM_ERR("NLM: grant CB, stat=%d err=%d\n",
 		    stat, err.re_errno);
 	}
-
-	nlm_host_rele_rpc(host, rpcp);
 }
 
 /*
@@ -660,6 +658,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	struct nlm_host *host;
 	struct netbuf *addr;
 	struct nlm_vhold *nvp = NULL;
+	nlm_rpc_t *rpcp = NULL;
 	char *netid;
 	int error;
 	bool_t slreq_unreg = FALSE;
@@ -674,6 +673,13 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	if (host == NULL) {
 		resp->stat.stat = nlm4_denied_nolocks;
 		return;
+	}
+	if (cb != NULL) {
+		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
+		if (error != 0) {
+			resp->stat.stat = nlm4_denied_nolocks;
+			return;
+		}
 	}
 
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
@@ -717,28 +723,25 @@ out:
 	 * If we have a callback funtion, use that to
 	 * deliver the response via another RPC call.
 	 */
-	if (cb != NULL) {
-		nlm_rpc_t *rpcp;
-		int stat;
+	if (cb != NULL && rpcp != NULL) {
+		enum clnt_stat stat;
 
-		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
-		if (error == 0) {
-			/* i.e. nlm_cancel_res_4_cb */
-			stat = (*cb)(resp, NULL, rpcp->nr_handle);
-			if (stat != RPC_SUCCESS) {
-				struct rpc_err err;
+		/* i.e. nlm_cancel_res_4_cb */
+		stat = (*cb)(resp, NULL, rpcp->nr_handle);
+		if (stat != RPC_SUCCESS) {
+			struct rpc_err err;
 
-				CLNT_GETERR(rpcp->nr_handle, &err);
-				NLM_ERR("NLM: do_cancel CB, stat=%d err=%d\n",
-				    stat, err.re_errno);
-			}
-
-			nlm_host_rele_rpc(host, rpcp);
+			CLNT_GETERR(rpcp->nr_handle, &err);
+			NLM_ERR("NLM: do_cancel CB, stat=%d err=%d\n",
+			    stat, err.re_errno);
 		}
 	}
 
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
+
+	if (rpcp != NULL)
+		nlm_host_rele_rpc(host, rpcp);
 
 	nlm_vhold_release(host, nvp);
 	nlm_host_release(g, host);
@@ -756,6 +759,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	struct nlm_globals *g;
 	struct nlm_host *host;
 	struct netbuf *addr;
+	nlm_rpc_t *rpcp = NULL;
 	vnode_t *vp = NULL;
 	char *netid;
 	int error;
@@ -779,6 +783,11 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	host = nlm_host_find(g, netid, addr);
 	if (host == NULL)
 		return;
+	if (cb != NULL) {
+		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
+		if (error != 0)
+			goto out;
+	}
 
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_unlockargs *, argp);
@@ -806,23 +815,17 @@ out:
 	 * If we have a callback funtion, use that to
 	 * deliver the response via another RPC call.
 	 */
-	if (cb != NULL) {
-		nlm_rpc_t *rpcp;
-		int stat;
+	if (cb != NULL && rpcp != NULL) {
+		enum clnt_stat stat;
 
-		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
-		if (error == 0) {
-			/* i.e. nlm_unlock_res_4_cb */
-			stat = (*cb)(resp, NULL, rpcp->nr_handle);
-			if (stat != RPC_SUCCESS) {
-				struct rpc_err err;
+		/* i.e. nlm_unlock_res_4_cb */
+		stat = (*cb)(resp, NULL, rpcp->nr_handle);
+		if (stat != RPC_SUCCESS) {
+			struct rpc_err err;
 
-				CLNT_GETERR(rpcp->nr_handle, &err);
-				NLM_ERR("NLM: do_unlock CB, stat=%d err=%d\n",
-				    stat, err.re_errno);
-			}
-
-			nlm_host_rele_rpc(host, rpcp);
+			CLNT_GETERR(rpcp->nr_handle, &err);
+			NLM_ERR("NLM: do_unlock CB, stat=%d err=%d\n",
+			    stat, err.re_errno);
 		}
 	}
 
@@ -831,6 +834,8 @@ out:
 
 	if (vp != NULL)
 		VN_RELE(vp);
+	if (rpcp != NULL)
+		nlm_host_rele_rpc(host, rpcp);
 
 	nlm_host_release(g, host);
 }
@@ -858,9 +863,11 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 	struct nlm_globals *g;
 	struct nlm_owner_handle *oh;
 	struct nlm_host *host;
+	nlm_rpc_t *rpcp = NULL;
 	int error;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
+	resp->stat.stat = nlm4_denied;
 
 	g = zone_getspecific(nlm_zone_key, curzone);
 	oh = (void *) argp->alock.oh.n_bytes;
@@ -868,10 +875,13 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 		return;
 
 	host = nlm_host_find_by_sysid(g, oh->oh_sysid);
-	if (host == NULL) {
-		/* could not match alock */
-		resp->stat.stat = nlm4_denied;
+	if (host == NULL)
 		return;
+
+	if (cb != NULL) {
+		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
+		if (error != 0)
+			goto out;
 	}
 
 	if (NLM_IN_GRACE(g)) {
@@ -880,32 +890,28 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 	}
 
 	error = nlm_slock_grant(g, host, &argp->alock);
-	resp->stat.stat = (error == 0) ?
-		nlm4_granted : nlm4_denied;
+	if (error == 0)
+		resp->stat.stat = nlm4_granted;
 
 out:
 	/*
 	 * If we have a callback funtion, use that to
 	 * deliver the response via another RPC call.
 	 */
-	if (cb != NULL) {
-		nlm_rpc_t *rpcp;
-		int stat;
-		stat = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
-		if (stat == 0) {
-			/* i.e. nlm_granted_res_4_cb */
-			stat = (*cb)(resp, NULL, rpcp->nr_handle);
-			if (stat != RPC_SUCCESS) {
-				struct rpc_err err;
+	if (cb != NULL && rpcp != NULL) {
+		/* i.e. nlm_granted_res_4_cb */
+		stat = (*cb)(resp, NULL, rpcp->nr_handle);
+		if (stat != RPC_SUCCESS) {
+			struct rpc_err err;
 
-				CLNT_GETERR(rpcp->nr_handle, &err);
-				NLM_ERR("NLM: do_grantd CB, stat=%d err=%d\n",
-				    stat, err.re_errno);
-			}
-
-			nlm_host_rele_rpc(host, rpcp);
+			CLNT_GETERR(rpcp->nr_handle, &err);
+			NLM_ERR("NLM: do_grantd CB, stat=%d err=%d\n",
+			    stat, err.re_errno);
 		}
 	}
+
+	if (rpcp != NULL)
+		nlm_host_rele_rpc(host, rpcp);
 
 	nlm_host_release(g, host);
 }
