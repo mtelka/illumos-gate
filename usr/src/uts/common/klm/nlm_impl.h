@@ -151,22 +151,43 @@ extern clock_t nlm_grace_threshold;
 #define NLM_WARN(...) \
 	cmn_err(CE_WARN, __VA_ARGS__)
 
+enum {
+	NV_JUSTBORN   = 0x01,
+	NV_CHECKLOCKS = 0x02
+};
+
 /*
- * List of vnodes in use by some client.  We (the server) keep
- * these active (with VN_HOLD) on behalf of the client so the
- * locks won't be destroyed by VOP_INACTIVE.
+ * nlm_vnode structure keep a hold (be VN_HOLD) of active vnodes
+ * locked by the client. The tree of vnodes is kept on both client
+ * and server sides. Client side keeps a tree of vnodes client
+ * locked on given host. Server side keeps a trree of vnodes
+ * locked on the host by given client.
  *
- * The _refs member is or active functions calls, incremented
- * in nlm_vnode_findcreate and decremented nlm_vnode_release.
- * The _locks member is incremented when a lock is granted,
- * decremented when a lock is unlocked, and _set_to_zero_
- * when we're clearing all locks for a crashed client.
- * (See nlm_destroy_client_locks)
+ * Server uses nlm_vnodes tree to prevent vnodes to be destroyed
+ * by VOP_INACTIVE. Client uses this tree to keep a track of all
+ * vnodes it locked to simplify resources cleanup mechanism.
+ *
+ * struct nlm_vnode:
+ *   nv_vp  - A pointer to vnode that is hold by given nlm_vnode
+ *   nv_refs - Reference counter.
+ *             The _refs member is or active functions calls,
+ *             incremented in nlm_vnode_find[_fh]/nlm_vnode_findcreate[_fh]
+ *             and decremented nlm_vnode_release.
+ *   nv_flags - nlm_vnode ORed flags:
+ *     NV_JUSTBORN: nlm_vnode is just born. It's a very first time
+ *                  anyone uses it.
+ *     NV_CHECKLOCKS: denotes that nlm_vnode_relese() must check whether
+ *                    there're any locks in os/flock on given vnode
+ *                    taken by given host. If there're no such locks,
+ *                    nlm_vnode will be freed and vnode it holds will
+ *                    be released.
+ *   nv_tree - AVL tree node.
  */
 struct nlm_vnode {
-	vnode_t *nv_vp;			/* (c) the held vnode */
-	int nv_refs;			/* (l) references */
-	avl_node_t nv_tree;
+	vnode_t    *nv_vp;
+	int         nv_refs;
+	uint8_t     nv_flags;
+	avl_node_t  nv_tree;
 };
 
 enum nlm_wait_state {
@@ -469,7 +490,8 @@ struct nlm_vnode *nlm_vnode_find_fh(struct nlm_host *hostp,
 	struct netobj *np);
 struct nlm_vnode * nlm_vnode_findcreate_fh(struct nlm_host *hostp,
     struct netobj *np);
-void nlm_vnode_release(struct nlm_host *host, struct nlm_vnode *nv);
+void nlm_vnode_release(struct nlm_host *hostp,
+    struct nlm_vnode *nvp, bool_t check_locks);
 
 
 /*

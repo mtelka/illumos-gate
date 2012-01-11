@@ -436,8 +436,10 @@ nlm_vnode_find_locked(struct nlm_host *hostp,
 	key.nv_vp = vp;
 
 	nvp = avl_find(&hostp->nh_vnodes, &key, &pos);
-	if (nvp != NULL)
+	if (nvp != NULL) {
 		nvp->nv_refs++;
+		nvp->nv_flags &= ~NV_JUSTBORN;
+	}
 	if (wherep != NULL)
 		*wherep = pos;
 
@@ -490,6 +492,7 @@ nlm_vnode_findcreate(struct nlm_host *hostp, vnode_t *vp)
 
 		nvp->nv_vp = vp;
 		nvp->nv_refs = 1;
+		nvp->nv_flags = NV_JUSTBORN;
 		VN_HOLD(nvp->nv_vp);
 		avl_insert(&hostp->nh_vnodes, nvp, where);
 	}
@@ -541,47 +544,79 @@ nlm_vnode_findcreate_fh(struct nlm_host *hostp, struct netobj *fh)
 	return (nvp);
 }
 
+/*
+ * Release nlm_vnode.
+ * If check_locks argument is TRUE and if no one
+ * uses given nlm_vnode (i.e. if its reference counter
+ * is 0), nlm_vnode_release() asks local os/flock manager
+ * whether given host has any locks on given vnode.
+ * If there no any active locks, nlm_vnode is freed and
+ * vnode it holds is released.
+ *
+ * TODO[DK]: Support checks of share reservations
+ */
 void
-nlm_vnode_release(struct nlm_host *host, struct nlm_vnode *nv)
+nlm_vnode_release(struct nlm_host *hostp,
+    struct nlm_vnode *nvp, bool_t check_locks)
 {
-	/* XXX	struct nlm_vnode *dead_nv = NULL; */
-
-	if (nv == NULL)
+	if (nvp == NULL)
 		return;
 
-	mutex_enter(&host->nh_lock);
+	mutex_enter(&hostp->nh_lock);
+	VERIFY(nvp->nv_refs > 0);
 
-	nv->nv_refs--;
+	nvp->nv_refs--;
+	if (check_locks)
+		nvp->nv_flags |= NV_CHECKLOCKS;
+
+	if (nvp->nv_refs > 0 ||
+	    !(nvp->nv_flags & (NV_JUSTBORN | NV_CHECKLOCKS))) {
+		/*
+		 * Either some one uses given nlm_vnode or we wasn't
+		 * asked to check local locks on it. Just return,
+		 * our work is node.
+		 */
+
+		mutex_exit(&hostp->nh_lock);
+		return;
+	}
+
+	DTRACE_PROBE2(nvp__free, struct nlm_host *, hostp,
+	    struct nlm_vnode *, nvp);
 
 	/*
-	 * We don't have an inexpensive way to find out if
-	 * this client has locks on this vnode, but need to
-	 * keep it active while this client has any locks.
-	 * (Counting locks and unlocks won't work because
-	 * those are not required to balance.)
+	 * No one uses the nlm_vnode and we was asked
+	 * to check local locks on it or nlm_vnode was just born.
 	 *
-	 * Current solution:  Just keep vnodes held until
-	 * this host struct reaches its idle timeout,
-	 * and then ask the os/flock code if this host
-	 * still owns any locks.
-	 *
-	 * XXX idle timeouts not yet fully implemented.
+	 * NOTE: It's important to check locks on nlm_vnodes that
+	 * are just born (i.e. have been used only once), because
+	 * toplevel code that allocates given nlm_vnode to add a
+	 * new lock on it, can fail to add the lock. In this case
+	 * it happily releases the nlm_vnode with check_locks = FALSE.
+	 * We don't want to have any stale nlm_vnodes, thus we need to
+	 * check whether "just born" nlm_vnode really has any locks.
+	 * This is done only once.
 	 */
-#if 0	/* XXX */
-	if (nv->nv_refs == 0) {
-		TAILQ_REMOVE(&host->nh_vnodes, nv, nv_link);
-		dead_nv = nv;
+	nvp->nv_flags &= ~NV_CHECKLOCKS;
+	if (flk_has_remote_locks_for_sysid(nvp->nv_vp, hostp->nh_sysid) ||
+	    flk_has_remote_locks_for_sysid(nvp->nv_vp,
+	        hostp->nh_sysid | NLM_SYSID_CLIENT)) {
+		/* Given host has locks on a vnode, don't release it */
+		mutex_exit(&hostp->nh_lock);
+		return;
 	}
-#endif	/* XXX */
 
-	mutex_exit(&host->nh_lock);
+	/*
+	 * There're no any locks given host has on a vnode.
+	 * Now we free to delete nlm_vnode and drop a vnode
+	 * it holds.
+	 */
+	avl_remove(&hostp->nh_vnodes, nvp);
+	mutex_exit(&hostp->nh_lock);
 
-#if 0	/* XXX */
-	if (dead_nv != NULL) {
-		VN_RELE(old_nv->nv_vp);
-		kmem_free(old_nv, sizeof (*old_nv));
-	}
-#endif	/* XXX */
+	VN_RELE(nvp->nv_vp);
+	nvp->nv_vp = NULL;
+	kmem_cache_free(nlm_vnode_cache, nvp);
 }
 
 /*

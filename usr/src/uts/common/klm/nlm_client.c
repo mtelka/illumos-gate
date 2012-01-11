@@ -338,6 +338,7 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 {
 	struct nlm_vnode *nvp;
 	int error, xflags;
+	bool_t nvp_check_locks = FALSE;
 
 	error = convoff(vp, flkp, 0, (offset_t)offset);
 	if (error != 0)
@@ -354,11 +355,11 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 		/*
 		 * Do not create new nlm_vnode in case of F_UNLCK,
 		 * there must be one already. (if there's no nlm_vnode
-		 * created earlier, it's an error).
+		 * created earlier, just return 0).
 		 */
 		nvp = nlm_vnode_find(hostp, vp);
 		if (nvp == NULL)
-			return (ENOLCK);
+			return (0);
 
 		/*
 		 * Purge local (cached) lock information first,
@@ -366,6 +367,9 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 		 */
 		(void) nlm_local_setlk(nvp->nv_vp, flkp, flags);
 		error = nlm_call_unlock(nvp->nv_vp, flkp, hostp, fhp, vers);
+		if (error == 0)
+			nvp_check_locks = TRUE;
+
 		goto out;
 	}
 
@@ -405,7 +409,7 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 	}
 
 out:
-	nlm_vnode_release(hostp, nvp);
+	nlm_vnode_release(hostp, nvp, nvp_check_locks);
 	return (error);
 }
 

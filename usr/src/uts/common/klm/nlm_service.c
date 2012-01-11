@@ -236,7 +236,7 @@ out:
 		}
 	}
 
-	nlm_vnode_release(host, nv);
+	nlm_vnode_release(host, nv, FALSE);
 	nlm_host_release(g, host);
 }
 
@@ -438,7 +438,7 @@ doreply:
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
-	nlm_vnode_release(host, nv);
+	nlm_vnode_release(host, nv, FALSE);
 	nlm_host_release(g, host);
 }
 
@@ -672,7 +672,7 @@ out:
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
-	nlm_vnode_release(host, nv);
+	nlm_vnode_release(host, nv, FALSE);
 	nlm_host_release(g, host);
 }
 
@@ -691,6 +691,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	struct netbuf *addr;
 	char *netid;
 	int error, sysid;
+	bool_t nvp_check_locks = FALSE;
 	struct flock64 fl;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
@@ -708,7 +709,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_unlockargs *, argp);
 
-	nv = nlm_vnode_find_fh(host, &argp->alock.fh);
+	nv = nlm_vnode_findcreate_fh(host, &argp->alock.fh);
 	if (nv == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto out;
@@ -733,6 +734,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	 */
 	DTRACE_PROBE1(unlock__res, int, error);
 	resp->stat.stat = nlm4_granted;
+	nvp_check_locks = TRUE;
 
 out:
 	/*
@@ -766,7 +768,7 @@ out:
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
-	nlm_vnode_release(host, nv);
+	nlm_vnode_release(host, nv, nvp_check_locks);
 	nlm_host_release(g, host);
 }
 
@@ -991,7 +993,7 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	resp->stat = error ? nlm4_denied : nlm4_granted;
 
 out:
-	nlm_vnode_release(host, nv);
+	nlm_vnode_release(host, nv, FALSE);
 	nlm_host_release(g, host);
 }
 
@@ -1051,6 +1053,6 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	resp->stat = nlm4_granted;
 
 out:
-	nlm_vnode_release(host, nv);
+	nlm_vnode_release(host, nv, TRUE);
 	nlm_host_release(g, host);
 }
