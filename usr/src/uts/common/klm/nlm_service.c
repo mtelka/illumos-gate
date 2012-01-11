@@ -743,7 +743,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	fl.l_type = F_UNLCK;
 
 	/* BSD: VOP_ADVLOCK(nv->nv_vp, NULL, F_UNLCK, &fl, F_REMOTE); */
-	error = VOP_FRLOCK(nv->nv_vp, F_UNLCK, &fl,
+	error = VOP_FRLOCK(nv->nv_vp, F_SETLK, &fl,
 	    F_REMOTELOCK | FREAD | FWRITE,
 	    (u_offset_t)0, NULL, CRED(), NULL);
 
