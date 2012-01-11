@@ -77,9 +77,6 @@ struct nlm_knc {
 	const char		*n_netid;
 };
 
-#define	NLM_KNCS \
-	(sizeof (nlm_netconfigs) / sizeof (nlm_netconfigs[0]))
-
 /*
  * Number of attempts NLM tries to obtain RPC binding
  * of local statd.
@@ -110,6 +107,42 @@ struct nlm_knc {
  *  1 if x is positive
  */
 #define	SIGN(x) (((x) < 0) - ((x) > 0))
+
+#define	ARRSIZE(arr)	(sizeof (arr) / sizeof ((arr)[0]))
+#define	NLM_KNCS	ARRSIZE(nlm_netconfigs)
+
+krwlock_t lm_lck;
+
+/*
+ * Zero timeout for asynchronous NLM RPC operations
+ */
+static const struct timeval nlm_rpctv_zero = { 0,  0 };
+
+
+/*
+ * NLM async RPC operations
+ */
+static const rpcproc_t nlm_async_procnums[] = {
+	NLM_TEST_RES,
+	NLM_LOCK_RES,
+	NLM_CANCEL_RES,
+	NLM_UNLOCK_RES,
+	NLM_GRANTED_RES,
+	NLM4_TEST_RES,
+	NLM4_LOCK_RES,
+	NLM4_CANCEL_RES,
+	NLM4_UNLOCK_RES,
+	NLM4_GRANTED_RES,
+};
+
+/*
+ * A collection of NLM RPC operations that
+ * require to block signals before calling.
+ */
+static const rpcproc_t nlm_bs_procnums[] = {
+	NLM_CANCEL,
+	NLM4_CANCEL,
+};
 
 /*
  * List of all Zone globals nlm_globals instences
@@ -200,8 +233,6 @@ static struct nlm_knc nlm_netconfigs[] = { /* (g) */
 	},
 };
 
-krwlock_t lm_lck;
-
 /*
  * NLM misc. function
  */
@@ -209,6 +240,7 @@ static void nlm_copy_netbuf(struct netbuf *, struct netbuf *);
 static int nlm_netbuf_addrs_cmp(struct netbuf *, struct netbuf *);
 static void nlm_kmem_reclaim(void *);
 static void nlm_pool_shutdown(void);
+static bool_t nlm_procnum_match(rpcproc_t, const rpcproc_t *, int);
 
 /*
  * NLM thread functions
@@ -490,6 +522,74 @@ nlm_copy_netobj(struct netobj *dst, struct netobj *src)
 	dst->n_len = src->n_len;
 	dst->n_bytes = kmem_alloc(src->n_len, KM_SLEEP);
 	bcopy(src->n_bytes, dst->n_bytes, src->n_len);
+}
+
+/*
+ * An NLM specificw replacement for clnt_call().
+ * nlm_clnt_call() is used by all RPC functions generated
+ * from nlm_prot.x specification. The function is aware
+ * about some pitfalls of NLM RPC procedures and has a logic
+ * that handles them properly.
+ */
+enum clnt_stat
+nlm_clnt_call(CLIENT *clnt, rpcproc_t procnum, xdrproc_t xdr_args,
+    caddr_t argsp, xdrproc_t xdr_result, caddr_t resultp, struct timeval wait)
+{
+	k_sigset_t oldmask;
+	enum clnt_stat stat;
+	bool_t sig_blocked = FALSE;
+
+	/*
+	 * If NLM RPC procnum is one of the NLM _RES procedures
+	 * that are used to reply on asynchronous NLM RPC
+	 * (MSG calls), explicitly set RPC timeout to zero.
+	 * Client doesn't send a reply to RES procedures, so
+	 * we don't need to wait anything.
+	 */
+	if (nlm_procnum_match(procnum, nlm_async_procnums,
+		ARRSIZE(nlm_async_procnums)))
+		wait = nlm_rpctv_zero;
+
+	/*
+	 * Check whether we need to block signals
+	 * for given NLM RPC procedure.
+	 */
+	if (nlm_procnum_match(procnum, nlm_bs_procnums,
+		ARRSIZE(nlm_bs_procnums))) {
+		/*
+		 * NOTE: we need to disable signals in order
+		 * to prevent interruption of network RPC calls.
+		 */	 
+		k_sigset_t newmask;
+
+		sigfillset(&newmask);
+		sigreplace(&newmask, &oldmask);
+		sig_blocked = TRUE;
+	}
+
+	stat = clnt_call(clnt, procnum, xdr_args,
+	    argsp, xdr_result, resultp, wait);
+
+	/*
+	 * Restore signal mask back if signals were blocked
+	 */
+	if (sig_blocked)
+		sigreplace(&oldmask, (k_sigset_t *)NULL);
+
+	return (stat);
+}
+
+static bool_t
+nlm_procnum_match(rpcproc_t procnum,
+    const rpcproc_t *match_procs, int match_procs_len)
+{
+	int i;
+
+	for (i = 0; i < match_procs_len; i++)
+		if (procnum == match_procs[i])
+			return (TRUE);
+
+	return (FALSE);
 }
 
 /*

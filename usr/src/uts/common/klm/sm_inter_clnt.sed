@@ -20,3 +20,5 @@ i\
 #include <rpcsvc/sm_inter.h>
 }
 /^.include/,/^.endif/d
+s/clnt_call/nlm_clnt_call/g
+

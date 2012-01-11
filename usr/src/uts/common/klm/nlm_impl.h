@@ -613,4 +613,10 @@ void nlm_do_share(nlm4_shareargs *, nlm4_shareres *, struct svc_req *);
 void nlm_do_unshare(nlm4_shareargs *, nlm4_shareres *, struct svc_req *);
 void nlm_do_free_all(nlm4_notify *, void *, struct svc_req *);
 
+/*
+ * NLM RPC functions
+ */
+enum clnt_stat nlm_clnt_call(CLIENT *, rpcproc_t, xdrproc_t,
+    caddr_t, xdrproc_t, caddr_t, struct timeval);
+
 #endif	/* _NLM_NLM_H_ */

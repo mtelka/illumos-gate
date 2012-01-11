@@ -835,16 +835,9 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 			/*
 			 * We need to call the server to cancel our
 			 * lock request.
-			 * NOTE: we need to disable signals in order
-			 * to prevent interruption of network RPC calls.
 			 */
-			k_sigset_t oldmask, newmask;
-
 			DTRACE_PROBE1(cancel__lock, int, error);
-			sigfillset(&newmask);
-			sigreplace(&newmask, &oldmask);
 			nlm_call_cancel(&args, hostp, vers);
-			sigreplace(&oldmask, (k_sigset_t *)NULL);
 			break;
 		} else {
 			/*
