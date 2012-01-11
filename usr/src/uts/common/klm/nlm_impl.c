@@ -782,7 +782,6 @@ nlm_host_destroy(struct nlm_host *hostp)
 	kmem_free(hostp->nh_addr.buf, sizeof (struct netbuf));
 
 	nlm_rpc_cache_destroy(hostp);
-	ASSERT(TAILQ_EMPTY(&hostp->nh_rpchc));
 
 	ASSERT(avl_is_empty(&hostp->nh_vholds));
 	avl_destroy(&hostp->nh_vholds);

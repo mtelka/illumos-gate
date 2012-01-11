@@ -257,7 +257,6 @@ nlm_rpc_cache_destroy(struct nlm_host *hostp)
 	 * So there shouldn't be any raises.
 	 */
 	TAILQ_FOREACH_SAFE(rpcp, rpcp_next, &hostp->nh_rpchc, nr_link) {
-		TAILQ_REMOVE(&hostp->nh_rpchc, rpcp, nr_link);
 		if (rpcp->nr_handle != NULL) {
 			AUTH_DESTROY(rpcp->nr_handle->cl_auth);
 			CLNT_DESTROY(rpcp->nr_handle);
