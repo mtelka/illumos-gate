@@ -178,50 +178,6 @@ nlm_copy_netobj(struct netobj *dst, struct netobj *src)
 	bcopy(src->n_bytes, dst->n_bytes, src->n_len);
 }
 
-/*
- * Create an RPC client handle for the given (prog, vers)
- * Note: modifies *addr (inserts the port number)
- *
- * The in-kernel RPC (kRPC) subsystem uses TLI/XTI, and
- * therfore needs _both_ a knetconfig and an address when
- * establishing a network endpoint.  We keep a collection
- * of the knetconfig structs for all our RPC bindings and
- * find one when needed using the "netid".
- */
-static CLIENT *
-nlm_get_rpc(struct knetconfig *knc, struct netbuf *addr,
-	rpcprog_t prog, rpcvers_t vers)
-{
-	CLIENT *clnt = NULL;
-	enum clnt_stat stat;
-	int error;
-
-	if (strcmp(knc->knc_protofmly, NC_LOOPBACK)) {
-		NLM_DEBUG(NLM_LL1, " loopback: %s\n", (char *)addr->buf);
-	}
-
-	/*
-	 * Contact the remote RPCBIND service to find the
-	 * port for this prog+service. NB: modifies *addr
-	 */
-	stat = rpcbind_getaddr(knc, prog, vers, addr);
-	if (stat != RPC_SUCCESS) {
-		NLM_DEBUG(NLM_LL1, "nlm_get_rpc: rpcbind_getaddr() failed "
-		    "[stat=%d]\n", stat);
-		return (NULL);
-	}
-	error = clnt_tli_kcreate(knc, addr, prog, vers,
-	    0, 0, CRED(), &clnt);
-	if (error != 0) {
-		NLM_DEBUG(NLM_LL1, "nlm_get_rpc: clnt_tli_kcreate() failed "
-		    "[ERR=%d]\n", error);
-		return (NULL);
-	}
-
-	return (clnt);
-}
-
-
 /*********************************************************************
  * NLM functions responsible for operations on NSM handle.
  */
