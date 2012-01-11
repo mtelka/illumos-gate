@@ -158,33 +158,33 @@ enum {
 };
 
 /*
- * nlm_vnode structure keep a hold (be VN_HOLD) of active vnodes
- * locked by the client. The tree of vnodes is kept on both client
- * and server sides. Client side keeps a tree of vnodes client
- * locked on given host. Server side keeps a trree of vnodes
+ * nlm_vhold structure keep a hold (be VN_HOLD) of active vnodes
+ * locked by the client. The tree of vholds is kept on both client
+ * and server sides. Client side keeps a tree of vholds client
+ * locked on given host. Server side keeps a tree of vholds
  * locked on the host by given client.
  *
- * Server uses nlm_vnodes tree to prevent vnodes to be destroyed
+ * Server uses nlm_vholds tree to prevent vnodes to be destroyed
  * by VOP_INACTIVE. Client uses this tree to keep a track of all
  * vnodes it locked to simplify resources cleanup mechanism.
  *
- * struct nlm_vnode:
- *   nv_vp  - A pointer to vnode that is hold by given nlm_vnode
+ * struct nlm_vhold:
+ *   nv_vp  - A pointer to vnode that is hold by given nlm_vhold
  *   nv_refs - Reference counter.
  *             The _refs member is or active functions calls,
- *             incremented in nlm_vnode_find[_fh]/nlm_vnode_findcreate[_fh]
- *             and decremented nlm_vnode_release.
- *   nv_flags - nlm_vnode ORed flags:
- *     NV_JUSTBORN: nlm_vnode is just born. It's a very first time
+ *             incremented in nlm_vhold_find[_fh]/nlm_vhold_findcreate[_fh]
+ *             and decremented nlm_vhold_release.
+ *   nv_flags - nlm_vhold ORed flags:
+ *     NV_JUSTBORN: nlm_vhold is just born. It's a very first time
  *                  anyone uses it.
- *     NV_CHECKLOCKS: denotes that nlm_vnode_relese() must check whether
+ *     NV_CHECKLOCKS: denotes that nlm_vhold_relese() must check whether
  *                    there're any locks in os/flock on given vnode
  *                    taken by given host. If there're no such locks,
- *                    nlm_vnode will be freed and vnode it holds will
+ *                    nlm_vhold will be freed and vnode it holds will
  *                    be released.
  *   nv_tree - AVL tree node.
  */
-struct nlm_vnode {
+struct nlm_vhold {
 	vnode_t    *nv_vp;
 	uint_t      nv_refs;
 	uint8_t     nv_flags;
@@ -339,7 +339,7 @@ typedef union nlm_addr {
  *   nh_monstate: host NSM state (see enum nlm_host_state for more info).
  *   nh_idle_timeout: host idle timeout. When expired host is freed.
  *   nh_rpchc: host's RPC handles cache.
- *   nh_vnodes: an AVL tree containing a tack of all vnodes given
+ *   nh_vholds: an AVL tree containing a tack of all vnodes given
  *              host has any locks on.
  *   nh_srv_slocks: a list of all server side sleeping locks made
  *                  by given host object.
@@ -361,7 +361,7 @@ struct nlm_host {
 	enum nlm_host_state        nh_monstate;
 	time_t                     nh_idle_timeout;
 	struct nlm_rpch_list       nh_rpchc;
-	avl_tree_t                 nh_vnodes;
+	avl_tree_t                 nh_vholds;
 	struct nlm_slock_srv_list  nh_srv_slocks;
 };
 TAILQ_HEAD(nlm_host_list, nlm_host);
@@ -553,16 +553,16 @@ extern int nlm_host_get_sysid(struct nlm_host *host);
 extern int nlm_host_get_state(struct nlm_host *host);
 
 
-struct nlm_vnode * nlm_vnode_find(struct nlm_host *hostp,
+struct nlm_vhold * nlm_vhold_find(struct nlm_host *hostp,
     vnode_t *vp);
-struct nlm_vnode * nlm_vnode_findcreate(struct nlm_host *hostp,
+struct nlm_vhold * nlm_vhold_findcreate(struct nlm_host *hostp,
     vnode_t *vp);
-struct nlm_vnode *nlm_vnode_find_fh(struct nlm_host *hostp,
+struct nlm_vhold *nlm_vhold_find_fh(struct nlm_host *hostp,
 	struct netobj *np);
-struct nlm_vnode * nlm_vnode_findcreate_fh(struct nlm_host *hostp,
+struct nlm_vhold * nlm_vhold_findcreate_fh(struct nlm_host *hostp,
     struct netobj *np);
-void nlm_vnode_release(struct nlm_host *hostp,
-    struct nlm_vnode *nvp, bool_t check_locks);
+void nlm_vhold_release(struct nlm_host *hostp,
+    struct nlm_vhold *nvp, bool_t check_locks);
 
 /*
  * Sleeping locks functions

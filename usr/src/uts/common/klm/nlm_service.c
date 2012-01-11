@@ -75,7 +75,7 @@
 static void nlm_block(
 	nlm4_lockargs *lockargs,
 	struct nlm_host *host,
-	struct nlm_vnode *nv,
+	struct nlm_vhold *nv,
 	struct flock64 *fl,
 	nlm_testargs_cb grant_cb,
 	rpcvers_t vers);
@@ -149,7 +149,7 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
-	struct nlm_vnode *nv = NULL;
+	struct nlm_vhold *nv = NULL;
 	struct netbuf *addr;
 	char *netid;
 	char *name;
@@ -172,7 +172,7 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 
 	NLM_DEBUG(NLM_LL3, "nlm_do_test(): name = %s sysid = %d\n", name, sysid);
 
-	nv = nlm_vnode_findcreate_fh(host, &argp->alock.fh);
+	nv = nlm_vhold_findcreate_fh(host, &argp->alock.fh);
 	if (nv == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto out;
@@ -237,7 +237,7 @@ out:
 		}
 	}
 
-	nlm_vnode_release(host, nv, FALSE);
+	nlm_vhold_release(host, nv, FALSE);
 	nlm_host_release(g, host);
 }
 
@@ -265,7 +265,7 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	struct nlm_globals *g;
 	struct flock64 fl;
 	struct nlm_host *host;
-	struct nlm_vnode *nv = NULL;
+	struct nlm_vhold *nv = NULL;
 	struct netbuf *addr;
 	char *netid;
 	char *name;
@@ -292,7 +292,7 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_lockargs *, argp);
 
-	nv = nlm_vnode_findcreate_fh(host, &argp->alock.fh);
+	nv = nlm_vhold_findcreate_fh(host, &argp->alock.fh);
 	if (nv == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto doreply;
@@ -439,7 +439,7 @@ doreply:
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
-	nlm_vnode_release(host, nv, FALSE);
+	nlm_vhold_release(host, nv, FALSE);
 	nlm_host_release(g, host);
 }
 
@@ -452,7 +452,7 @@ static void
 nlm_block(
 	nlm4_lockargs *lockargs,
 	struct nlm_host *host,
-	struct nlm_vnode *nv,
+	struct nlm_vhold *nv,
 	struct flock64 *fl,
 	nlm_testargs_cb grant_cb,
 	rpcvers_t vers)
@@ -534,7 +534,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
-	struct nlm_vnode *nv = NULL;
+	struct nlm_vhold *nv = NULL;
 	struct netbuf *addr;
 	char *netid;
 	int error;
@@ -555,7 +555,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_cancargs *, argp);
 
-	nv = nlm_vnode_find_fh(host, &argp->alock.fh);
+	nv = nlm_vhold_find_fh(host, &argp->alock.fh);
 	if (nv == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto out;
@@ -625,7 +625,7 @@ out:
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
-	nlm_vnode_release(host, nv, FALSE);
+	nlm_vhold_release(host, nv, FALSE);
 	nlm_host_release(g, host);
 }
 
@@ -640,7 +640,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
-	struct nlm_vnode *nv = NULL;
+	struct nlm_vhold *nv = NULL;
 	struct netbuf *addr;
 	char *netid;
 	int error, sysid;
@@ -662,7 +662,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_unlockargs *, argp);
 
-	nv = nlm_vnode_findcreate_fh(host, &argp->alock.fh);
+	nv = nlm_vhold_findcreate_fh(host, &argp->alock.fh);
 	if (nv == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto out;
@@ -721,7 +721,7 @@ out:
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
-	nlm_vnode_release(host, nv, nvp_check_locks);
+	nlm_vhold_release(host, nv, nvp_check_locks);
 	nlm_host_release(g, host);
 }
 
@@ -902,7 +902,7 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
-	struct nlm_vnode *nv = NULL;
+	struct nlm_vhold *nv = NULL;
 	struct netbuf *addr;
 	char *netid;
 	char *name;
@@ -931,7 +931,7 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 		goto out;
 	}
 
-	nv = nlm_vnode_findcreate_fh(host, &argp->share.fh);
+	nv = nlm_vhold_findcreate_fh(host, &argp->share.fh);
 	if (nv == NULL) {
 		resp->stat = nlm4_stale_fh;
 		goto out;
@@ -950,7 +950,7 @@ out:
 	DTRACE_PROBE3(share__end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_shareres *, resp);
 
-	nlm_vnode_release(host, nv, FALSE);
+	nlm_vhold_release(host, nv, FALSE);
 	nlm_host_release(g, host);
 }
 
@@ -964,7 +964,7 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
-	struct nlm_vnode *nv = NULL;
+	struct nlm_vhold *nv = NULL;
 	struct netbuf *addr;
 	char *netid;
 	char *name;
@@ -993,7 +993,7 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 		goto out;
 	}
 
-	nv = nlm_vnode_findcreate_fh(host, &argp->share.fh);
+	nv = nlm_vhold_findcreate_fh(host, &argp->share.fh);
 	if (nv == NULL) {
 		resp->stat = nlm4_stale_fh;
 		goto out;
@@ -1013,6 +1013,6 @@ out:
 	DTRACE_PROBE3(unshare__end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_shareres *, resp);
 
-	nlm_vnode_release(host, nv, TRUE);
+	nlm_vhold_release(host, nv, TRUE);
 	nlm_host_release(g, host);
 }

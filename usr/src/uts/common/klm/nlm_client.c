@@ -337,7 +337,7 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
     struct netobj *fhp, struct flk_callback *flcb,
     int vers, bool_t do_block)
 {
-	struct nlm_vnode *nvp;
+	struct nlm_vhold *nvp;
 	int error, xflags;
 	bool_t nvp_check_locks = FALSE;
 
@@ -354,11 +354,11 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 
 	if (flkp->l_type == F_UNLCK) {
 		/*
-		 * Do not create new nlm_vnode in case of F_UNLCK,
-		 * there must be one already. (if there's no nlm_vnode
+		 * Do not create new nlm_vhold in case of F_UNLCK,
+		 * there must be one already. (if there's no nlm_vhold
 		 * created earlier, just return 0).
 		 */
-		nvp = nlm_vnode_find(hostp, vp);
+		nvp = nlm_vhold_find(hostp, vp);
 		if (nvp == NULL)
 			return (0);
 
@@ -374,7 +374,7 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 		goto out;
 	}
 
-	nvp = nlm_vnode_findcreate(hostp, vp);
+	nvp = nlm_vhold_findcreate(hostp, vp);
 	if (nvp == NULL)
 		return (ENOLCK);
 
@@ -410,7 +410,7 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 	}
 
 out:
-	nlm_vnode_release(hostp, nvp, nvp_check_locks);
+	nlm_vhold_release(hostp, nvp, nvp_check_locks);
 	return (error);
 }
 
@@ -1139,7 +1139,7 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	int flags, struct netobj *fh, int vers)
 {
 	struct shrlock shlk;
-	struct nlm_vnode *nvp = NULL;
+	struct nlm_vhold *nvp = NULL;
 	mntinfo_t *mi;
 	servinfo_t *sv;
 	const char *netid;
@@ -1162,7 +1162,7 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	if (host == NULL)
 		return (ENOSYS);
 
-	nvp = nlm_vnode_findcreate(host, vp);
+	nvp = nlm_vhold_findcreate(host, vp);
 	if (nvp == NULL) {
 		error = ENOLCK;
 		goto out;
@@ -1218,7 +1218,7 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	nlm_host_monitor(g, host, 0);
 
 out:
-	nlm_vnode_release(host, nvp, check_locks);
+	nlm_vhold_release(host, nvp, check_locks);
 	nlm_host_release(g, host);
 
 	return (error);

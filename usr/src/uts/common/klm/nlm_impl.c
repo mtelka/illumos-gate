@@ -133,7 +133,7 @@ static recovery_cb nlm_recovery_func = NULL;	/* (c) */
  * NLM kmem caches
  */
 static struct kmem_cache *nlm_hosts_cache = NULL;
-static struct kmem_cache *nlm_vnode_cache = NULL;
+static struct kmem_cache *nlm_vhold_cache = NULL;
 
 /*
  * NLM NSM functions
@@ -144,11 +144,11 @@ static struct nlm_nsm *nlm_svc_acquire_nsm(struct nlm_globals *);
 static void nlm_svc_release_nsm(struct nlm_nsm *);
 
 /*
- * NLM vnode functions
+ * NLM vhold functions
  */
-static int nlm_vnode_ctor(void *, void *, int);
-static void nlm_vnode_dtor(void *, void *);
-static int nlm_vnode_cmp(const void *, const void *);
+static int nlm_vhold_ctor(void *, void *, int);
+static void nlm_vhold_dtor(void *, void *);
+static int nlm_vhold_cmp(const void *, const void *);
 
 /*
  * NLM host functions
@@ -214,8 +214,8 @@ nlm_init(void)
 	    sizeof (struct nlm_host), 0, nlm_host_ctor, nlm_host_dtor,
 	    nlm_reclaim, NULL, NULL, 0);
 
-	nlm_vnode_cache = kmem_cache_create("nlm_vnode_cache",
-	    sizeof (struct nlm_vnode), 0, nlm_vnode_ctor, nlm_vnode_dtor,
+	nlm_vhold_cache = kmem_cache_create("nlm_vhold_cache",
+	    sizeof (struct nlm_vhold), 0, nlm_vhold_ctor, nlm_vhold_dtor,
 	    NULL, NULL, NULL, 0);
 
 	nlm_rpc_init();
@@ -410,14 +410,14 @@ nlm_svc_release_nsm(struct nlm_nsm *nsm)
 }
 
 /*********************************************************************
- * NLM vnode functions
+ * NLM vhold functions
  */
 
 static int
-nlm_vnode_cmp(const void *p1, const void *p2)
+nlm_vhold_cmp(const void *p1, const void *p2)
 {
-	const struct nlm_vnode *nvp1 = (const struct nlm_vnode *)p1;
-	const struct nlm_vnode *nvp2 = (const struct nlm_vnode *)p2;
+	const struct nlm_vhold *nvp1 = (const struct nlm_vhold *)p1;
+	const struct nlm_vhold *nvp2 = (const struct nlm_vhold *)p2;
 	int ret;
 
 	if (nvp1->nv_vp < nvp2->nv_vp)
@@ -429,18 +429,18 @@ nlm_vnode_cmp(const void *p1, const void *p2)
 }
 
 static int
-nlm_vnode_ctor(void *datap, void *cdrarg, int kmflags)
+nlm_vhold_ctor(void *datap, void *cdrarg, int kmflags)
 {
-	struct nlm_vnode *nvp = (struct nlm_vnode *)datap;
+	struct nlm_vhold *nvp = (struct nlm_vhold *)datap;
 
 	bzero(nvp, sizeof (*nvp));
 	return (0);
 }
 
 static void
-nlm_vnode_dtor(void *datap, void *cdrarg)
+nlm_vhold_dtor(void *datap, void *cdrarg)
 {
-	struct nlm_vnode *nvp = (struct nlm_vnode *)datap;
+	struct nlm_vhold *nvp = (struct nlm_vhold *)datap;
 
 	ASSERT(nvp->nv_refs == 0);
 	ASSERT(nvp->nv_vp == NULL);
@@ -469,17 +469,17 @@ nlm_fh_to_vnode(struct netobj *fh)
 }
 
 /*
- * Finds nlm_vnode by given pointer to vnode_t.
- * On success returns a pointer to nlm_vnode that was found,
+ * Finds nlm_vhold by given pointer to vnode_t.
+ * On success returns a pointer to nlm_vhold that was found,
  * on error returns NULL.
  *
  * NOTE: hostp->nh_lock must be locked.
  */
-static struct nlm_vnode *
-nlm_vnode_find_locked(struct nlm_host *hostp,
+static struct nlm_vhold *
+nlm_vhold_find_locked(struct nlm_host *hostp,
     vnode_t *vp, avl_index_t *wherep)
 {
-	struct nlm_vnode *nvp, key;
+	struct nlm_vhold *nvp, key;
 	avl_index_t pos;
 
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
@@ -487,7 +487,7 @@ nlm_vnode_find_locked(struct nlm_host *hostp,
 	bzero(&key, sizeof (key));
 	key.nv_vp = vp;
 
-	nvp = avl_find(&hostp->nh_vnodes, &key, &pos);
+	nvp = avl_find(&hostp->nh_vholds, &key, &pos);
 	if (nvp != NULL) {
 		nvp->nv_refs++;
 		nvp->nv_flags &= ~NV_JUSTBORN;
@@ -499,45 +499,45 @@ nlm_vnode_find_locked(struct nlm_host *hostp,
 }
 
 /*
- * Find nlm_vnode by given pointer to vnode.
+ * Find nlm_vhold by given pointer to vnode.
  */
-struct nlm_vnode *
-nlm_vnode_find(struct nlm_host *hostp, vnode_t *vp)
+struct nlm_vhold *
+nlm_vhold_find(struct nlm_host *hostp, vnode_t *vp)
 {
-	struct nlm_vnode *nvp;
+	struct nlm_vhold *nvp;
 
 	mutex_enter(&hostp->nh_lock);
-	nvp = nlm_vnode_find_locked(hostp, vp, NULL);
+	nvp = nlm_vhold_find_locked(hostp, vp, NULL);
 	mutex_exit(&hostp->nh_lock);
 
 	return (nvp);
 }
 
 /*
- * Find or create an nlm_vnode.
- * See comments at struct nlm_vnode def.
+ * Find or create an nlm_vhold.
+ * See comments at struct nlm_vhold def.
  */
-struct nlm_vnode *
-nlm_vnode_findcreate(struct nlm_host *hostp, vnode_t *vp)
+struct nlm_vhold *
+nlm_vhold_findcreate(struct nlm_host *hostp, vnode_t *vp)
 {
-	struct nlm_vnode *nvp, *new_nvp = NULL;
+	struct nlm_vhold *nvp, *new_nvp = NULL;
 	avl_index_t where;
 
 	mutex_enter(&hostp->nh_lock);
-	nvp = nlm_vnode_find_locked(hostp, vp, NULL);
+	nvp = nlm_vhold_find_locked(hostp, vp, NULL);
 	mutex_exit(&hostp->nh_lock);
 	if (nvp != NULL)
 		goto out;
 
-	/* nlm_vnode wasn't found, then create a new one */
-	new_nvp = kmem_cache_alloc(nlm_vnode_cache, KM_SLEEP);
+	/* nlm_vhold wasn't found, then create a new one */
+	new_nvp = kmem_cache_alloc(nlm_vhold_cache, KM_SLEEP);
 	mutex_enter(&hostp->nh_lock);
 
 	/*
 	 * Check if another thread already has created
-	 * the same nlm_vnode.
+	 * the same nlm_vhold.
 	 */
-	nvp = nlm_vnode_find_locked(hostp, vp, &where);
+	nvp = nlm_vhold_find_locked(hostp, vp, &where);
 	if (nvp == NULL) {
 		nvp = new_nvp;
 		new_nvp = NULL;
@@ -546,68 +546,68 @@ nlm_vnode_findcreate(struct nlm_host *hostp, vnode_t *vp)
 		nvp->nv_refs = 1;
 		nvp->nv_flags = NV_JUSTBORN;
 		VN_HOLD(nvp->nv_vp);
-		avl_insert(&hostp->nh_vnodes, nvp, where);
+		avl_insert(&hostp->nh_vholds, nvp, where);
 	}
 
 	mutex_exit(&hostp->nh_lock);
 	if (new_nvp != NULL)
-		kmem_cache_free(nlm_vnode_cache, new_nvp);
+		kmem_cache_free(nlm_vhold_cache, new_nvp);
 
 out:
 	return (nvp);
 }
 
 /*
- * Find nlm_vnode by given filehandle.
- * See also: nlm_vnode_find().
+ * Find nlm_vhold by given filehandle.
+ * See also: nlm_vhold_find().
  */
-struct nlm_vnode *
-nlm_vnode_find_fh(struct nlm_host *hostp, struct netobj *fh)
+struct nlm_vhold *
+nlm_vhold_find_fh(struct nlm_host *hostp, struct netobj *fh)
 {
-	struct nlm_vnode *nvp;
+	struct nlm_vhold *nvp;
 	vnode_t *vp;
 
 	vp = nlm_fh_to_vnode(fh);
 	if (vp == NULL)
 		return (NULL);
 
-	nvp = nlm_vnode_find(hostp, vp);
+	nvp = nlm_vhold_find(hostp, vp);
 	VN_RELE(vp);
 	return (nvp);
 }
 
 /*
- * Find or create nlm_vnode by given filehandle.
- * See also: nlm_vnode_findcreate().
+ * Find or create nlm_vhold by given filehandle.
+ * See also: nlm_vhold_findcreate().
  */
-struct nlm_vnode *
-nlm_vnode_findcreate_fh(struct nlm_host *hostp, struct netobj *fh)
+struct nlm_vhold *
+nlm_vhold_findcreate_fh(struct nlm_host *hostp, struct netobj *fh)
 {
 	vnode_t *vp;
-	struct nlm_vnode *nvp;
+	struct nlm_vhold *nvp;
 
 	vp = nlm_fh_to_vnode(fh);
 	if (vp == NULL)
 		return (NULL);
 
-	nvp = nlm_vnode_findcreate(hostp, vp);
+	nvp = nlm_vhold_findcreate(hostp, vp);
 	VN_RELE(vp);
 
 	return (nvp);
 }
 
 /*
- * Release nlm_vnode.
+ * Release nlm_vhold.
  * If check_locks argument is TRUE and if no one
- * uses given nlm_vnode (i.e. if its reference counter
- * is 0), nlm_vnode_release() asks local os/flock manager
+ * uses given nlm_vhold (i.e. if its reference counter
+ * is 0), nlm_vhold_release() asks local os/flock manager
  * whether given host has any locks (and share reservations)
- * on given  If there no any active locks, nlm_vnode is
+ * on given  If there no any active locks, nlm_vhold is
  * freed and vnode it holds is released.
  */
 void
-nlm_vnode_release(struct nlm_host *hostp,
-    struct nlm_vnode *nvp, bool_t check_locks)
+nlm_vhold_release(struct nlm_host *hostp,
+    struct nlm_vhold *nvp, bool_t check_locks)
 {
 	if (nvp == NULL)
 		return;
@@ -622,7 +622,7 @@ nlm_vnode_release(struct nlm_host *hostp,
 	if (nvp->nv_refs > 0 ||
 	    !(nvp->nv_flags & (NV_JUSTBORN | NV_CHECKLOCKS))) {
 		/*
-		 * Either some one uses given nlm_vnode or we wasn't
+		 * Either some one uses given nlm_vhold or we wasn't
 		 * asked to check local locks on it. Just return,
 		 * our work is node.
 		 */
@@ -632,19 +632,19 @@ nlm_vnode_release(struct nlm_host *hostp,
 	}
 
 	DTRACE_PROBE2(nvp__free, struct nlm_host *, hostp,
-	    struct nlm_vnode *, nvp);
+	    struct nlm_vhold *, nvp);
 
 	/*
-	 * No one uses the nlm_vnode and we was asked
-	 * to check local locks on it or nlm_vnode was just born.
+	 * No one uses the nlm_vhold and we was asked
+	 * to check local locks on it or nlm_vhold was just born.
 	 *
-	 * NOTE: It's important to check locks on nlm_vnodes that
+	 * NOTE: It's important to check locks on nlm_vholds that
 	 * are just born (i.e. have been used only once), because
-	 * toplevel code that allocates given nlm_vnode to add a
+	 * toplevel code that allocates given nlm_vhold to add a
 	 * new lock on it, can fail to add the lock. In this case
-	 * it happily releases the nlm_vnode with check_locks = FALSE.
-	 * We don't want to have any stale nlm_vnodes, thus we need to
-	 * check whether "just born" nlm_vnode really has any locks.
+	 * it happily releases the nlm_vhold with check_locks = FALSE.
+	 * We don't want to have any stale nlm_vholds, thus we need to
+	 * check whether "just born" nlm_vhold really has any locks.
 	 * This is done only once.
 	 */
 	nvp->nv_flags &= ~NV_CHECKLOCKS;
@@ -660,15 +660,15 @@ nlm_vnode_release(struct nlm_host *hostp,
 
 	/*
 	 * There're no any locks given host has on a vnode.
-	 * Now we free to delete nlm_vnode and drop a vnode
+	 * Now we free to delete nlm_vhold and drop a vnode
 	 * it holds.
 	 */
-	avl_remove(&hostp->nh_vnodes, nvp);
+	avl_remove(&hostp->nh_vholds, nvp);
 	mutex_exit(&hostp->nh_lock);
 
 	VN_RELE(nvp->nv_vp);
 	nvp->nv_vp = NULL;
-	kmem_cache_free(nlm_vnode_cache, nvp);
+	kmem_cache_free(nlm_vhold_cache, nvp);
 }
 
 /*
@@ -718,7 +718,7 @@ nlm_destroy_client_pending(struct nlm_host *host)
 static void
 nlm_destroy_client_locks(struct nlm_host *host)
 {
-	struct nlm_vnode *nvp;
+	struct nlm_vhold *nvp;
 	struct flock64 fl;
 	int flags;
 
@@ -729,11 +729,11 @@ nlm_destroy_client_locks(struct nlm_host *host)
 	fl.l_sysid = host->nh_sysid;
 	flags = F_REMOTELOCK | FREAD | FWRITE;
 
-	nvp = avl_first(&host->nh_vnodes);
+	nvp = avl_first(&host->nh_vholds);
 	while (nvp != NULL) {
 		(void) VOP_FRLOCK(nvp->nv_vp, F_SETLK, &fl,
 		    flags, 0, NULL, CRED(), NULL);
-		nvp = AVL_NEXT(&host->nh_vnodes, nvp);
+		nvp = AVL_NEXT(&host->nh_vholds, nvp);
 	}
 }
 
@@ -774,8 +774,8 @@ nlm_host_destroy(struct nlm_host *hostp)
 	nlm_rpc_cache_destroy(hostp);
 	ASSERT(TAILQ_EMPTY(&hostp->nh_rpchc));
 
-	ASSERT(avl_is_empty(&hostp->nh_vnodes));
-	avl_destroy(&hostp->nh_vnodes);
+	ASSERT(avl_is_empty(&hostp->nh_vholds));
+	avl_destroy(&hostp->nh_vholds);
 
 	mutex_destroy(&hostp->nh_lock);
 	cv_destroy(&hostp->nh_rpcb_cv);
@@ -949,9 +949,9 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	host->nh_monstate = NLM_UNMONITORED;
 	host->nh_rpcb_state = NRPCB_NEED_UPDATE;
 
-	avl_create(&host->nh_vnodes, nlm_vnode_cmp,
-	    sizeof (struct nlm_vnode),
-	    offsetof(struct nlm_vnode, nv_tree));
+	avl_create(&host->nh_vholds, nlm_vhold_cmp,
+	    sizeof (struct nlm_vhold),
+	    offsetof(struct nlm_vhold, nv_tree));
 
 	TAILQ_INIT(&host->nh_srv_slocks);
 	TAILQ_INIT(&host->nh_rpchc);
@@ -1244,10 +1244,10 @@ nlm_host_release(struct nlm_globals *g, struct nlm_host *hostp)
 	 * NOTE: We don't need to check whether there're
 	 * any sleeping locks made by this host, because
 	 * each lock (doesn't matter if it's active or
-	 * sleeping) has a nlm_vnode associated with it.
+	 * sleeping) has a nlm_vhold associated with it.
 	 */
 	if (hostp->nh_refs != 0 ||
-	    !avl_is_empty(&hostp->nh_vnodes)) {
+	    !avl_is_empty(&hostp->nh_vholds)) {
 		mutex_exit(&g->lock);
 		return;
 	}
