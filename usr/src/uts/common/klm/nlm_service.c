@@ -111,15 +111,17 @@ void
 nlm_do_notify1(nlm_sm_status *argp, void *res, struct svc_req *sr)
 {
 	uint32_t sysid;
+	struct nlm_globals *g;
 	struct nlm_host *host;
 
-	NLM_DEBUG(3, "nlm_do_notify1(): mon_name = %s\n", argp->mon_name);
+	NLM_DEBUG(NLM_LL3, "nlm_do_notify1(): mon_name = %s\n", argp->mon_name);
+	g = zone_getspecific(nlm_zone_key, curzone);
 	bcopy(&argp->priv, &sysid, sizeof (sysid));
-	host = nlm_host_find_by_sysid(sysid);
+	host = nlm_host_find_by_sysid(g, sysid);
 	if (host) {
 		nlm_host_notify_server(host, argp->state);
 		nlm_host_notify_client(host);
-		nlm_host_release(host);
+		nlm_host_release(g, host);
 	}
 }
 
@@ -143,6 +145,7 @@ void
 nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
     struct svc_req *sr, nlm_testres_cb cb)
 {
+	struct nlm_globals *g;
 	struct nlm_host *host;
 	struct nlm_vnode *nv = NULL;
 	struct netbuf *addr;
@@ -158,14 +161,15 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
-	host = nlm_host_findcreate(name, netid, addr);
+	g = zone_getspecific(nlm_zone_key, curzone);
+	host = nlm_host_findcreate(g, name, netid, addr);
 	if (host == NULL) {
 		resp->stat.stat = nlm4_denied_nolocks;
 		return;
 	}
 	sysid = host->nh_sysid;
 
-	NLM_DEBUG(3, "nlm_do_test(): name = %s sysid = %d\n", name, sysid);
+	NLM_DEBUG(NLM_LL3, "nlm_do_test(): name = %s sysid = %d\n", name, sysid);
 
 	nv = nlm_vnode_findcreate(host, &argp->alock.fh);
 	if (nv == NULL) {
@@ -227,7 +231,7 @@ out:
 	}
 
 	nlm_vnode_release(host, nv);
-	nlm_host_release(host);
+	nlm_host_release(g, host);
 }
 
 /*
@@ -251,6 +255,7 @@ void
 nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
     nlm_reply_cb reply_cb, nlm_res_cb res_cb, nlm_testargs_cb grant_cb)
 {
+	struct nlm_globals *g;
 	struct flock64 fl;
 	struct nlm_host *host;
 	struct nlm_vnode *nv = NULL;
@@ -270,13 +275,14 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
-	host = nlm_host_findcreate(name, netid, addr);
+	g = zone_getspecific(nlm_zone_key, curzone);
+	host = nlm_host_findcreate(g, name, netid, addr);
 	if (host == NULL) {
 		status = nlm4_denied_nolocks;
 		goto doreply;
 	}
 
-	NLM_DEBUG(3, "nlm_do_lock(): name = %s sysid = %d\n",
+	NLM_DEBUG(NLM_LL3, "nlm_do_lock(): name = %s sysid = %d\n",
 	    name, host->nh_sysid);
 
 	nv = nlm_vnode_findcreate(host, &argp->alock.fh);
@@ -413,7 +419,7 @@ doreply:
 	 * No monitoring for these (lame) clients.
 	 */
 	if (do_mon_req && grant_cb != NULL)
-		nlm_host_monitor(host, argp->state);
+		nlm_host_monitor(g, host, argp->state);
 
 	if (do_blocking) {
 		/*
@@ -432,7 +438,7 @@ doreply:
 	}
 
 	nlm_vnode_release(host, nv);
-	nlm_host_release(host);
+	nlm_host_release(g, host);
 }
 
 /*
@@ -554,6 +560,7 @@ void
 nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
     struct svc_req *sr, nlm_res_cb cb)
 {
+	struct nlm_globals *g;
 	struct nlm_host *host;
 	struct nlm_vnode *nv = NULL;
 	struct netbuf *addr;
@@ -570,14 +577,15 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
-	host = nlm_host_findcreate(name, netid, addr);
+	g = zone_getspecific(nlm_zone_key, curzone);
+	host = nlm_host_findcreate(g, name, netid, addr);
 	if (host == NULL) {
 		resp->stat.stat = nlm4_denied_nolocks;
 		return;
 	}
 	sysid = host->nh_sysid;
 
-	NLM_DEBUG(3, "nlm_do_cancel(): name = %s sysid = %d\n", name, sysid);
+	NLM_DEBUG(NLM_LL3, "nlm_do_cancel(): name = %s sysid = %d\n", name, sysid);
 
 	nv = nlm_vnode_findcreate(host, &argp->alock.fh);
 	if (nv == NULL) {
@@ -648,7 +656,7 @@ out:
 	}
 
 	nlm_vnode_release(host, nv);
-	nlm_host_release(host);
+	nlm_host_release(g, host);
 }
 
 /*
@@ -660,6 +668,7 @@ void
 nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
     struct svc_req *sr, nlm_res_cb cb)
 {
+	struct nlm_globals *g;
 	struct nlm_host *host;
 	struct nlm_vnode *nv = NULL;
 	struct netbuf *addr;
@@ -675,14 +684,15 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
-	host = nlm_host_findcreate(name, netid, addr);
+	g = zone_getspecific(nlm_zone_key, curzone);
+	host = nlm_host_findcreate(g, name, netid, addr);
 	if (host == NULL) {
 		resp->stat.stat = nlm4_denied_nolocks;
 		return;
 	}
 	sysid = host->nh_sysid;
 
-	NLM_DEBUG(3, "nlm_do_unlock(): name = %s sysid = %d\n", name, sysid);
+	NLM_DEBUG(NLM_LL3, "nlm_do_unlock(): name = %s sysid = %d\n", name, sysid);
 
 	nv = nlm_vnode_findcreate(host, &argp->alock.fh);
 	if (nv == NULL) {
@@ -734,7 +744,7 @@ out:
 	}
 
 	nlm_vnode_release(host, nv);
-	nlm_host_release(host);
+	nlm_host_release(g, host);
 }
 
 /*
@@ -757,6 +767,7 @@ void
 nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
     struct svc_req *sr, nlm_res_cb cb)
 {
+	struct nlm_globals *g;
 	struct nlm_owner_handle *oh;
 	struct nlm_host *host;
 	struct nlm_waiting_lock *nw;
@@ -764,8 +775,9 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 	bzero(resp, sizeof (*resp));
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
+	g = zone_getspecific(nlm_zone_key, curzone);
 	oh = (void *) argp->alock.oh.n_bytes;
-	host = nlm_host_find_by_sysid(oh->oh_sysid);
+	host = nlm_host_find_by_sysid(g, oh->oh_sysid);
 	if (host == NULL) {
 		/* could not match alock */
 		resp->stat.stat = nlm4_denied;
@@ -815,7 +827,7 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 		}
 	}
 
-	nlm_host_release(host);
+	nlm_host_release(g, host);
 }
 
 /*
@@ -826,6 +838,7 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 void
 nlm_do_free_all(nlm4_notify *argp, void *res, struct svc_req *sr)
 {
+	struct nlm_globals *g;
 	struct nlm_host *host;
 	struct netbuf *addr;
 	char *netid;
@@ -835,7 +848,8 @@ nlm_do_free_all(nlm4_notify *argp, void *res, struct svc_req *sr)
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
-	host = nlm_host_findcreate(name, netid, addr);
+	g = zone_getspecific(nlm_zone_key, curzone);
+	host = nlm_host_findcreate(g, name, netid, addr);
 	if (host == NULL) {
 		/* nothing to do */
 		return;
@@ -847,8 +861,7 @@ nlm_do_free_all(nlm4_notify *argp, void *res, struct svc_req *sr)
 	 * server has restarted.
 	 */
 	nlm_host_notify_server(host, argp->state);
-
-	nlm_host_release(host);
+	nlm_host_release(g, host);
 	(void) res;
 }
 
@@ -903,6 +916,7 @@ nlm_init_shrlock(struct shrlock *shr,
 void
 nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 {
+	struct nlm_globals *g;
 	struct nlm_host *host;
 	struct nlm_vnode *nv = NULL;
 	struct netbuf *addr;
@@ -918,14 +932,15 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
-	host = nlm_host_findcreate(name, netid, addr);
+	g = zone_getspecific(nlm_zone_key, curzone);
+	host = nlm_host_findcreate(g, name, netid, addr);
 	if (host == NULL) {
 		resp->stat = nlm4_denied_nolocks;
 		return;
 	}
 	sysid = host->nh_sysid;
 
-	NLM_DEBUG(3, "nlm_do_share(): name = %s sysid = %d\n", name, sysid);
+	NLM_DEBUG(NLM_LL3, "nlm_do_share(): name = %s sysid = %d\n", name, sysid);
 
 	if (argp->reclaim == 0 &&
 	    ddi_get_lbolt() < nlm_grace_threshold) {
@@ -950,7 +965,7 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 
 out:
 	nlm_vnode_release(host, nv);
-	nlm_host_release(host);
+	nlm_host_release(g, host);
 }
 
 /*
@@ -961,6 +976,7 @@ out:
 void
 nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 {
+	struct nlm_globals *g;
 	struct nlm_host *host;
 	struct nlm_vnode *nv = NULL;
 	struct netbuf *addr;
@@ -976,14 +992,15 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
-	host = nlm_host_findcreate(name, netid, addr);
+	g = zone_getspecific(nlm_zone_key, curzone);
+	host = nlm_host_findcreate(g, name, netid, addr);
 	if (host == NULL) {
 		resp->stat = nlm4_denied_nolocks;
 		return;
 	}
 	sysid = host->nh_sysid;
 
-	NLM_DEBUG(3, "nlm_do_unshare(): name = %s sysid = %d\n", name, sysid);
+	NLM_DEBUG(NLM_LL3, "nlm_do_unshare(): name = %s sysid = %d\n", name, sysid);
 
 	if (argp->reclaim == 0 &&
 	    ddi_get_lbolt() < nlm_grace_threshold) {
@@ -1009,5 +1026,5 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 
 out:
 	nlm_vnode_release(host, nv);
-	nlm_host_release(host);
+	nlm_host_release(g, host);
 }

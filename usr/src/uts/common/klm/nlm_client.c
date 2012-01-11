@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
+ * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -224,18 +224,25 @@ nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flk,
 	const char *netid;
 	struct nlm_host *host = NULL;
 	int error, xflags;
+	struct nlm_globals *g;
 
 	mi = VTOMI(vp);
 	sv = mi->mi_curr_serv;
 
 	netid = nlm_netid_from_knetconfig(sv->sv_knconf);
 	if (netid == NULL) {
-		cmn_err(CE_NOTE, "nlm_frlock: unknown NFS netid");
+		NLM_ERR("nlm_frlock: unknown NFS netid");
 		error = ENOSYS;
 		goto out;
 	}
 
-	host = nlm_host_findcreate(sv->sv_hostname, netid, &sv->sv_addr);
+
+	g = zone_getspecific(nlm_zone_key, curzone);
+	host = nlm_host_findcreate(g, sv->sv_hostname, netid, &sv->sv_addr);
+	if (host == NULL) {
+		error = ENOSYS;
+		goto out;
+	}
 
 	/*
 	 * BSD: Push dirty pages to the server and flush our cache
@@ -370,11 +377,11 @@ nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flk,
 	}
 	/* Start monitoring this host. */
 
-	nlm_host_monitor(host, 0);
+	nlm_host_monitor(g, host, 0);
 
 out:
 	if (host)
-		nlm_host_release(host);
+		nlm_host_release(g, host);
 
 	return (error);
 }
@@ -971,16 +978,6 @@ nlm_init_lock(struct nlm4_lock *lock,
 	/* Caller converts to zero-base. */
 	ASSERT(fl->l_whence == SEEK_SET);
 
-#if 0 /* XXX handled in our stubs */
-	if (vers == NLM_VERS) {
-		/*
-		 * Enforce range limits on V1 locks
-		 */
-		if (fl->l_start > 0xffffffffLL || fl->l_len > 0xffffffffLL)
-			return (EOVERFLOW);
-	}
-#endif /* XXX */
-
 	bzero(lock, sizeof (*lock));
 	bzero(oh, sizeof (*oh));
 
@@ -1008,6 +1005,7 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	const char *netid;
 	struct nlm_host *host = NULL;
 	int error, xflags;
+	struct nlm_globals *g;
 
 	mi = VTOMI(vp);
 	sv = mi->mi_curr_serv;
@@ -1019,7 +1017,8 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 		goto out;
 	}
 
-	host = nlm_host_findcreate(sv->sv_hostname, netid, &sv->sv_addr);
+	g = zone_getspecific(nlm_zone_key, curzone);
+	host = nlm_host_findcreate(g, sv->sv_hostname, netid, &sv->sv_addr);
 
 	/*
 	 * Fill in s_sysid for the local locking calls.
@@ -1060,16 +1059,16 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 		 * XXX: release the remote lock?  Or what?
 		 * Ignore the local error for now...
 		 */
-		cmn_err(CE_NOTE, "NLM: set locally, err %d", error);
+		NLM_ERR("NLM: set locally, err %d\n", error);
 		error = 0;
 	}
 
 	/* Start monitoring this host. */
-	nlm_host_monitor(host, 0);
+	nlm_host_monitor(g, host, 0);
 
 out:
 	if (host)
-		nlm_host_release(host);
+		nlm_host_release(g, host);
 
 	return (error);
 }

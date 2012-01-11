@@ -40,6 +40,36 @@ SYMBOL_SCOPE {
 		lm_sysidt;
 		lm_unexport;
 		lm_vp_active;
+		lm_global_nlmid;
+		lm_remove_file_locks;
+		lm_set_nlmid_flk;
+		nlm_cancel_1;
+		nlm_netid_from_knetconfig;
+		nlm_set_recovery_cb;
+		nlm_deregister_wait_lock;
+		nlm4_unlock_4;
+		nlm_zone_key;
+		nlm4_cancel_4;
+		nlm_unlock_1;
+		nlm_host_findcreate;
+		nlm_wait_lock;
+		nlm_lock_1;
+		nlm4_lock_4;
+		nlm_test_1;
+		nlm4_test_4;
+		xdr_nlm4_res;
+		nlm_host_monitor;
+		nlm_host_get_rpc;
+		nlm_host_get_state;
+		nlm_host_get_sysid;
+		nlm_share_3;
+		nlm4_unshare_4;
+		xdr_nlm4_shareres;
+		xdr_nlm4_testres;
+		nlm_unshare_3;
+		nlm_register_wait_lock;
+		nlm_host_release;
+		nlm4_share_4;
 
 	local:
 		*;

@@ -1463,6 +1463,7 @@ RPCMOD_OBJS +=	rpcmod.o	clnt_cots.o	clnt_clts.o \
 
 KLMMOD_OBJS +=	klmmod.o \
 		nlm_clhdl.o \
+		nlm_netconfig.o \
 		nlm_impl.o \
 		nlm_dispatch.o \
 		nlm_rpc_svc.o \

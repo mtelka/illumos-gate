@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
+ * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -98,47 +98,28 @@ typedef enum {
 } nlm_run_status_t;
 
 /*
+ * Per-zone NLM debug level.
+ * NLM_LL0: no verbose output
+ * NLM_LL1: verbose error messages
+ * NLM_LL2: verbose debug output in monitor/unmonitor/recovery operations
+ * NLM_LL3: verbose debug output in server functions
+ *
+ * NOTE: log level has sense only when NLM was compiled with DEBUG option.
+ */
+typedef enum {
+	NLM_LL0 = 0,
+	NLM_LL1,
+	NLM_LL2,
+	NLM_LL3,
+} nlm_loglevel_t;
+
+/*
  * Data structures
  */
-
-struct nlm_globals {
-	kmutex_t lock;
-	clock_t grace_threshold;
-	clock_t next_idle_check;
-	CLIENT *nlm_nsm;
-	AUTH *nlm_auth;
-	pid_t lockd_pid;
-	int nsm_state;
-	nlm_run_status_t run_status;
-	kcondvar_t status_cv;
-	/* options from lockd */
-	int debug_level;
-	int cn_idle_tmo;
-	int grace_period;
-	int retrans_tmo;
-};
 
 /* XXX: temporary... */
 extern zone_key_t nlm_zone_key;
 extern clock_t nlm_grace_threshold;
-extern void nlm_init(void);
-
-
-/*
- * Debug level passed in from userland.
- */
-#if !defined(NDEBUG) || defined(lint)
-#define	NLM_DEBUG(_level, args...)			\
-	do {						\
-		struct nlm_globals *g;			\
-		g = zone_getspecific(nlm_zone_key, curzone); \
-		if (g->debug_level >= (_level))	\
-			cmn_err(CE_CONT, args);	\
-	} while (__lintzero)
-#else	/* NDEBUG */
-#define	NLM_DEBUG(_level, args...)	((void)0)
-#endif	/* NDEBUG */
-#define	NLM_ERR(args...)	cmn_err(CE_NOTE, args)
 
 /*
  * Locks:
@@ -148,20 +129,23 @@ extern void nlm_init(void);
  * (c)		const until freeing
  * (a)		modified using atomic ops
  */
-
 /*
- * The in-kernel RPC (kRPC) subsystem uses TLI/XTI, and
- * therfore needs _both_ a knetconfig and an address when
- * establishing a network endpoint.  We keep a collection
- * of the knetconfig structs for all our RPC bindings and
- * find one when needed using the "netid".
+ * Debug level passed in from userland.
  */
-struct nlm_knc {
-	TAILQ_ENTRY(nlm_knc) nc_link;	/* (l) global list of NCs */
-	const char *nc_netid;
-	struct knetconfig nc_conf;
-};
-TAILQ_HEAD(nlm_knc_list, nlm_knc);
+#ifdef DEBUG
+#define NLM_DEBUG(_level, ...)	  \
+	do { \
+		struct nlm_globals *__g; \
+		(__g) = zone_getspecific(nlm_zone_key, curzone); \
+		if ((__g)->loglevel >= (_level)) \
+			cmn_err(CE_CONT, __VA_ARGS__); \
+	} while (0)
+#else /* !DEBUG */
+#define NLM_DEBUG(_level, ...) ((void)0)
+#endif /* DEBUG */
+
+#define	NLM_ERR(...)	\
+	cmn_err(CE_NOTE, __VA_ARGS__)
 
 /*
  * List of vnodes in use by some client.  We (the server) keep
@@ -238,10 +222,10 @@ struct nlm_rpc {
 struct nlm_host {
 	kmutex_t	nh_lock;
 	volatile uint_t	nh_refs;	/* (a) reference count */
-	TAILQ_ENTRY(nlm_host) nh_link; /* (g) global list of hosts */
+	TAILQ_ENTRY(nlm_host) nh_link; /* (z) per-zone list of hosts */
 	char		*nh_name;	/* (c) printable name of host */
 	char		*nh_netid;	/* TLI binding name */
-	struct knetconfig nh_knc;	/* (c) knetconfg for nh_addr */
+	struct knetconfig nh_knc;	/* (c) knetconfig for nh_addr */
 	struct netbuf	nh_addr;	/* (c) remote address of host */
 	int32_t		nh_sysid;	/* (c) our allocaed system ID */
 	struct nlm_rpc	nh_srvrpc;	/* (l) RPC for server replies */
@@ -256,6 +240,45 @@ struct nlm_host {
 TAILQ_HEAD(nlm_host_list, nlm_host);
 
 /*
+ * nlm_nsm structure describes RPC client handle that can be
+ * used to communicate with local NSM via kRPC.
+ *
+ * We need to wrap handle with nlm_nsm structure because kRPC
+ * can not share one handle between several threads. It's assumed
+ * that NLM uses only one NSM handle per zone, thus all RPC operations
+ * on NSM's handle are serialized using nlm_nsm->sem semaphore.
+ *
+ * nlm_nsm also contains refcnt field used for reference counting.
+ * It's used because there exist a possibility of simultaneous
+ * execution of NLM shutdown operation and host monitor/unmonitor
+ * operations.
+ */
+struct nlm_nsm {
+	CLIENT *handle;
+	ksema_t sem;
+	volatile uint_t refcnt;
+};
+
+struct nlm_globals {
+	kmutex_t lock;
+	clock_t grace_threshold;
+	clock_t next_idle_check;
+	pid_t lockd_pid;
+	int nsm_state;
+	nlm_run_status_t run_status;
+	nlm_loglevel_t loglevel; /* Debug loglevel */
+	kcondvar_t status_cv;
+	struct nlm_nsm *nlm_nsm; /* An RPC client handle that can be used to communicate
+		                        with the local NSM. */
+	struct nlm_host_list nlm_hosts; /* (l) NLM hosts */
+	/* options from lockd */
+	int cn_idle_tmo;
+	int grace_period;
+	int retrans_tmo;
+};
+
+
+/*
  * This is what we pass as the "owner handle" for NLM_LOCK.
  * This lets us find the blocked lock in NLM_GRANTED.
  * It also exposes on the wire what we're using as the
@@ -265,6 +288,17 @@ TAILQ_HEAD(nlm_host_list, nlm_host);
 struct nlm_owner_handle {
 	int oh_sysid;		/* of remote host */
 };
+
+/*
+ * XXX[DK]: Release RPC handle obtained by calling
+ * nlm_host_get_rpc or nlm_get_rpc. For now nlm_get_rpc
+ * allocates new client every time we need one, but in future
+ * it will take new client from a cache. So nlm_release_rpc
+ * function just destroes allocated client now, but it will
+ * be more sophisticated in future: it should put released
+ * client into a cache.
+ */
+#define CLNT_RELEASE(clnt) CLNT_DESTROY(clnt)
 
 /* nlm_client.c */
 int nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flk,
@@ -305,23 +339,29 @@ void nlm_prog_4(struct svc_req *rqstp, SVCXPRT *transp);
 
 
 /* New lockd process starting in this zone. */
-int nlm_svc_starting(struct nlm_globals *,
-	const char *, struct knetconfig *);
-void nlm_svc_stopping(struct nlm_globals *);
+int nlm_svc_starting(struct nlm_globals *g, struct file *fp,
+    const char *netid, struct knetconfig *knc);
+void nlm_svc_stopping(struct nlm_globals *g);
 
 /* Start NLM service on the given endpoint. */
-int nlm_svc_add_ep(struct nlm_globals *, struct file *,
-	char *, struct knetconfig *);
-
-/* XXX: Not sure yet what this needs to do... */
-extern void CLNT_RELEASE(CLIENT *);
+int nlm_svc_add_ep(struct nlm_globals *g, struct file *fp,
+	const char *netid, struct knetconfig *knc);
 
 /*
  * Copy a struct netobj.
  */
 extern void nlm_copy_netobj(struct netobj *dst, struct netobj *src);
 
-const char *nlm_netid_from_knetconfig(struct knetconfig *);
+/*
+ * Functions working with knetconfig
+ */
+void nlm_netconfigs_init(void);
+int nlm_knetconfig_from_netid(const char *netid,
+    /* OUT */ struct knetconfig *knc);
+const char *nlm_netid_from_knetconfig(struct knetconfig *knc);
+int nlm_build_knetconfig(int nfmly, int nproto,
+    /* OUT */ struct knetconfig *out_knc);
+
 
 /*
  * Search for an existing NLM host that matches the given name
@@ -346,22 +386,23 @@ extern struct nlm_host *nlm_find_host_by_name(const char *name,
 extern struct nlm_host *nlm_find_host_by_addr(struct netbuf *addr,
     int vers);
 
-struct nlm_host *nlm_host_findcreate(char *name,
+struct nlm_host *nlm_host_findcreate(struct nlm_globals *g, char *name,
     const char *netid, struct netbuf *addr);
-struct nlm_host *nlm_host_find_by_sysid(int sysid);
+struct nlm_host *nlm_host_find_by_sysid(struct nlm_globals *g, int sysid);
 
 /*
  * Register this NLM host with the local NSM so that we can be
  * notified if it reboots.
  */
-void nlm_host_monitor(struct nlm_host *host, int state);
-void nlm_host_unmonitor(struct nlm_host *host);
+void nlm_host_monitor(struct nlm_globals *g,
+    struct nlm_host *host, int state);
+void nlm_host_unmonitor(struct nlm_globals *g, struct nlm_host *host);
 
 /*
  * Decrement the host reference count, freeing resources if the
  * reference count reaches zero.
  */
-void nlm_host_release(struct nlm_host *host);
+void nlm_host_release(struct nlm_globals *g, struct nlm_host *host);
 
 void nlm_host_notify_server(struct nlm_host *host, int newstate);
 void nlm_host_notify_client(struct nlm_host *host);
@@ -496,10 +537,5 @@ struct vop_advlock_args;
 struct vop_reclaim_args;
 extern int nlm_advlock(struct vop_advlock_args *ap);
 extern int nlm_reclaim(struct vop_reclaim_args *ap);
-
-/*
- * Acquire the next sysid for remote locks not handled by the NLM.
- */
-extern uint32_t nlm_acquire_next_sysid(void);
 
 #endif	/* _NLM_NLM_H_ */

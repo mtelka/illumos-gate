@@ -114,7 +114,7 @@ static	char	*MyName;
  * initialization. (It uses it to talk to statd.)
  */
 static  NETSELDECL(defaultproviders)[] = {
-	"/dev/ticotsord",
+	"/dev/ticlts",
 	"/dev/tcp6",
 	"/dev/tcp",
 	"/dev/udp6",
@@ -501,6 +501,12 @@ nlmsvc(int fd, struct netbuf addrmask, struct netconfig *nconf)
 	lma.n_fmly = ncfmly_to_lmfmly(nconf->nc_protofmly);
 	lma.n_proto = nctype_to_lmprot(nconf->nc_semantics);
 	lma.n_rdev = ncdev_to_rdev(nconf->nc_device);
+
+	/*
+	 * FIXME[DK]: make debug=3 by default to simplify development.
+	 * Later the following line must be removed.
+	 */
+	lma.debug = 3;
 
 	return (_nfssys(LM_SVC, &lma));
 }

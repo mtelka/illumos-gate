@@ -28,9 +28,9 @@
 #include <nfs/nfs.h>
 #include <nfs/nfssys.h>
 #include <nfs/lm.h>
+#include <nfs/rnode.h>
 #include <rpcsvc/nlm_prot.h>
 #include "nlm_impl.h"
-
 
 static struct modlmisc modlmisc = {
 	&mod_miscops, "lock mgr common module"
@@ -40,6 +40,8 @@ static struct modlinkage modlinkage = {
 	MODREV_1, &modlmisc, NULL
 };
 
+int				lm_global_nlmid;
+void			(*lm_remove_file_locks)(int);
 kmutex_t		lm_lck;
 zone_key_t		nlm_zone_key;
 
@@ -72,8 +74,10 @@ lm_zone_init(zoneid_t zoneid)
 	struct nlm_globals *g;
 
 	g = kmem_zalloc(sizeof (*g), KM_SLEEP);
+	TAILQ_INIT(&g->nlm_hosts);
 
-	/* XXX - todo... */
+	g->lockd_pid = 0;
+	g->run_status = NLM_ST_DOWN;
 
 	return (g);
 }
@@ -102,8 +106,7 @@ _init()
 	/* Per-zone lockmgr data.  See: os/flock.c */
 	zone_key_create(&flock_zone_key, flk_zone_init, NULL, flk_zone_fini);
 	lm_sysid_init();
-
-	nlm_init();	/* XXX - temporary... */
+	nlm_netconfigs_init();
 
 	retval = mod_install(&modlinkage);
 	if (retval == 0)
@@ -150,10 +153,11 @@ int
 lm_svc(struct lm_svc_args *args)
 {
 	struct knetconfig knc;
-	char *netid;
+	const char *netid;
 	struct nlm_globals *g;
 	struct file *fp = NULL;
 	int err = 0;
+	bool_t nlm_started = FALSE;
 
 	/* Get our "globals" */
 	g = zone_getspecific(nlm_zone_key, curzone);
@@ -162,7 +166,16 @@ lm_svc(struct lm_svc_args *args)
 	 * Check version of lockd calling.
 	 */
 	if (args->version != LM_SVC_CUR_VERS) {
-		cmn_err(CE_WARN, "lm_svc: version mismatch");
+		NLM_ERR("lm_svc: Version mismatch (given 0x%x, expected 0x%x)\n",
+		    args->version, LM_SVC_CUR_VERS);
+		return (EINVAL);
+	}
+
+	/*
+	 * Validate log level
+	 */
+	if ((args->debug < NLM_LL0) || (args->debug > NLM_LL3)) {
+		NLM_ERR("lm_svc: Unexpected loglevel %d\n", args->debug);
 		return (EINVAL);
 	}
 
@@ -170,68 +183,42 @@ lm_svc(struct lm_svc_args *args)
 	 * Build knetconfig, checking arg values.
 	 * Also come up with the "netid" string.
 	 * (With some knowledge of /etc/netconfig)
-	 * XXX: Later, should just put all of this in
-	 * the lm_svc_args and bump the version...
+	 *
+	 * FIXME[DK]: Later we have to decide how to pass
+	 * netid/knetconfig arguments from user-space in a better way.
+	 * For now we have pre-defined static table of all netid/knetconfigs
+	 * KLM can deal with. So I see two ways:
+	 * 1) User space passes only netid. Kernel then lookups valid knetconfig
+	 *    by given netid.
+	 * 2) Kernel builds and dynamically registers all netids/knetconfigs
+	 *    user-space passes. In this case we don't need pre-defined knetconfigs
+	 *    table in the kernel.
 	 */
 	bzero(&knc, sizeof (knc));
+	err = nlm_build_knetconfig(args->n_fmly, args->n_proto, &knc);
+	if (err)
+		return (err);
 
-	/*
-	 * NB: User-level encodes nc_semantics in n_proto
-	 * as LM_TCP, LM_UDP. (for loopback too!)
-	 */
-	switch (args->n_proto) {
-	case LM_TCP:
-		knc.knc_semantics = NC_TPI_COTS_ORD;
-		knc.knc_proto = NC_TCP;
-		break;
-	case LM_UDP:
-		knc.knc_semantics = NC_TPI_CLTS;
-		knc.knc_proto = NC_UDP;
-		break;
-	default:
-		return (EINVAL);
-	}
-	switch (args->n_fmly) {
-	case LM_INET:
-		knc.knc_protofmly = NC_INET;
-		netid = (args->n_proto == LM_TCP) ?
-		    "tcp" : "udp";
-		break;
-	case LM_INET6:
-		knc.knc_protofmly = NC_INET6;
-		netid = (args->n_proto == LM_TCP) ?
-		    "tcp6" : "udp6";
-		break;
-	case LM_LOOPBACK:
-		knc.knc_protofmly = NC_LOOPBACK;
-		/* Override what we set above. */
-		knc.knc_proto = NC_NOPROTO;
-		netid = (args->n_proto == LM_TCP) ?
-		    "ticotsord" : "ticlts";
-		break;
-	default:
-		return (EINVAL);
-	}
 	knc.knc_rdev = args->n_rdev;
+	netid = nlm_netid_from_knetconfig(&knc);
+	if (!netid)
+		return (EINVAL);
 
 	/*
 	 * Setup service on the passed transport.
 	 * NB: must releasef(fp) after this.
 	 */
-	if ((fp = getf(args->fd)) == NULL) {
+	if ((fp = getf(args->fd)) == NULL)
 		return (EBADF);
-	}
 
 	mutex_enter(&g->lock);
-
 	/*
 	 * Don't try to start while still shutting down,
 	 * or lots of things will fail...
 	 */
 	if (g->run_status == NLM_ST_STOPPING) {
-		mutex_exit(&g->lock);
 		err = EAGAIN;
-		goto out;
+		goto out_unlock;
 	}
 
 	/*
@@ -242,21 +229,19 @@ lm_svc(struct lm_svc_args *args)
 	 * so we piggy back initializations on that call.
 	 */
 	if (args->n_fmly == LM_LOOPBACK) {
-
 		if (g->run_status != NLM_ST_DOWN) {
-			mutex_exit(&g->lock);
-			err = EINVAL;
-			goto out;
+			err = EALREADY;
+			goto out_unlock;
 		}
 
 		g->run_status = NLM_ST_STARTING;
 		g->lockd_pid = curproc->p_pid;
 
 		/* Save the options. */
-		g->debug_level  = args->debug;
 		g->cn_idle_tmo  = args->timout;
 		g->grace_period = args->grace;
 		g->retrans_tmo  = args->retransmittimeout;
+		g->loglevel     = args->debug;
 
 		/* See nfs_sys.c (not yet per-zone) */
 		if (INGLOBALZONE(curproc)) {
@@ -265,25 +250,35 @@ lm_svc(struct lm_svc_args *args)
 		}
 
 		mutex_exit(&g->lock);
+		err = nlm_svc_starting(g, fp, netid, &knc);
+		goto out;
+	}
 
-		err = nlm_svc_starting(g, netid, &knc);
-		if (err == 0)
-			flk_set_lockmgr_status(FLK_LOCKMGR_UP);
-
-		mutex_enter(&g->lock);
-
-		g->run_status = (err == 0) ?
-		    NLM_ST_UP : NLM_ST_DOWN;
+	/*
+	 * If KLM is not started and the very first endpoint lockd
+	 * tries to add is not a loopback device, report an error.
+	 */
+	if (g->run_status != NLM_ST_UP) {
+		err = ENOTACTIVE;
+		goto out_unlock;
+	}
+	if (g->lockd_pid != curproc->p_pid) {
+		/* Check if caller has the same PID lockd does */
+		err = EPERM;
+		goto out_unlock;
 	}
 
 	mutex_exit(&g->lock);
+	/* register new endpoint */
+	err = nlm_svc_add_ep(g, fp, netid, &knc);
+	goto out;
 
-	if (err == 0)
-		err = nlm_svc_add_ep(g, fp, netid, &knc);
-
+out_unlock:
+	mutex_exit(&g->lock);
 out:
-	if (fp != NULL)
+	if (fp)
 		releasef(args->fd);
+
 	return (err);
 }
 
@@ -298,13 +293,26 @@ lm_shutdown(void)
 	struct nlm_globals *g;
 	proc_t *p;
 	pid_t pid;
+	int err;
 
 	/* Get our "globals" */
 	g = zone_getspecific(nlm_zone_key, curzone);
 
+	mutex_enter(&g->lock);
+	if (g->run_status != NLM_ST_UP) {
+		mutex_exit(&g->lock);
+		return (EALREADY);
+	}
+
+	g->run_status = NLM_ST_STOPPING;
 	pid = g->lockd_pid;
-	if (pid == 0)
+	if (pid == 0) {
+		mutex_exit(&g->lock);
 		return (ESRCH);
+	}
+
+	mutex_exit(&g->lock);
+	nlm_svc_stopping(g);
 
 	mutex_enter(&pidlock);
 	p = prfind(pid);
@@ -353,8 +361,38 @@ lm_cprresume(void)
 int
 lm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
 {
-	/* XXX - todo... */
-	return (0);
+	rnode_t *rp = VTOR(vp);
+	struct vattr va;
+	int err;
+
+	va.va_mask = AT_MODE;
+	err = nfs3getattr(vp, &va, cr);
+	if (err) {
+		NLM_DEBUG(NLM_LL1, "Failed to get AT_MODE NFS3 file attribte. [ERR=%d]\n", err);
+		return (0);
+	}
+	/* NLM4 doesn't allow mandatory file locking */
+	if (MANDLOCK(vp, va.va_mode)) {
+		NLM_DEBUG(NLM_LL1, "NLM4 doesn't allow mandatory locks!\n");
+		return (0);
+	}
+	/*
+	 * If the file corresponding to rnode is memory mapped to someone's
+	 * address space, we allow only advisory file locks aquiring the whole file
+	 * even if given lock is not intersect with existing mappings.
+	 *
+	 * XXX[DK]: I don't know if it's a "valid" behavior, but it the
+	 * easiest one. I'm not sure that we need to check intersection
+	 * of lock range and existing mappings, because nfs3_map doesn't check
+	 * intersection of new mapping range with existing locks.
+	 */
+	if ((rp->r_mapcnt > 0) && (fl->l_start != 0 || fl->l_len != 0)) {
+		NLM_DEBUG(NLM_LL1, "Lock l_start=%"PRId64", l_len=%"PRId64" is not a safe "
+		    "lock on memory mapped file\n", fl->l_start, fl->l_len);
+		return (0);
+	}
+
+	return (1);
 }
 
 /*
@@ -365,9 +403,31 @@ lm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
 int
 lm_safemap(const vnode_t *vp)
 {
-	/* XXX - todo... */
-	return (0);
+	struct locklist *vp_lock, *next;
+	int safe = 1;
+
+	vp_lock = flk_active_locks_for_vp(vp);
+	while (vp_lock) {
+		if ((vp_lock->ll_flock.l_start != 0) ||
+		    (vp_lock->ll_flock.l_len != 0))
+			safe = 0;
+
+		next = vp_lock->ll_next;
+		VN_RELE(vp_lock->ll_vp);
+		kmem_free(vp_lock, sizeof(*vp_lock));
+		vp_lock = next;
+	}
+
+	return (safe);
 }
+
+void
+lm_set_nlmid_flk(int *new_sysid)
+{
+	/* XXX[DK]: fill this up */
+	NLM_DEBUG(NLM_LL3, "nlm_set_nlmid_flk() is not implemented\n");
+}
+
 
 /*
  * Called by nfs_map() for the MANDLOCK case.
