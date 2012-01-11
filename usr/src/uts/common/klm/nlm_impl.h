@@ -378,24 +378,31 @@ TAILQ_HEAD(nlm_host_list, nlm_host);
  * It's used because there exist a possibility of simultaneous
  * execution of NLM shutdown operation and host monitor/unmonitor
  * operations.
+ *
+ * struct nlm_nsm:
+ *  ns_sem: a semaphore for serialization network operations to statd
+ *  ns_knc: a kneconfig describing transport that is used for communication
+ *  ns_addr: an address of local statd we're talking to
+ *  ns_handle: an RPC handle used for talking to local statd
  */
 struct nlm_nsm {
-	CLIENT *handle;
-	ksema_t sem;
-	volatile uint_t refcnt;
+	ksema_t			ns_sem;
+	struct knetconfig	ns_knc;
+	struct netbuf		ns_addr;
+	CLIENT			*ns_handle;
 };
 
 struct nlm_globals {
 	kmutex_t                    lock;
 	clock_t                     grace_threshold;
 	pid_t                       lockd_pid;
-	int                         nsm_state;
 	nlm_run_status_t            run_status;
 	nlm_loglevel_t              loglevel;
+	int32_t                     nsm_state;
 	kthread_t                  *nlm_gc_thread;
 	kcondvar_t                  nlm_gc_sched_cv;
 	kcondvar_t                  nlm_gc_finish_cv;
-	struct nlm_nsm             *nlm_nsm;
+	struct nlm_nsm              nlm_nsm;
 	avl_tree_t                  nlm_hosts_tree;
 	mod_hash_t                 *nlm_hosts_hash;
 	struct nlm_host_list        nlm_idle_hosts;

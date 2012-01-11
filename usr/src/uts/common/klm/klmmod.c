@@ -300,12 +300,7 @@ lm_svc(struct lm_svc_args *args)
 	 * know that lockd binds the loopback transport first,
 	 * so we piggy back initializations on that call.
 	 */
-	if (args->n_fmly == LM_LOOPBACK) {
-		if (g->run_status != NLM_ST_DOWN) {
-			err = EBUSY;
-			goto out_unlock;
-		}
-
+	if (g->run_status == NLM_ST_DOWN) {
 		nlm_netconfigs_init(); /* Initialize knetconfig/netid table */
 		g->run_status = NLM_ST_STARTING;
 		g->lockd_pid = curproc->p_pid;
@@ -339,8 +334,8 @@ lm_svc(struct lm_svc_args *args)
 			goto out_unlock;
 		}
 
-		mutex_exit(&g->lock);
 		err = nlm_svc_add_ep(g, fp, netid, &knc);
+		mutex_exit(&g->lock);
 	}
 
 	releasef(args->fd);

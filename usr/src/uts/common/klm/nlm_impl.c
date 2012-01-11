@@ -141,10 +141,13 @@ static void nlm_reclaimer(struct nlm_host *);
 /*
  * NLM NSM functions
  */
-static int nlm_svc_create_nsm(struct knetconfig *, struct nlm_nsm **);
-static void nlm_svc_destroy_nsm(struct nlm_nsm *);
-static struct nlm_nsm *nlm_svc_acquire_nsm(struct nlm_globals *);
-static void nlm_svc_release_nsm(struct nlm_nsm *);
+static int nlm_nsm_init_knc(struct knetconfig *);
+static int nlm_nsm_init(struct nlm_nsm *);
+static void nlm_nsm_fini(struct nlm_nsm *);
+static enum clnt_stat nlm_nsm_simu_crash(struct nlm_nsm *);
+static enum clnt_stat nlm_nsm_stat(struct nlm_nsm *, int32_t *);
+static enum clnt_stat nlm_nsm_mon(struct nlm_nsm *, char *, uint16_t);
+static enum clnt_stat nlm_nsm_unmon(struct nlm_nsm *, char *);
 
 /*
  * NLM vhold functions
@@ -430,137 +433,197 @@ nlm_copy_netobj(struct netobj *dst, struct netobj *src)
  */
 
 /*
- * Create an instance of nlm_nsm structure.
- * The function establishes new (and the only one) connection
- * with local statd and informs it that we're starting
- * or restarting with call SM_SIMU_CRASH.
- *
- * In case of success the function returns 0 and newly allocated
- * nlm_nsm is saved to out_nsm.
+ * Initialize knetconfig that is used for communication
+ * with local statd via loopback transport.
  */
 static int
-nlm_svc_create_nsm(struct knetconfig *knc, struct nlm_nsm **out_nsm)
+nlm_nsm_init_knc(struct knetconfig *knc)
+{
+	int error;
+	vnode_t *vp;
+
+	bzero(knc, sizeof (*knc));
+
+	error = lookupname("/dev/ticotsord", UIO_SYSSPACE,
+	    FOLLOW, NULLVPP, &vp);
+	if (error != 0)
+		return (error);
+
+	knc->knc_semantics = NC_TPI_COTS_ORD;
+	knc->knc_protofmly = NC_LOOPBACK;
+	knc->knc_proto = NC_NOPROTO;
+	knc->knc_rdev = vp->v_rdev;
+	VN_RELE(vp);
+
+	return (0);
+}
+
+/*
+ * Initialize NSM handle that will be used to talk
+ * to local statd.
+ */
+static int
+nlm_nsm_init(struct nlm_nsm *nsm)
 {
 	CLIENT *clnt = NULL;
-	struct netbuf nb;
-	struct nlm_nsm *nsm;
-	char myaddr[SYS_NMLN + 2];
+	char *addr, *nodename;
 	enum clnt_stat stat;
 	int error, retries;
 
-	/*
-	 * Get an RPC client handle for the local statd.
-	 *
-	 * Create the "self" host address, which is like
-	 * "nodename.service" where the service is empty,
-	 * and nodename is the zone's node name.
-	 */
-	nb.buf = myaddr;
-	nb.maxlen = sizeof (myaddr);
-	nb.len = snprintf(nb.buf, nb.maxlen, "%s.", uts_nodename());
+	error = nlm_nsm_init_knc(&nsm->ns_knc);
+	if (error != 0)
+		return (error);
 
 	/*
-	 * Try several times to get port of local statd service.
+	 * Initialize an address of local statd we'll talk to.
+	 * We use local transport for communication with local
+	 * NSM, so the address will be simply our nodename follwed
+	 * by a dot.
+	 */
+	nodename = uts_nodename();
+	nsm->ns_addr.len = nsm->ns_addr.maxlen = strlen(nodename) + 1;
+	nsm->ns_addr.buf = kmem_zalloc(nsm->ns_addr.len, KM_SLEEP);
+	(void) strncpy(nsm->ns_addr.buf, nodename, nsm->ns_addr.len - 1);
+	nsm->ns_addr.buf[nsm->ns_addr.len - 1] = '.';
+
+	/*
+	 * Try several times to get the port of local statd service,
+	 * because it's possible that we start before statd registers
+	 * on the rpcbind.
+	 *
 	 * If rpcbind_getaddr returns either RPC_INTR or
 	 * RPC_PROGNOTREGISTERED, retry an attempt, but wait
 	 * for NLM_NSM_RPCBIND_TIMEOUT seconds berofore.
 	 */
 	for (retries = 0; retries < NLM_NSM_RPCBIND_RETRIES; retries++) {
-		stat = rpcbind_getaddr(knc, SM_PROG, SM_VERS, &nb);
+		stat = rpcbind_getaddr(&nsm->ns_knc, SM_PROG,
+		    SM_VERS, &nsm->ns_addr);
+		if (stat != RPC_SUCCESS) {
+			if (stat == RPC_PROGNOTREGISTERED) {
+				delay(SEC_TO_TICK(NLM_NSM_RPCBIND_TIMEOUT));
+				continue;
+			}
+		}
 
-		if (stat != RPC_INTR && stat != RPC_PROGNOTREGISTERED)
-			break;
-
-		delay(SEC_TO_TICK(NLM_NSM_RPCBIND_TIMEOUT));
+		break;
 	}
 
 	if (stat != RPC_SUCCESS) {
 		DTRACE_PROBE2(rpcbind__error, enum clnt_stat, stat,
 		    int, retries);
 		error = ENOENT;
-		goto err;
+		goto error;
 	}
 
 	/*
 	 * Create a RPC handle that'll be used for
 	 * communication with local statd
 	 */
-	error = clnt_tli_kcreate(knc, &nb, SM_PROG, SM_VERS,
-	    0, NLM_RPC_RETRIES, CRED(), &clnt);
+	error = clnt_tli_kcreate(&nsm->ns_knc, &nsm->ns_addr, SM_PROG, SM_VERS,
+	    0, NLM_RPC_RETRIES, kcred, &clnt);
 	if (error != 0)
-		goto err;
+		goto error;
 
-	stat = sm_simu_crash_1(NULL, NULL, clnt);
-	if (stat != RPC_SUCCESS) {
-		struct rpc_err rpcerr;
-
-		CLNT_GETERR(clnt, &rpcerr);
-		error = rpcerr.re_errno;
-		goto err;
-	}
-
-	nsm = kmem_zalloc(sizeof (*nsm), KM_SLEEP);
-	sema_init(&nsm->sem, 1, NULL, SEMA_DEFAULT, NULL);
-	nsm->refcnt = 1;
-	nsm->handle = clnt;
-	*out_nsm = nsm;
-
+	nsm->ns_handle = clnt;
+	sema_init(&nsm->ns_sem, 1, NULL, SEMA_DEFAULT, NULL);
 	return (0);
 
-err:
-	if (clnt != NULL)
+error:
+	kmem_free(nsm->ns_addr.buf, nsm->ns_addr.maxlen);
+	if (clnt)
 		CLNT_DESTROY(clnt);
 
 	return (error);
 }
 
-/*
- * Function destroes nlm_nsm structure and its mutex.
- * NOTE: must be called when nsm->refcnt == 0.
- * NOTE: nsm->handle must be released before this function is called.
- */
 static void
-nlm_svc_destroy_nsm(struct nlm_nsm *nsm)
+nlm_nsm_fini(struct nlm_nsm *nsm)
 {
-	ASSERT(nsm->refcnt == 0);
-	sema_destroy(&nsm->sem);
-	kmem_free(nsm, sizeof(*nsm));
+	kmem_free(nsm->ns_addr.buf, nsm->ns_addr.maxlen);
+	CLNT_DESTROY(nsm->ns_handle);
+	sema_destroy(&nsm->ns_sem);
 }
 
-/*
- * Returns serialized nlm_nsm structure for given zone.
- * NOTE: the instance returned by this function must be
- * explicitly released by calling nlm_svc_release_nsm.
- */
-static struct nlm_nsm *
-nlm_svc_acquire_nsm(struct nlm_globals *g)
+static enum clnt_stat
+nlm_nsm_simu_crash(struct nlm_nsm *nsm)
 {
-	struct nlm_nsm *nsm;
+	enum clnt_stat stat;
 
-	mutex_enter(&g->lock);
-	nsm = g->nlm_nsm;
-	nsm->refcnt++;
-	mutex_exit(&g->lock);
+	sema_v(&nsm->ns_sem);
+	stat = sm_simu_crash_1(NULL, NULL, nsm->ns_handle);
+	sema_p(&nsm->ns_sem);
 
-	sema_p(&nsm->sem);
-	return nsm;
+	return (stat);
 }
 
-/*
- * Relases nlm_nsm instance.
- * If the function finds that it's the last reference to an instance,
- * it destroes nsm->handle (if any) and then destroes instance itself.
- */
-static void
-nlm_svc_release_nsm(struct nlm_nsm *nsm)
+static enum clnt_stat
+nlm_nsm_stat(struct nlm_nsm *nsm, int32_t *out_stat)
 {
-	sema_v(&nsm->sem);
-	if (atomic_dec_uint_nv(&nsm->refcnt) == 0) {
-		if (nsm->handle)
-			CLNT_DESTROY(nsm->handle);
+	struct sm_name args;
+	struct sm_stat_res res;
+	enum clnt_stat stat;
 
-		nlm_svc_destroy_nsm(nsm);
+	args.mon_name = uts_nodename();
+	bzero(&res, sizeof (res));
+
+	sema_v(&nsm->ns_sem);
+	stat = sm_stat_1(&args, &res, nsm->ns_handle);
+	if (stat != RPC_SUCCESS) {
+		sema_p(&nsm->ns_sem);
+		return (stat);
 	}
+
+	sema_p(&nsm->ns_sem);
+	*out_stat = res.state;
+
+	return (stat);
+}
+
+static enum clnt_stat
+nlm_nsm_mon(struct nlm_nsm *nsm, char *hostname, uint16_t priv)
+{
+	struct mon args;
+	struct sm_stat_res res;
+	enum clnt_stat stat;
+
+	bzero(&args, sizeof (args));
+	bzero(&res, sizeof (res));
+
+	args.mon_id.mon_name = hostname;
+	args.mon_id.my_id.my_name = uts_nodename();
+	args.mon_id.my_id.my_prog = NLM_PROG;
+	args.mon_id.my_id.my_vers = NLM_SM;
+	args.mon_id.my_id.my_proc = NLM_SM_NOTIFY1;
+	bcopy(&priv, args.priv, sizeof (priv));
+
+	sema_v(&nsm->ns_sem);
+	stat = sm_mon_1(&args, &res, nsm->ns_handle);
+	sema_p(&nsm->ns_sem);
+
+	return (stat);
+}
+
+static enum clnt_stat
+nlm_nsm_unmon(struct nlm_nsm *nsm, char *hostname)
+{
+	struct mon_id args;
+	struct sm_stat res;
+	enum clnt_stat stat;
+
+	bzero(&args, sizeof (args));
+	bzero(&res, sizeof (res));
+
+	args.mon_name = hostname;
+	args.my_id.my_name = uts_nodename();
+	args.my_id.my_prog = NLM_PROG;
+	args.my_id.my_vers = NLM_SM;
+	args.my_id.my_proc = NLM_SM_NOTIFY1;
+
+	sema_v(&nsm->ns_sem);
+	stat = sm_unmon_1(&args, &res, nsm->ns_handle);
+	sema_p(&nsm->ns_sem);
+
+	return (stat);
 }
 
 /*********************************************************************
@@ -1357,43 +1420,18 @@ nlm_host_release(struct nlm_globals *g, struct nlm_host *hostp)
 void
 nlm_host_unmonitor(struct nlm_globals *g, struct nlm_host *host)
 {
-	mon_id args;
-	sm_stat res;
 	enum clnt_stat stat;
-	struct nlm_nsm *nsm;
 
 	VERIFY(host->nh_refs == 0);
 	if (!(host->nh_flags & NLM_NH_MONITORED))
 		return;
 
-	/*
-	 * We put our assigned system ID value in the priv field to
-	 * make it simpler to find the host if we are notified of a
-	 * host restart.
-	 */
-	args.mon_name = host->nh_name;
-	args.my_id.my_name = uts_nodename();
-	args.my_id.my_prog = NLM_PROG;
-	args.my_id.my_vers = NLM_SM;
-	args.my_id.my_proc = NLM_SM_NOTIFY1;
-
-	/* Call SM_UNMON */
-	nsm = nlm_svc_acquire_nsm(g);
-	stat = sm_unmon_1(&args, &res, nsm->handle);
+	host->nh_flags &= ~NLM_NH_MONITORED;
+	stat = nlm_nsm_unmon(&g->nlm_nsm, host->nh_name);
 	if (stat != RPC_SUCCESS) {
-		struct rpc_err err;
-
-		CLNT_GETERR(nsm->handle, &err);
-		nlm_svc_release_nsm(nsm);
-		NLM_WARN("NLM: Failed to contact statd, stat=%d error=%d\n",
-		    stat, err.re_errno);
+		NLM_WARN("NLM: Failed to contact statd, stat=%d\n", stat);
 		return;
 	}
-
-	nlm_svc_release_nsm(nsm);
-	host->nh_flags &= ~NLM_NH_MONITORED;
-	DTRACE_PROBE2(unmon__done, struct nlm_host *, host,
-	    int, res.state);
 }
 
 /*
@@ -1405,12 +1443,9 @@ nlm_host_unmonitor(struct nlm_globals *g, struct nlm_host *host)
 void
 nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 {
-	struct mon args;
-	sm_stat_res res;
 	enum clnt_stat stat;
-	struct nlm_nsm *nsm;
 
-	if (state && !host->nh_state) {
+	if (state != 0 && host->nh_state == 0) {
 		/*
 		 * This is the first time we have seen an NSM state
 		 * Value for this host. We record it here to help
@@ -1425,6 +1460,7 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 		return;
 	}
 
+	host->nh_flags |= NLM_NH_MONITORED;
 	mutex_exit(&host->nh_lock);
 
 	/*
@@ -1435,36 +1471,15 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 	 * make it simpler to find the host if we are notified of a
 	 * host restart.
 	 */
-	bzero(&args, sizeof (args));
-	args.mon_id.mon_name = host->nh_name;
-	args.mon_id.my_id.my_name = uts_nodename();
-	args.mon_id.my_id.my_prog = NLM_PROG;
-	args.mon_id.my_id.my_vers = NLM_SM;
-	args.mon_id.my_id.my_proc = NLM_SM_NOTIFY1;
-	bcopy(&host->nh_sysid, args.priv, sizeof (host->nh_sysid));
-
-	/* Call SM_MON */
-	nsm = nlm_svc_acquire_nsm(g);
-	stat = sm_mon_1(&args, &res, nsm->handle);
+	stat = nlm_nsm_mon(&g->nlm_nsm, host->nh_name, (uint16_t)host->nh_sysid);
 	if (stat != RPC_SUCCESS) {
-		struct rpc_err err;
+		NLM_WARN("Failed to contact local NSM, stat=%d\n", stat);
+		mutex_enter(&g->lock);
+		host->nh_flags &= ~NLM_NH_MONITORED;
+		mutex_exit(&g->lock);
 
-		CLNT_GETERR(nsm->handle, &err);
-		nlm_svc_release_nsm(nsm);
-		NLM_WARN("Failed to contact local NSM, stat=%d, error=%d\n",
-		    stat, err.re_errno);
 		return;
 	}
-
-	nlm_svc_release_nsm(nsm);
-	if (res.res_stat == stat_fail) {
-		NLM_WARN("Local NSM refuses to monitor %s\n", host->nh_name);
-		return;
-	}
-
-	mutex_enter(&host->nh_lock);
-	host->nh_flags |= NLM_NH_MONITORED;
-	mutex_exit(&host->nh_lock);
 }
 
 int
@@ -1787,12 +1802,22 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
     const char *netid, struct knetconfig *knc)
 {
 	clock_t time_uptime;
-	struct nlm_nsm *nsm;
-	int err;
+	int error;
+	enum clnt_stat stat;
 
 	VERIFY(g->run_status == NLM_ST_STARTING);
 	VERIFY(g->nlm_gc_thread == NULL);
-	VERIFY(g->nlm_nsm == NULL);
+
+	bzero(&g->nlm_nsm, sizeof (g->nlm_nsm));
+	error = nlm_nsm_init(&g->nlm_nsm);
+	if (error != 0) {
+		NLM_ERR("Failed to initialize NSM handler "
+		    "(error=%d)\n", error);
+		g->run_status = NLM_ST_DOWN;
+		return (error);
+	}
+
+	error = EIO;
 
 	/*
 	 * Create an NLM garbage collector thread that will
@@ -1801,27 +1826,35 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 	g->nlm_gc_thread = zthread_create(NULL, 0, nlm_gc,
 	    g, 0, minclsyspri);
 
-	err = nlm_svc_create_nsm(knc, &nsm);
-	if (err != 0) {
-		NLM_WARN("NLM: Failed to contact to local NSM: errno=%d\n", err);
-		err = EIO;
+	/*
+	 * Send SIMU_CRASH to local statd to report that
+	 * NLM started, so that statd can report other hosts
+	 * about NLM state change.
+	 */
+	stat = nlm_nsm_simu_crash(&g->nlm_nsm);
+	if (stat != RPC_SUCCESS) {
+		NLM_ERR("Failed to connect to local statd "
+		    "(rpcerr=%d)\n", stat);
+		goto shutdown_lm;
+	}
+
+	stat = nlm_nsm_stat(&g->nlm_nsm, &g->nsm_state);
+	if (stat != RPC_SUCCESS) {
+		NLM_ERR("Failed to get the status of local statd "
+		    "(rpcerr=%d)\n", stat);
 		goto shutdown_lm;
 	}
 
 	mutex_enter(&g->lock);
-	VERIFY(g->nlm_nsm == NULL);
-
-	g->nlm_nsm = nsm;
 	time_uptime = ddi_get_lbolt();
-	g->grace_threshold = time_uptime +
-	    SEC_TO_TICK(g->grace_period);
+	g->grace_threshold = time_uptime + SEC_TO_TICK(g->grace_period);
 	g->run_status = NLM_ST_UP;
 
 	mutex_exit(&g->lock);
 
 	/* Register endpoint used for communications with local NLM */
-	err = nlm_svc_add_ep(g, fp, netid, knc);
-	if (err)
+	error = nlm_svc_add_ep(g, fp, netid, knc);
+	if (error != 0)
 		goto shutdown_lm;
 
 	return (0);
@@ -1829,16 +1862,12 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 shutdown_lm:
 	/* XXX[DK]: Probably we should call nlm_svc_stopping here... */
 	mutex_enter(&g->lock);
-	if (g->nlm_nsm) {
-		CLNT_DESTROY(g->nlm_nsm->handle);
-		nlm_svc_destroy_nsm(g->nlm_nsm);
-		g->nlm_nsm = NULL;
-	}
-
 	g->run_status = NLM_ST_DOWN;
 	g->lockd_pid = 0;
 	mutex_exit(&g->lock);
-	return (err);
+	nlm_nsm_fini(&g->nlm_nsm);
+
+	return (error);
 }
 
 /*

@@ -536,9 +536,10 @@ nlm_safemap(const vnode_t *vp)
 	g = zone_getspecific(nlm_zone_key, curzone);
 	mutex_enter(&g->lock);
 	TAILQ_FOREACH(nslp, &g->nlm_slocks, nsl_link) {
-		if (nslp->nsl_vp == vp &&
-			((nslp->nsl_lock.l_offset != 0) ||
-			 (nslp->nsl_lock.l_len != 0))) {
+		if (nslp->nsl_state == NLM_SL_BLOCKED	&&
+		    nslp->nsl_vp == vp			&&
+		    ((nslp->nsl_lock.l_offset != 0)	||
+		        (nslp->nsl_lock.l_len != 0))) {
 			safe = 0;
 			break;
 		}
@@ -552,14 +553,20 @@ int
 nlm_has_sleep(const vnode_t *vp)
 {
 	struct nlm_globals *g;
-	int empty;
+	struct nlm_slock *nslp;
+	int has_slocks = FALSE;
 
 	g = zone_getspecific(nlm_zone_key, curzone);
 	mutex_enter(&g->lock);
-	empty = TAILQ_EMPTY(&g->nlm_slocks);
-	mutex_exit(&g->lock);
+	TAILQ_FOREACH(nslp, &g->nlm_slocks, nsl_link) {
+		if (nslp->nsl_state == NLM_SL_BLOCKED) {
+			has_slocks = TRUE;
+			break;
+		}
+	}
 
-	return (!empty);
+	mutex_exit(&g->lock);
+	return (has_slocks);
 }
 
 /*

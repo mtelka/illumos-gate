@@ -206,17 +206,17 @@ nlm_fh_to_vhold(struct nlm_host *hostp, struct netobj *fh)
 void
 nlm_do_notify1(nlm_sm_status *argp, void *res, struct svc_req *sr)
 {
-	uint32_t sysid;
 	struct nlm_globals *g;
 	struct nlm_host *host;
+	uint16_t sysid;
 
 	g = zone_getspecific(nlm_zone_key, curzone);
 	bcopy(&argp->priv, &sysid, sizeof (sysid));
 
-	DTRACE_PROBE2(nsm__notify, uint32_t, sysid,
+	DTRACE_PROBE2(nsm__notify, uint16_t, sysid,
 	    int, argp->state);
 
-	host = nlm_host_find_by_sysid(g, sysid);
+	host = nlm_host_find_by_sysid(g, (int32_t)sysid);
 	if (host == NULL)
 		return;
 
