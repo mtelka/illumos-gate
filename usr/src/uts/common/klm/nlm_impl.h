@@ -348,22 +348,23 @@ int nlm_has_sleep(const vnode_t *vp);
 
 /* nlm_rpc_clnt.c */
 extern enum clnt_stat
-nlm_test_rpc(nlm4_testargs *args, nlm4_testres *res, nlm_rpc_t *rpcp);
-
+nlm_test_rpc(nlm4_testargs *args, nlm4_testres *res,
+    CLIENT *client, rpcvers_t vers);
 extern enum clnt_stat
-nlm_lock_rpc(nlm4_lockargs *args, nlm4_res *res, nlm_rpc_t *rpcp);
-
+nlm_lock_rpc(nlm4_lockargs *args, nlm4_res *res,
+	CLIENT *client, rpcvers_t vers);
 extern enum clnt_stat
-nlm_cancel_rpc(nlm4_cancargs *args, nlm4_res *res, nlm_rpc_t *rpcp);
-
+nlm_cancel_rpc(nlm4_cancargs *args, nlm4_res *res,
+	CLIENT *client, rpcvers_t vers);
 extern enum clnt_stat
-nlm_unlock_rpc(nlm4_unlockargs *args, nlm4_res *res, nlm_rpc_t *rpcp);
-
+nlm_unlock_rpc(nlm4_unlockargs *args, nlm4_res *res,
+	CLIENT *client, rpcvers_t vers);
 extern enum clnt_stat
-nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res, nlm_rpc_t *rpcp);
-
+nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res,
+	CLIENT *client, rpcvers_t vers);
 extern enum clnt_stat
-nlm_unshare_rpc(nlm4_shareargs *args, nlm4_shareres *res, nlm_rpc_t *rpcp);
+nlm_unshare_rpc(nlm4_shareargs *args, nlm4_shareres *res,
+	CLIENT *client, rpcvers_t vers);
 
 
 /*

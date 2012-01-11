@@ -703,7 +703,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_lock_rpc(&args, &res, rpc);
+		stat = nlm_lock_rpc(&args, &res, rpc->nr_handle, vers);
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
@@ -852,7 +852,7 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 			/* XXX retry? */
 			return (error);
 
-		stat = nlm_cancel_rpc(&cargs, &res, rpc);
+		stat = nlm_cancel_rpc(&cargs, &res, rpc->nr_handle, vers);
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
@@ -944,7 +944,7 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *fl,
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_unlock_rpc(&args, &res, rpc);
+		stat = nlm_unlock_rpc(&args, &res, rpc->nr_handle, vers);
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
@@ -1031,7 +1031,7 @@ nlm_call_test(struct vnode *vp, struct flock64 *fl,
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_test_rpc(&args, &res, rpc);
+		stat = nlm_test_rpc(&args, &res, rpc->nr_handle, vers);
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
@@ -1288,7 +1288,7 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_share_rpc(&args, &res, rpc);
+		stat = nlm_share_rpc(&args, &res, rpc->nr_handle, vers);
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
@@ -1378,7 +1378,7 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_unshare_rpc(&args, &res, rpc);
+		stat = nlm_unshare_rpc(&args, &res, rpc->nr_handle, vers);
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
