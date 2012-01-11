@@ -166,7 +166,6 @@ struct nlm_vnode {
 	TAILQ_ENTRY(nlm_vnode) nv_link;	/* (l) hosts list of vnodes */
 	vnode_t *nv_vp;			/* (c) the held vnode */
 	int nv_refs;			/* (l) references */
-	int nv_locks;			/* (l) locks cnt? XXX */
 };
 TAILQ_HEAD(nlm_vnode_list, nlm_vnode);
 
