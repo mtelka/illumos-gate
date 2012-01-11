@@ -427,9 +427,9 @@ struct nlm_owner_handle {
 #define NLM_RPC_RETRIES 5
 
 /*
- * Klmmod global mutex
+ * Klmmod global R/W lock
  */
-extern kmutex_t lm_lck;
+extern krwlock_t lm_lck;
 
 /*
  * NLM internal functions for initialization.

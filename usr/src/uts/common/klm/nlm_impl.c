@@ -99,7 +99,7 @@
  */
 #define SIGN(x) (((x) < 0) - ((x) > 0))
 
-kmutex_t lm_lck;
+krwlock_t lm_lck;
 
 /*
  * Grace period handling. The value of nlm_grace_threshold is the
@@ -225,17 +225,17 @@ nlm_init(void)
 void
 nlm_globals_register(struct nlm_globals *g)
 {
-	mutex_enter(&lm_lck);
+	rw_enter(&lm_lck, RW_WRITER);
 	TAILQ_INSERT_TAIL(&nlm_zones_list, g, nlm_link);
-	mutex_exit(&lm_lck);
+	rw_exit(&lm_lck);
 }
 
 void
 nlm_globals_unregister(struct nlm_globals *g)
 {
-	mutex_enter(&lm_lck);
+	rw_enter(&lm_lck, RW_WRITER);
 	TAILQ_REMOVE(&nlm_zones_list, g, nlm_link);
-	mutex_exit(&lm_lck);
+	rw_exit(&lm_lck);
 }
 
 static void
@@ -243,14 +243,11 @@ nlm_reclaim(void *cdrarg)
 {
 	struct nlm_globals *g;
 
-	mutex_enter(&lm_lck);
-	TAILQ_FOREACH(g, &nlm_zones_list, nlm_link) {
-		mutex_exit(&lm_lck);
+	rw_enter(&lm_lck, RW_READER);
+	TAILQ_FOREACH(g, &nlm_zones_list, nlm_link)
 		nlm_free_idle_hosts(g);
-		mutex_enter(&lm_lck);
-	}
 
-	mutex_exit(&lm_lck);
+	rw_exit(&lm_lck);
 }
 
 /*********************************************************************

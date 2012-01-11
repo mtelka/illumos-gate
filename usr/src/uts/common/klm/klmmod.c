@@ -60,7 +60,7 @@ void (*lm_set_nlm_status)(int nlm_id, flk_nlm_status_t) = NULL;
  */
 void (*lm_remove_file_locks)(int) = NULL;
 
-kmutex_t		lm_lck;
+krwlock_t		lm_lck;
 zone_key_t		nlm_zone_key;
 
 /*
@@ -136,7 +136,7 @@ _init()
 {
 	int retval;
 
-	mutex_init(&lm_lck, NULL, MUTEX_DEFAULT, NULL);
+	rw_init(&lm_lck, NULL, RW_DEFAULT, NULL);
 	lm_sysid_init();
 	nlm_init();
 
@@ -156,7 +156,7 @@ _init()
 	(void) zone_key_delete(flock_zone_key);
 	flock_zone_key = ZONE_KEY_UNINITIALIZED;
 	(void) zone_key_delete(nlm_zone_key);
-	mutex_destroy(&lm_lck);
+	rw_destroy(&lm_lck);
 
 	return (retval);
 }
