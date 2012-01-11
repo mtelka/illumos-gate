@@ -1515,6 +1515,7 @@ nlm_slock_srv_create(struct nlm_host *hostp,
 	nssp = kmem_zalloc(sizeof (*nssp), KM_SLEEP);
 	nssp->nss_host = hostp;
 	nssp->nss_vp = vp;
+	nssp->nss_refcnt = 1;
 	nssp->nss_fl = *flp;
 
 	mutex_enter(&hostp->nh_lock);
@@ -1542,9 +1543,14 @@ nlm_slock_srv_create(struct nlm_host *hostp,
  * Deregister and free server-side sleeping lock.
  */
 void
-nlm_slock_srv_destroy(struct nlm_host *hostp, nlm_slock_srv_t *nssp)
+nlm_slock_srv_deregister(struct nlm_host *hostp, nlm_slock_srv_t *nssp)
 {
 	mutex_enter(&hostp->nh_lock);
+	if (--nssp->nss_refcnt > 0) {
+		mutex_exit(&hostp->nh_lock);
+		return;
+	}
+
 	TAILQ_REMOVE(&hostp->nh_srv_slocks, nssp, nss_link);
 	mutex_exit(&hostp->nh_lock);
 
@@ -1586,6 +1592,7 @@ nlm_slock_srv_find_locked(struct nlm_host *hostp,
 		    nssp->nss_fl.l_len == flp->l_len &&
 		    nssp->nss_fl.l_pid == flp->l_pid &&
 		    nssp->nss_fl.l_type == flp->l_type) {
+			nssp->nss_refcnt++;
 			break;
 		}
 	}

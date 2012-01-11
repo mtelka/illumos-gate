@@ -489,7 +489,7 @@ nlm_block(
 	/*
 	 * Done waiting (no longer pending)
 	 */
-	nlm_slock_srv_destroy(host, nssp);
+	nlm_slock_srv_deregister(host, nssp);
 	if (error != 0) {
 		/*
 		 * We failed getting the lock, but have no way to
@@ -574,21 +574,25 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	if (nssp != NULL) {
 		/*
 		 * Registered sleeping lock was found.
-		 * Just destroy it, so that nobody can
-		 * reuse it.
+		 * Just release it so nobody can use it.
 		 */
-		nlm_slock_srv_destroy(host, nssp);
+		nlm_slock_srv_deregister(host, nssp);
 	}
 
 	/*
 	 * Sleeping lock we're trying to cancel could
 	 * already be applied. In this case we have to try
 	 * to ask our local os/flock manager to unlock it.
+	 * We interested in frlock retcode only if
+	 * server-side sleeping lock wasn't found.
 	 */
 	error = VOP_FRLOCK(nv->nv_vp, F_SETLK, &fl,
 	    F_REMOTELOCK | FREAD | FWRITE,
 	    (u_offset_t)0, NULL, CRED(), NULL);
-	resp->stat.stat = ((error != 0) ? nlm4_denied : nlm4_granted);
+
+	resp->stat.stat = nlm4_granted;
+	if (nssp == NULL && error != 0)
+		resp->stat.stat = nlm4_denied;
 
 out:
 	/*

@@ -240,6 +240,7 @@ typedef struct nlm_slock_srv {
 	struct nlm_host *nss_host;
 	struct vnode	*nss_vp;
 	struct flock64   nss_fl;
+	int              nss_refcnt;
 	TAILQ_ENTRY(nlm_slock_srv) nss_link;
 } nlm_slock_srv_t;
 TAILQ_HEAD(nlm_slock_srv_list, nlm_slock_srv);
@@ -520,7 +521,7 @@ extern nlm_slock_srv_t *nlm_slock_srv_create(struct nlm_host *hostp,
     vnode_t *vp, struct flock64 *flp);
 extern nlm_slock_srv_t *nlm_slock_srv_find(struct nlm_host *hostp,
     vnode_t *vp, struct flock64 *flp);
-extern void nlm_slock_srv_destroy(struct nlm_host *hostp,
+extern void nlm_slock_srv_deregister(struct nlm_host *hostp,
     nlm_slock_srv_t *nssp);
 
 /*
