@@ -866,6 +866,9 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 
 	g = zone_getspecific(nlm_zone_key, curzone);
 	oh = (void *) argp->alock.oh.n_bytes;
+	if (oh == NULL)
+		return;
+
 	host = nlm_host_find_by_sysid(g, oh->oh_sysid);
 	if (host == NULL) {
 		/* could not match alock */
