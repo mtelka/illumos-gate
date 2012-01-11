@@ -51,6 +51,7 @@
 #include <sys/vnode.h>
 #include <sys/vfs.h>
 #include <sys/queue.h>
+#include <netinet/in.h>
 
 #include <rpc/rpc.h>
 #include <rpc/xdr.h>
@@ -670,7 +671,6 @@ object and start the recovery thread.  mark recovery as 'running'.
 	}
 }
 
-
 /*
  * Create a new NLM host.
  */
@@ -741,6 +741,34 @@ nlm_check_idle(void)
 	mutex_exit(&g->lock);
 }
 
+/*
+ * This function compares only addresses of two netbufs
+ * that belong to NC_TCP[6] or NC_UDP[6] protofamily.
+ * Port part of netbuf is ignored.
+ *
+ * If addresses are equal, the function returns TRUE and FALSE
+ * otherwise.
+ */
+static bool_t
+nlm_netbuf_addrs_equal(struct netbuf *nb1, struct netbuf *nb2)
+{
+	union {
+		struct sockaddr_in *sin;
+		struct sockaddr_in6 *sin6;
+	} addr1, addr2;
+
+	addr1.sin = (struct sockaddr_in *)nb1->buf;
+	addr2.sin = (struct sockaddr_in *)nb2->buf;
+
+	ASSERT(addr1.sin->sin_family == addr2.sin->sin_family);
+	if (addr1.sin->sin_family == AF_INET) {
+		return (addr1.sin->sin_addr.s_addr ==
+		    addr2.sin->sin_addr.s_addr);
+	} else { /* AF_INET6 */
+		return (IN6_ARE_ADDR_EQUAL(&addr1.sin6->sin6_addr,
+		        &addr2.sin6->sin6_addr));
+	}
+}
 
 /*
  * Find the host specified by...  (see below)
@@ -755,9 +783,9 @@ nlm_host_find_locked(struct nlm_globals *g, char *name,
 	ASSERT(MUTEX_HELD(&g->lock));
 
 	TAILQ_FOREACH(host, &g->nlm_hosts, nh_link) {
-		if (0 == strcmp(host->nh_name, name) &&
-		    0 == strcmp(host->nh_netid, netid) &&
-		    host->nh_addr.len == addr->len) {
+		if (0 == strcmp(host->nh_netid, netid) &&
+			nlm_netbuf_addrs_equal(&host->nh_addr, addr) &&
+		    0 == strcmp(host->nh_name, name)) {
 			host->nh_refs++;
 			break;
 		}
