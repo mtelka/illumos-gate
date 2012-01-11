@@ -77,7 +77,7 @@
  * for this amount of seconds, we consider it
  * unused, so that we unmonitor and destroy it.
  */
-#define	NLM_IDLE_TIMEOUT	30
+#define	NLM_IDLE_TIMEOUT	300
 
 /*
  * Number of attempts NLM tries to obtain RPC binding
@@ -1329,7 +1329,7 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 	if (state && !host->nh_state) {
 		/*
 		 * This is the first time we have seen an NSM state
-		 * value for this host. We record it here to help
+		 * Value for this host. We record it here to help
 		 * detect host reboots.
 		 */
 		host->nh_state = state;
