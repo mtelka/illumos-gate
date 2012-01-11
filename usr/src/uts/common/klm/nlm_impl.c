@@ -783,22 +783,6 @@ nlm_vhold_find_locked(struct nlm_host *hostp, vnode_t *vp)
 }
 
 /*
- * In the BSD code, this was called in the context of the
- * F_UNLCK caller that allowed our F_SETLKW to succeed.
- * Here, F_SETLKW is done from the RPC service thread in a way
- * that allows it to simply blocks in the F_SETLK call.
- * XXX: We probably don't need this function.
- */
-#if 0 /* XXX */
-static void
-nlm_lock_callback(flk_cb_when_t when, void *arg)
-{
-	struct nlm_async_lock *af = (struct nlm_async_lock *)arg;
-
-}
-#endif
-
-/*
  * Destroy any locks the client holds.
  * Do F_UNLKSYS on all it's vnodes.
  */
@@ -1921,29 +1905,58 @@ nlm_svc_stopping(struct nlm_globals *g)
 	 */
 	while (!avl_is_empty(&g->nlm_hosts_tree)) {
 		struct nlm_host *hostp;
+		int busy_hosts = 0;
 
+		/*
+		 * Iterate through all NLM hosts in the system
+		 * and drop the locks they own by force.
+		 */
 		hostp = avl_first(&g->nlm_hosts_tree);
+		while (hostp != NULL) {
+			/* Cleanup all client and server side locks */
+			nlm_client_cancel_all(g, hostp);
+			nlm_host_notify_server(hostp, 0);
 
-		/* Cleanup all client and server side locks */
-		nlm_client_cancel_all(g, hostp);
-		nlm_host_notify_server(hostp, 0);
+			mutex_enter(&hostp->nh_lock);
+			nlm_host_gc_vholds(hostp);
+			if (hostp->nh_refs > 0 || nlm_host_has_locks(hostp)) {
+				/*
+				 * Oh, it seems the host is still busy, let
+				 * it some time to release and go to the
+				 * next one.
+				 */
 
-		mutex_enter(&hostp->nh_lock);
-		nlm_host_gc_vholds(hostp);
-		if (hostp->nh_refs > 0 || nlm_host_has_locks(hostp)) {
-			/*
-			 * Oh, it seems the host is still busy, let
-			 * it some time to release and go to the
-			 * next one.
-			 */
+				mutex_exit(&hostp->nh_lock);
+				hostp = AVL_NEXT(&g->nlm_hosts_tree, hostp);
+				busy_hosts++;
+				continue;
+			}
 
 			mutex_exit(&hostp->nh_lock);
-			continue;
+			hostp = AVL_NEXT(&g->nlm_hosts_tree, hostp);
 		}
 
-		mutex_exit(&hostp->nh_lock);
-		nlm_host_unregister(g, hostp);
-		nlm_host_destroy(hostp);
+		/*
+		 * All hosts go to nlm_idle_hosts list after
+		 * all locks they own are cleaned up and last refereces
+		 * were dropped. Just destroy all hosts in nlm_idle_hosts
+		 * list, they can not be removed from there while we're
+		 * in stopping state.
+		 */
+		while ((hostp = TAILQ_FIRST(&g->nlm_idle_hosts)) != NULL) {
+			nlm_host_unregister(g, hostp);
+			nlm_host_destroy(hostp);
+		}
+
+		if (busy_hosts > 0) {
+			/*
+			 * There're some hosts that weren't cleaned
+			 * up. Probably they're in resource cleanup
+			 * process. Give them some time to do drop
+			 * references.
+			 */
+			delay(MSEC_TO_TICK(500));
+		}
 	}
 
 	ASSERT(TAILQ_EMPTY(&g->nlm_slocks));
