@@ -816,13 +816,18 @@ nlm_netbuf_addrs_equal(struct netbuf *nb1, struct netbuf *nb2)
 	addr1.sin = (struct sockaddr_in *)nb1->buf;
 	addr2.sin = (struct sockaddr_in *)nb2->buf;
 
-	ASSERT(addr1.sin->sin_family == addr2.sin->sin_family);
-	if (addr1.sin->sin_family == AF_INET) {
+	switch (addr1.sin->sin_family) {
+	case AF_INET:
 		return (addr1.sin->sin_addr.s_addr ==
 		    addr2.sin->sin_addr.s_addr);
-	} else { /* AF_INET6 */
+	case AF_INET6:
 		return (IN6_ARE_ADDR_EQUAL(&addr1.sin6->sin6_addr,
 		        &addr2.sin6->sin6_addr));
+	default:
+		ASSERT(0);
+
+		/* Just to take away compiler warning */
+		return (FALSE);
 	}
 }
 
