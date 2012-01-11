@@ -228,6 +228,7 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
+	struct nlm_owner_handle oh;
 	vnode_t *vp = NULL;
 	struct netbuf *addr;
 	char *netid;
@@ -275,7 +276,6 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 		resp->stat.stat = nlm4_granted;
 	} else {
 		struct nlm4_holder *lh;
-		struct nlm_owner_handle oh;
 
 		resp->stat.stat = nlm4_denied;
 		lh = &resp->stat.nlm4_testrply_u.holder;
