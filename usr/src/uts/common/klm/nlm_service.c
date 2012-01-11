@@ -78,6 +78,25 @@ struct nlm_block_cb_data {
 	struct flock64		*flp;
 };
 
+/*
+ * Invoke an asyncronous RPC callbeck
+ * (used when NLM server needs to reply to MSG NLM procedure).
+ */
+#define NLM_INVOKE_CALLBACK(descr, rpcp, resp, callb)			\
+	do {								\
+		enum clnt_stat _stat;					\
+									\
+		_stat = (*(callb))(resp, NULL, (rpcp)->nr_handle);	\
+		if (_stat != RPC_SUCCESS && _stat != RPC_TIMEDOUT) {	\
+			struct rpc_err _err;				\
+									\
+			CLNT_GETERR((rpcp)->nr_handle, &_err);		\
+			NLM_ERR("NLM: %s callback failed: "		\
+			    "stat %d, err %d\n", descr, _stat,		\
+			    _err.re_errno);				\
+		}							\
+	} while (0)
+
 static void nlm_block(
 	nlm4_lockargs *lockargs,
 	struct nlm_host *host,
@@ -304,19 +323,8 @@ out:
 	 * If we have a callback funtion, use that to
 	 * deliver the response via another RPC call.
 	 */
-	if (cb != NULL && rpcp != NULL) {
-		enum clnt_stat stat;
-
-		/* i.e. nlm_test_res_4_cb */
-		stat = (*cb)(resp, NULL, rpcp->nr_handle);
-		if (stat != RPC_SUCCESS) {
-			struct rpc_err err;
-
-			CLNT_GETERR(rpcp->nr_handle, &err);
-			NLM_ERR("NLM: do_test CB, stat=%d err=%d\n",
-			    stat, err.re_errno);
-		}
-	}
+	if (cb != NULL && rpcp != NULL)
+		NLM_INVOKE_CALLBACK("test", rpcp, resp, cb);
 
 	if (vp != NULL)
 		VN_RELE(vp);
@@ -500,19 +508,8 @@ doreply:
 		if (!(*reply_cb)(sr->rq_xprt, resp))
 			svcerr_systemerr(sr->rq_xprt);
 	}
-	if (res_cb != NULL && rpcp != NULL) {
-		enum clnt_stat stat;
-
-		/* i.e. nlm_lock_res_1_cb */
-		stat = (*res_cb)(resp, NULL, rpcp->nr_handle);
-		if (stat != RPC_SUCCESS) {
-			struct rpc_err err;
-
-			CLNT_GETERR(rpcp->nr_handle, &err);
-			NLM_ERR("NLM: do_lock CB, stat=%d err=%d\n",
-			    stat, err.re_errno);
-		}
-	}
+	if (res_cb != NULL && rpcp != NULL)
+		NLM_INVOKE_CALLBACK("lock", rpcp, resp, res_cb);
 
 	/*
 	 * The reply has been sent to the client.
@@ -564,7 +561,6 @@ nlm_block(nlm4_lockargs *lockargs,
 {
 	nlm4_testargs args;
 	int error;
-	enum clnt_stat stat;
 	flk_callback_t flk_cb;
 	struct nlm_block_cb_data cb_data;
 
@@ -613,14 +609,8 @@ nlm_block(nlm4_lockargs *lockargs,
 	args.cookie	= lockargs->cookie;
 	args.exclusive	= lockargs->exclusive;
 	args.alock	= lockargs->alock;
-	stat = (*grant_cb)(&args, NULL, rpcp->nr_handle);
-	if (stat != RPC_SUCCESS) {
-		struct rpc_err err;
 
-		CLNT_GETERR(rpcp->nr_handle, &err);
-		NLM_ERR("NLM: grant CB, stat=%d err=%d\n",
-		    stat, err.re_errno);
-	}
+	NLM_INVOKE_CALLBACK("grant", rpcp, &args, grant_cb);
 }
 
 /*
@@ -723,19 +713,8 @@ out:
 	 * If we have a callback funtion, use that to
 	 * deliver the response via another RPC call.
 	 */
-	if (cb != NULL && rpcp != NULL) {
-		enum clnt_stat stat;
-
-		/* i.e. nlm_cancel_res_4_cb */
-		stat = (*cb)(resp, NULL, rpcp->nr_handle);
-		if (stat != RPC_SUCCESS) {
-			struct rpc_err err;
-
-			CLNT_GETERR(rpcp->nr_handle, &err);
-			NLM_ERR("NLM: do_cancel CB, stat=%d err=%d\n",
-			    stat, err.re_errno);
-		}
-	}
+	if (cb != NULL && rpcp != NULL)
+		NLM_INVOKE_CALLBACK("cancel", rpcp, resp, cb);
 
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
@@ -815,19 +794,8 @@ out:
 	 * If we have a callback funtion, use that to
 	 * deliver the response via another RPC call.
 	 */
-	if (cb != NULL && rpcp != NULL) {
-		enum clnt_stat stat;
-
-		/* i.e. nlm_unlock_res_4_cb */
-		stat = (*cb)(resp, NULL, rpcp->nr_handle);
-		if (stat != RPC_SUCCESS) {
-			struct rpc_err err;
-
-			CLNT_GETERR(rpcp->nr_handle, &err);
-			NLM_ERR("NLM: do_unlock CB, stat=%d err=%d\n",
-			    stat, err.re_errno);
-		}
-	}
+	if (cb != NULL && rpcp != NULL)
+		NLM_INVOKE_CALLBACK("unlock", rpcp, resp, cb);
 
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
@@ -898,17 +866,8 @@ out:
 	 * If we have a callback funtion, use that to
 	 * deliver the response via another RPC call.
 	 */
-	if (cb != NULL && rpcp != NULL) {
-		/* i.e. nlm_granted_res_4_cb */
-		stat = (*cb)(resp, NULL, rpcp->nr_handle);
-		if (stat != RPC_SUCCESS) {
-			struct rpc_err err;
-
-			CLNT_GETERR(rpcp->nr_handle, &err);
-			NLM_ERR("NLM: do_grantd CB, stat=%d err=%d\n",
-			    stat, err.re_errno);
-		}
-	}
+	if (cb != NULL && rpcp != NULL)
+		NLM_INVOKE_CALLBACK("do_granted", rpcp, resp, cb);
 
 	if (rpcp != NULL)
 		nlm_host_rele_rpc(host, rpcp);
