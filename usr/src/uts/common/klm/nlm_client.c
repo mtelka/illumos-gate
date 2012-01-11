@@ -69,6 +69,15 @@ static volatile uint32_t nlm_xid = 1;
 
 static int nlm_map_status(nlm4_stats stat);
 
+static int nlm_frlock_getlk(struct nlm_host *hostp, vnode_t *vp,
+    struct flock64 *flkp, int flags, u_offset_t offset,
+    struct netobj *fhp, int vers);
+
+static int nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
+    struct flock64 *flkp, int flags, u_offset_t offset,
+    struct netobj *fhp, struct flk_callback *flcb,
+    int vers, bool_t do_block);
+
 static int nlm_init_lock(struct nlm4_lock *lock,
 	const struct flock64 *fl, struct netobj *fh,
 	struct nlm_owner_handle *oh);
@@ -214,16 +223,15 @@ nlm_feedback(int type, int proc, void *arg)
  * Was: nlm_advlock()
  */
 int
-nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flk,
-	int flags, u_offset_t offset, struct cred *cr,
-	struct netobj *fh, struct flk_callback *flcb, int vers)
+nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flkp,
+	int flags, u_offset_t offset, struct cred *crp,
+	struct netobj *fhp, struct flk_callback *flcb, int vers)
 {
-	struct flock64 flk0, tflk;
 	mntinfo_t *mi;
 	servinfo_t *sv;
 	const char *netid;
-	struct nlm_host *host = NULL;
-	int error, xflags;
+	struct nlm_host *hostp;
+	int error;
 	struct nlm_globals *g;
 
 	mi = VTOMI(vp);
@@ -232,156 +240,157 @@ nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flk,
 	netid = nlm_netid_from_knetconfig(sv->sv_knconf);
 	if (netid == NULL) {
 		NLM_ERR("nlm_frlock: unknown NFS netid");
-		error = ENOSYS;
-		goto out;
+		return (ENOSYS);
 	}
 
 
 	g = zone_getspecific(nlm_zone_key, curzone);
-	host = nlm_host_findcreate(g, sv->sv_hostname, netid, &sv->sv_addr);
-	if (host == NULL) {
-		error = ENOSYS;
-		goto out;
-	}
+	hostp = nlm_host_findcreate(g, sv->sv_hostname, netid, &sv->sv_addr);
+	if (hostp == NULL)
+		return (ENOSYS);
 
 	/*
-	 * BSD: Push dirty pages to the server and flush our cache
-	 * so that if we are contending with another machine for a
-	 * file, we get whatever they wrote and vice-versa.
-	 * (The NFS code calling here has already done that).
+	 * Purge cached attributes in order to make sure that
+	 * future calls of convoff()/VOP_GETATTR() will get the
+	 * latest data.
 	 */
-
-	/*
-	 * Convert the lock offset from "whence" base to zero based,
-	 * first making a local copy so the caller's data will not be
-	 * modified.  If the passed lock "whence" is EOF, make sure
-	 * that when convoff() does VOP_GETATTR it will get the
-	 * latest data (purge cached attributes).
-	 */
-	flk0 = *flk;
-	if (flk->l_whence == SEEK_END) {
-		/* Purge NFS attr. cache */
+	if (flkp->l_whence == SEEK_END)
 		PURGE_ATTRCACHE(vp);
-	}
-	error = convoff(vp, &flk0, 0, (offset_t)offset);
-	if (error)
-		goto out;
-	/* Now flk0 is the zero-based lock request. */
 
-	if (cmd == F_GETLK) {
-		/*
-		 * Check local (cached) locks first.
-		 * If we find one, no need for RPC.
-		 */
-		tflk = flk0;
-		error = nlm_local_getlk(vp, &tflk, flags);
-		if (error == 0 && tflk.l_type != F_UNLCK) {
-			/* Found local F_RDLK or F_WRLCK */
-			goto getlk_found;
+	/* Now flk0 is the zero-based lock request. */
+	switch (cmd) {
+	case F_GETLK:
+		error = nlm_frlock_getlk(hostp, vp, flkp, flags,
+		    offset, fhp, vers);
+		break;
+
+	case F_SETLK:
+	case F_SETLKW:
+		error = nlm_frlock_setlk(hostp, vp, flkp, flags,
+		    offset, fhp, flcb, vers, (cmd == F_SETLKW));
+		if (error == 0) {
+			/* Start monitoring the host */
+			nlm_host_monitor(g, hostp, 0);
 		}
-		/* Not found locally.  Try remote. */
-		tflk = flk0;
-		error = nlm_call_test(vp, &tflk, host, fh, vers);
-		if (error != 0)
-			goto out;
+
+		break;
+
+	default:
+		error = EINVAL;
+		break;
+	}
+
+	nlm_host_release(g, hostp);
+	return (error);
+}
+
+static int
+nlm_frlock_getlk(struct nlm_host *hostp, vnode_t *vp,
+    struct flock64 *flkp, int flags, u_offset_t offset,
+    struct netobj *fhp, int vers)
+{
+	struct flock64 flk0;
+	int error;
+
+	/*
+	 * Check local (cached) locks first.
+	 * If we find one, no need for RPC.
+	 */
+	error = nlm_local_getlk(vp, flkp, flags);
+	if (error != 0)
+		return (error);
+	if (flkp->l_type != F_UNLCK)
+		return (0);
+
+	/* Not found locally.  Try remote. */
+	flk0 = *flkp;
+	error = convoff(vp, &flk0, 0, (offset_t)offset);
+	if (error != 0)
+		return (error);
+
+	error = nlm_call_test(vp, &flk0, hostp, fhp, vers);
+	if (error != 0)
+		return (error);
+
+	if (flk0.l_type == F_UNLCK) {
 		/*
-		 * Update the caller's *flk with information
+		 * Update the caller's *flkp with information
 		 * on the conflicting lock (or lack thereof).
 		 * Note: This is the only place where we
-		 * modify the caller's *flk data.
+		 * modify the caller's *flkp data.
 		 */
-		if (tflk.l_type == F_UNLCK) {
-			/* No conflicting lock. */
-			flk->l_type = F_UNLCK;
-		} else {
-			/*
-			 * Found a conflicting lock.  Set the
-			 * caller's *flk with the info, first
-			 * converting to the caller's whence.
-			 */
-		getlk_found:
-			(void) convoff(vp, &tflk, flk->l_whence,
-			    (offset_t)offset);
-			*flk = tflk;
-		}
-		error = 0;
-		goto out;
+		flkp->l_type = F_UNLCK;
+	} else {
+		/*
+		 * Found a conflicting lock.  Set the
+		 * caller's *flkp with the info, first
+		 * converting to the caller's whence.
+		 */
+		(void)convoff(vp, &flk0, flkp->l_whence, (offset_t)offset);
+		*flkp = flk0;
 	}
 
+	return (0);
+}
+
+static int
+nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
+    struct flock64 *flkp, int flags, u_offset_t offset,
+    struct netobj *fhp, struct flk_callback *flcb,
+    int vers, bool_t do_block)
+{
+	int error, xflags;
+
+	error = convoff(vp, flkp, 0, (offset_t)offset);
+	if (error != 0)
+		return (error);
+
 	/*
-	 * cmd: F_SETLK, F_SETLKW
-	 * (We're modifying.)
-	 *
 	 * Fill in l_sysid for the local locking calls.
 	 * Also, let's not trust the caller's l_pid.
 	 */
-	flk0.l_sysid = NLM_SYSID_CLIENT | nlm_host_get_sysid(host);
-	flk0.l_pid = curproc->p_pid;
+	flkp->l_sysid = NLM_SYSID_CLIENT | nlm_host_get_sysid(hostp);
+	flkp->l_pid = curproc->p_pid;
 
-	if (flk0.l_type == F_UNLCK) {
+	if (flkp->l_type == F_UNLCK) {
 		/*
 		 * Purge local (cached) lock information first,
 		 * then clear the remote lock.
 		 */
-		(void) nlm_local_setlk(vp, &flk0, flags);
-		error = nlm_call_unlock(vp, &flk0, host, fh, vers);
-		goto out;
+		(void) nlm_local_setlk(vp, flkp, flags);
+		return (nlm_call_unlock(vp, flkp, hostp, fhp, vers));
 	}
 
-	/*
-	 * l_type: F_RDLCK, F_WRLCK
-	 * (Requesting a lock.)
-	 */
-
-	if (cmd == F_SETLK) {
+	if (!do_block) {
 		/*
 		 * This is a non-blocking "set" request,
 		 * so we can check locally first, and
 		 * sometimes avoid an RPC call.
 		 */
-		tflk = flk0;
-		error = nlm_local_getlk(vp, &tflk, flags);
-		if (error == 0 && tflk.l_type != F_UNLCK) {
+		struct flock64 flk0;
+
+		flk0 = *flkp;
+		error = nlm_local_getlk(vp, &flk0, flags);
+		if (error != 0 && flk0.l_type != F_UNLCK) {
 			/* Found a conflicting lock. */
-			error = EAGAIN;
-			goto out;
+			return (EAGAIN);
 		}
+
 		xflags = 0;
-	} else
+	} else {
 		xflags = NLM_X_BLOCKING;
-
-	/*
-	 * Blocking lock, or no conflicts found locally.
-	 * Do the NLM_LOCK RPC.
-	 * XXX: Check flags & (FREAD | FWRITE) ?
-	 */
-
-	error = nlm_call_lock(vp, &flk0, host, fh, flcb, vers, xflags);
-	if (error != 0)
-		goto out;
-
-	/*
-	 * Save the lock locally.  This should not fail,
-	 * because the server is authoritative about locks
-	 * and it just told us we have the lock!
-	 */
-	error = nlm_local_setlk(vp, &flk0, flags);
-	if (error != 0) {
-		/*
-		 * Oh oh, we really don't expect an error here.
-		 * XXX: release the remote lock?  Or what?
-		 * Ignore the local error for now...
-		 */
-		cmn_err(CE_NOTE, "NLM: set locally, err %d", error);
-		error = 0;
 	}
-	/* Start monitoring this host. */
 
-	nlm_host_monitor(g, host, 0);
+	error = nlm_call_lock(vp, flkp, hostp, fhp, flcb, vers, xflags);
+	if (error != 0)
+		return (error);
 
-out:
-	if (host)
-		nlm_host_release(g, host);
+	error = nlm_local_setlk(vp, flkp, flags);
+	if (error != 0) {
+		NLM_ERR("nlm_frlock_setlk: Failed to set local lock. [err=%d]\n",
+			error);
+		/* XXX[DK]: unlock remote lock? */
+	}
 
 	return (error);
 }
@@ -597,7 +606,6 @@ nlm_local_getlk(vnode_t *vp, struct flock64 *fl, int flags)
 	int err, cmd = 0; /* get */
 
 	ASSERT(fl->l_whence == SEEK_SET);
-
 	err = reclock(vp, fl, cmd, flags, 0, NULL);
 
 	return (err);
@@ -1089,7 +1097,6 @@ nlm_call_test(struct vnode *vp, struct flock64 *fl,
 		default:
 			error = nlm_map_status(res.stat.stat);
 			break;
-
 		}
 
 		xdr_free((xdrproc_t)xdr_nlm4_testres, (void *)&res);

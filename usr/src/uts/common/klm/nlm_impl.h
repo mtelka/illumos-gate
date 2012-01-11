@@ -360,9 +360,9 @@ extern void nlm_host_invalidate_binding(struct nlm_host *hostp);
 
 
 /* nlm_client.c */
-int nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flk,
-	int flag, u_offset_t offset, struct cred *cr,
-	struct netobj *fh, struct flk_callback *flcb, int vers);
+int nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flkp,
+	int flag, u_offset_t offset, struct cred *crp,
+	struct netobj *fhp, struct flk_callback *flcb, int vers);
 int nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	int flag, struct netobj *fh, int vers);
 int nlm_safemap(const vnode_t *vp);
