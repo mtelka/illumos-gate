@@ -87,11 +87,10 @@ nlm_convert_to_nlm4_res(struct nlm4_res *dst, struct nlm_res *src)
 }
 
 enum clnt_stat
-nlm_test_rpc(nlm4_testargs *args, nlm4_testres *res,
-    CLIENT *client, rpcvers_t vers)
+nlm_test_rpc(nlm4_testargs *args, nlm4_testres *res, nlm_rpc_t *rpcp)
 {
-	if (vers == NLM4_VERS) {
-		return (nlm4_test_4(args, res, client));
+	if (rpcp->nr_vers == NLM4_VERS) {
+		return (nlm4_test_4(args, res, rpcp->nr_handle));
 	} else {
 		nlm_testargs args1;
 		nlm_testres res1;
@@ -102,7 +101,7 @@ nlm_test_rpc(nlm4_testargs *args, nlm4_testres *res,
 		nlm_convert_to_nlm_lock(&args1.alock, &args->alock);
 		memset(&res1, 0, sizeof (res1));
 
-		stat = nlm_test_1(&args1, &res1, client);
+		stat = nlm_test_1(&args1, &res1, rpcp->nr_handle);
 
 		if (stat == RPC_SUCCESS) {
 			res->cookie = res1.cookie;
@@ -118,11 +117,10 @@ nlm_test_rpc(nlm4_testargs *args, nlm4_testres *res,
 }
 
 enum clnt_stat
-nlm_lock_rpc(nlm4_lockargs *args, nlm4_res *res,
-    CLIENT *client, rpcvers_t vers)
+nlm_lock_rpc(nlm4_lockargs *args, nlm4_res *res, nlm_rpc_t *rpcp)
 {
-	if (vers == NLM4_VERS) {
-		return (nlm4_lock_4(args, res, client));
+	if (rpcp->nr_vers == NLM4_VERS) {
+		return (nlm4_lock_4(args, res, rpcp->nr_handle));
 	} else {
 		nlm_lockargs args1;
 		nlm_res res1;
@@ -136,7 +134,7 @@ nlm_lock_rpc(nlm4_lockargs *args, nlm4_res *res,
 		args1.state = args->state;
 		memset(&res1, 0, sizeof (res1));
 
-		stat = nlm_lock_1(&args1, &res1, client);
+		stat = nlm_lock_1(&args1, &res1, rpcp->nr_handle);
 
 		if (stat == RPC_SUCCESS) {
 			nlm_convert_to_nlm4_res(res, &res1);
@@ -147,11 +145,10 @@ nlm_lock_rpc(nlm4_lockargs *args, nlm4_res *res,
 }
 
 enum clnt_stat
-nlm_cancel_rpc(nlm4_cancargs *args, nlm4_res *res,
-    CLIENT *client, rpcvers_t vers)
+nlm_cancel_rpc(nlm4_cancargs *args, nlm4_res *res, nlm_rpc_t *rpcp)
 {
-	if (vers == NLM4_VERS) {
-		return (nlm4_cancel_4(args, res, client));
+	if (rpcp->nr_vers == NLM4_VERS) {
+		return (nlm4_cancel_4(args, res, rpcp->nr_handle));
 	} else {
 		nlm_cancargs args1;
 		nlm_res res1;
@@ -163,7 +160,7 @@ nlm_cancel_rpc(nlm4_cancargs *args, nlm4_res *res,
 		nlm_convert_to_nlm_lock(&args1.alock, &args->alock);
 		memset(&res1, 0, sizeof (res1));
 
-		stat = nlm_cancel_1(&args1, &res1, client);
+		stat = nlm_cancel_1(&args1, &res1, rpcp->nr_handle);
 
 		if (stat == RPC_SUCCESS) {
 			nlm_convert_to_nlm4_res(res, &res1);
@@ -174,11 +171,10 @@ nlm_cancel_rpc(nlm4_cancargs *args, nlm4_res *res,
 }
 
 enum clnt_stat
-nlm_unlock_rpc(nlm4_unlockargs *args, nlm4_res *res,
-    CLIENT *client, rpcvers_t vers)
+nlm_unlock_rpc(nlm4_unlockargs *args, nlm4_res *res, nlm_rpc_t *rpcp)
 {
-	if (vers == NLM4_VERS) {
-		return (nlm4_unlock_4(args, res, client));
+	if (rpcp->nr_vers == NLM4_VERS) {
+		return (nlm4_unlock_4(args, res, rpcp->nr_handle));
 	} else {
 		nlm_unlockargs args1;
 		nlm_res res1;
@@ -188,7 +184,7 @@ nlm_unlock_rpc(nlm4_unlockargs *args, nlm4_res *res,
 		nlm_convert_to_nlm_lock(&args1.alock, &args->alock);
 		memset(&res1, 0, sizeof (res1));
 
-		stat = nlm_unlock_1(&args1, &res1, client);
+		stat = nlm_unlock_1(&args1, &res1, rpcp->nr_handle);
 
 		if (stat == RPC_SUCCESS) {
 			nlm_convert_to_nlm4_res(res, &res1);
@@ -224,11 +220,10 @@ nlm_convert_to_nlm4_shres(struct nlm4_shareres *dst,
 
 
 enum clnt_stat
-nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res,
-    CLIENT *client, rpcvers_t vers)
+nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res, nlm_rpc_t *rpcp)
 {
-	if (vers == NLM4_VERS) {
-		return (nlm4_share_4(args, res, client));
+	if (rpcp->nr_vers == NLM4_VERS) {
+		return (nlm4_share_4(args, res, rpcp->nr_handle));
 	} else {
 		nlm_shareargs args3;
 		nlm_shareres res3;
@@ -239,7 +234,7 @@ nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res,
 		args3.reclaim = args->reclaim;
 		memset(&res3, 0, sizeof (res3));
 
-		stat = nlm_share_3(&args3, &res3, client);
+		stat = nlm_share_3(&args3, &res3, rpcp->nr_handle);
 
 		if (stat == RPC_SUCCESS) {
 			nlm_convert_to_nlm4_shres(res, &res3);
@@ -250,11 +245,10 @@ nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res,
 }
 
 enum clnt_stat
-nlm_unshare_rpc(nlm4_shareargs *args, nlm4_shareres *res,
-    CLIENT *client, rpcvers_t vers)
+nlm_unshare_rpc(nlm4_shareargs *args, nlm4_shareres *res, nlm_rpc_t *rpcp)
 {
-	if (vers == NLM4_VERS) {
-		return (nlm4_unshare_4(args, res, client));
+	if (rpcp->nr_vers == NLM4_VERS) {
+		return (nlm4_unshare_4(args, res, rpcp->nr_handle));
 	} else {
 		nlm_shareargs args3;
 		nlm_shareres res3;
@@ -265,7 +259,7 @@ nlm_unshare_rpc(nlm4_shareargs *args, nlm4_shareres *res,
 		args3.reclaim = args->reclaim;
 		memset(&res3, 0, sizeof (res3));
 
-		stat = nlm_unshare_3(&args3, &res3, client);
+		stat = nlm_unshare_3(&args3, &res3, rpcp->nr_handle);
 
 		if (stat == RPC_SUCCESS) {
 			nlm_convert_to_nlm4_shres(res, &res3);

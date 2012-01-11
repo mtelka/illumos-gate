@@ -195,6 +195,10 @@ nlm_get_rpc(struct knetconfig *knc, struct netbuf *addr,
 	enum clnt_stat stat;
 	int error;
 
+	if (strcmp(knc->knc_protofmly, NC_LOOPBACK)) {
+		NLM_DEBUG(NLM_LL1, " loopback: %s\n", (char *)addr->buf);
+	}
+
 	/*
 	 * Contact the remote RPCBIND service to find the
 	 * port for this prog+service. NB: modifies *addr
@@ -690,6 +694,7 @@ nlm_create_host(struct nlm_globals *g, char *name,
 
 	TAILQ_INIT(&host->nh_vnodes);
 	TAILQ_INIT(&host->nh_pending);
+	TAILQ_INIT(&host->nh_rpchc);
 
 	return (host);
 }
@@ -983,38 +988,6 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 	}
 
 	host->nh_monstate = NLM_MONITORED;
-}
-
-/*
- * XXX porting work still todo XXX
-
-XXX[DK]: nlm_host_get_rpc should be implemented on the base
-of handles cache. nlm_host_release/CLNT_RELEASE should
-put handles back to cache.
-
- * Return an RPC client handle that can be used to talk to the NLM
- * running on the given host.
- */
-CLIENT *
-nlm_host_get_rpc(struct nlm_host *host, int vers, bool_t isserver)
-{
-	struct nlm_rpc *rpc;
-
-	mutex_enter(&host->nh_lock);
-	if (isserver) {
-		/*
-		 * Some SVC function that needs to callback,
-		 * i.e. for reply to a _msg_ call, or for a
-		 * granted lock callback.
-		 */
-		rpc = &host->nh_srvrpc;
-	} else {
-		rpc = &host->nh_clntrpc;
-	}
-
-	mutex_exit(&host->nh_lock);
-	return nlm_get_rpc(&host->nh_knc, &host->nh_addr,
-	    NLM_PROG, vers);
 }
 
 int

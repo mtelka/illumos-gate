@@ -214,13 +214,17 @@ enum nlm_host_state {
 	NLM_UNMONITORED,
 	NLM_MONITORED,
 	NLM_MONITOR_FAILED,
-	NLM_RECOVERING
+	NLM_RECOVERING,
 };
 
-struct nlm_rpc {
-	CLIENT		*nr_client;    /* (l) RPC client handle */
-	time_t		nr_create_time; /* (l) when client was created */
-};
+typedef struct nlm_rpc {
+	CLIENT		*nr_handle;
+	rpcvers_t	nr_vers;
+	clock_t     nr_ttl_timeout;
+	clock_t     nr_refresh_time;
+	TAILQ_ENTRY(nlm_rpc) nr_link;
+} nlm_rpc_t;
+TAILQ_HEAD(nlm_rpch_list, nlm_rpc);
 
 struct nlm_host {
 	kmutex_t	nh_lock;
@@ -231,11 +235,10 @@ struct nlm_host {
 	struct knetconfig nh_knc;	/* (c) knetconfig for nh_addr */
 	struct netbuf	nh_addr;	/* (c) remote address of host */
 	int32_t		nh_sysid;	/* (c) our allocaed system ID */
-	struct nlm_rpc	nh_srvrpc;	/* (l) RPC for server replies */
-	struct nlm_rpc	nh_clntrpc;	/* (l) RPC for client requests */
 	int		nh_state;	/* (s) last seen NSM state of host */
 	enum nlm_host_state nh_monstate; /* (l) local NSM monitoring state */
 	time_t		nh_idle_timeout; /* (s) Time at which host is idle */
+	struct nlm_rpch_list nh_rpchc; /* RPC handles cache */
 	struct nlm_vnode_list nh_vnodes;	/* (l) active vnodes */
 	struct nlm_async_lock_list nh_pending; /* (l) server-side waits */
 };
@@ -293,15 +296,31 @@ struct nlm_owner_handle {
 };
 
 /*
- * XXX[DK]: Release RPC handle obtained by calling
- * nlm_host_get_rpc or nlm_get_rpc. For now nlm_get_rpc
- * allocates new client every time we need one, but in future
- * it will take new client from a cache. So nlm_release_rpc
- * function just destroes allocated client now, but it will
- * be more sophisticated in future: it should put released
- * client into a cache.
+ * Verious timeouts
  */
-#define CLNT_RELEASE(clnt) CLNT_DESTROY(clnt)
+
+/*
+ * NLM RPC handle time to live (in seconds). I.e. time interval
+ * during which RPC handle exists in handles cache. If the ttl
+ * is expired, handle is removed from cache during memory reclamation.
+ */
+#define NLM_RPC_TTL_PERIOD 60
+
+/*
+ * Period of time (in seconds) during which NLM RPC handle
+ * is considered as "fresh". If RPC handle is not "fresh" we'll
+ * check if it's possible to use it wihout reinitialization by
+ * calling NULL procedure.
+ */
+#define NLM_RPC_FRESH_PERIOD (2 * 60)
+
+/*
+ * RPC handles cache: nlm_rpc_handle.c
+ */
+
+extern int nlm_host_get_rpc(struct nlm_host *hostp,
+    int vers, nlm_rpc_t **rpcpp);
+extern void nlm_host_rele_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp);
 
 /* nlm_client.c */
 int nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flk,
@@ -315,24 +334,23 @@ int nlm_has_sleep(const vnode_t *vp);
 
 
 /* nlm_rpc_clnt.c */
-enum clnt_stat
-nlm_test_rpc(nlm4_testargs *args, nlm4_testres *res,
-    CLIENT *client, rpcvers_t vers);
-enum clnt_stat
-nlm_lock_rpc(nlm4_lockargs *args, nlm4_res *res,
-    CLIENT *client, rpcvers_t vers);
-enum clnt_stat
-nlm_cancel_rpc(nlm4_cancargs *args, nlm4_res *res,
-    CLIENT *client, rpcvers_t vers);
-enum clnt_stat
-nlm_unlock_rpc(nlm4_unlockargs *args, nlm4_res *res,
-    CLIENT *client, rpcvers_t vers);
-enum clnt_stat
-nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res,
-    CLIENT *client, rpcvers_t vers);
-enum clnt_stat
-nlm_unshare_rpc(nlm4_shareargs *args, nlm4_shareres *res,
-    CLIENT *client, rpcvers_t vers);
+extern enum clnt_stat
+nlm_test_rpc(nlm4_testargs *args, nlm4_testres *res, nlm_rpc_t *rpcp);
+
+extern enum clnt_stat
+nlm_lock_rpc(nlm4_lockargs *args, nlm4_res *res, nlm_rpc_t *rpcp);
+
+extern enum clnt_stat
+nlm_cancel_rpc(nlm4_cancargs *args, nlm4_res *res, nlm_rpc_t *rpcp);
+
+extern enum clnt_stat
+nlm_unlock_rpc(nlm4_unlockargs *args, nlm4_res *res, nlm_rpc_t *rpcp);
+
+extern enum clnt_stat
+nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res, nlm_rpc_t *rpcp);
+
+extern enum clnt_stat
+nlm_unshare_rpc(nlm4_shareargs *args, nlm4_shareres *res, nlm_rpc_t *rpcp);
 
 
 /*
@@ -413,12 +431,6 @@ void nlm_host_release(struct nlm_globals *g, struct nlm_host *host);
 
 void nlm_host_notify_server(struct nlm_host *host, int newstate);
 void nlm_host_notify_client(struct nlm_host *host);
-
-/*
- * Return an RPC client handle that can be used to talk to the NLM
- * running on the given host.
- */
-extern CLIENT *nlm_host_get_rpc(struct nlm_host *, int vers, bool_t issrv);
 
 /*
  * Return the system ID for a host.

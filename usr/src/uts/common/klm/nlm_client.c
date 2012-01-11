@@ -653,7 +653,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 	struct nlm4_res res;
 	struct nlm_owner_handle oh;
 	uint32_t xid;
-	CLIENT *client;
+	nlm_rpc_t *rpc;
 	mntinfo_t *mi = VTOMI(vp);
 	rnode_t *rn = VTOR(vp);
 	struct nlm_globals *g;
@@ -689,9 +689,10 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 	for (;;) {
 		ASSERT(wait_handle == NULL);
 
-		client = nlm_host_get_rpc(host, vers, FALSE);
-		if (!client)
-			return (ENOLCK); /* XXX retry? */
+		error = nlm_host_get_rpc(host, vers, &rpc);
+		if (error != 0)
+			return (error); /* XXX retry? */
+
 		if (block) {
 			wait_handle = nlm_register_wait_lock(g, host,
 			    &args.alock, vp);
@@ -702,9 +703,8 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_lock_rpc(&args, &res, client, vers);
-
-		CLNT_RELEASE(client);
+		stat = nlm_lock_rpc(&args, &res, rpc);
+		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
 			if (block) {
@@ -831,7 +831,7 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 	nlm4_cancargs cargs;
 	struct nlm4_res res;
 	uint32_t xid;
-	CLIENT *client;
+	nlm_rpc_t *rpc;
 	enum clnt_stat stat;
 	int error;
 
@@ -847,13 +847,13 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 	cargs.alock	= largs->alock;
 
 	do {
-		client = nlm_host_get_rpc(host, vers, FALSE);
-		if (!client)
+		error = nlm_host_get_rpc(host, vers, &rpc);
+		if (error != 0)
 			/* XXX retry? */
-			return (ENOLCK);
+			return (error);
 
-		stat = nlm_cancel_rpc(&cargs, &res, client, vers);
-		CLNT_RELEASE(client);
+		stat = nlm_cancel_rpc(&cargs, &res, rpc);
+		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
 			/*
@@ -918,7 +918,7 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *fl,
 	struct nlm4_res res;
 	struct nlm_owner_handle oh;
 	uint32_t xid;
-	CLIENT *client;
+	nlm_rpc_t *rpc;
 	mntinfo_t *mi = VTOMI(vp);
 	enum clnt_stat stat;
 	int error;
@@ -936,16 +936,16 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *fl,
 	oh.oh_sysid = nlm_host_get_sysid(host);
 
 	for (;;) {
-		client = nlm_host_get_rpc(host, vers, FALSE);
-		if (!client)
-			return (ENOLCK); /* XXX retry? */
+		error = nlm_host_get_rpc(host, vers, &rpc);
+		if (error != 0)
+			return (error); /* XXX retry? */
 
 		xid = atomic_inc_32_nv(&nlm_xid);
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_unlock_rpc(&args, &res, client, vers);
-		CLNT_RELEASE(client);
+		stat = nlm_unlock_rpc(&args, &res, rpc);
+		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
 			if (retries) {
@@ -1001,7 +1001,7 @@ nlm_call_test(struct vnode *vp, struct flock64 *fl,
 	struct nlm4_holder *h;
 	struct nlm_owner_handle oh;
 	uint32_t xid;
-	CLIENT *client;
+	nlm_rpc_t *rpc;
 	mntinfo_t *mi = VTOMI(vp);
 	enum clnt_stat stat;
 	int exclusive;
@@ -1023,16 +1023,16 @@ nlm_call_test(struct vnode *vp, struct flock64 *fl,
 	oh.oh_sysid = nlm_host_get_sysid(host);
 
 	for (;;) {
-		client = nlm_host_get_rpc(host, vers, FALSE);
-		if (!client)
-			return (ENOLCK); /* XXX retry? */
+		error = nlm_host_get_rpc(host, vers, &rpc);
+		if (error != 0)
+			return (error); /* XXX retry? */
 
 		xid = atomic_inc_32_nv(&nlm_xid);
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_test_rpc(&args, &res, client, vers);
-		CLNT_RELEASE(client);
+		stat = nlm_test_rpc(&args, &res, rpc);
+		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
 			if (retries) {
@@ -1256,7 +1256,7 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 	struct nlm4_shareres res;
 	struct nlm_owner_handle oh;
 	uint32_t xid;
-	CLIENT *client;
+	nlm_rpc_t *rpc;
 	mntinfo_t *mi = VTOMI(vp);
 	struct nlm_globals *g;
 	enum clnt_stat stat;
@@ -1278,10 +1278,9 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 
 	retry = SEC_TO_TICK(5);
 	for (;;) {
-
-		client = nlm_host_get_rpc(host, vers, FALSE);
-		if (!client)
-			return (ENOLCK); /* XXX retry? */
+		error = nlm_host_get_rpc(host, vers, &rpc);
+		if (error != 0)
+			return (error); /* XXX retry? */
 
 
 		/* XXX: Get XID from RPC handle? */
@@ -1289,8 +1288,8 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_share_rpc(&args, &res, client, vers);
-		CLNT_RELEASE(client);
+		stat = nlm_share_rpc(&args, &res, rpc);
+		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
 			if (retries) {
@@ -1355,7 +1354,7 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 	struct nlm4_shareres res;
 	struct nlm_owner_handle oh;
 	uint32_t xid;
-	CLIENT *client;
+	nlm_rpc_t *rpc;
 	mntinfo_t *mi = VTOMI(vp);
 	enum clnt_stat stat;
 	int error;
@@ -1371,17 +1370,16 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 	oh.oh_sysid = nlm_host_get_sysid(host);
 
 	for (;;) {
-		client = nlm_host_get_rpc(host, vers, FALSE);
-		if (!client)
-			return (ENOLCK); /* XXX retry? */
+		error = nlm_host_get_rpc(host, vers, &rpc);
+		if (error != 0)
+			return (error); /* XXX retry? */
 
 		xid = atomic_inc_32_nv(&nlm_xid);
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_unshare_rpc(&args, &res, client, vers);
-
-		CLNT_RELEASE(client);
+		stat = nlm_unshare_rpc(&args, &res, rpc);
+		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
 			if (retries) {
