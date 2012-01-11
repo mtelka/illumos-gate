@@ -130,12 +130,23 @@ static volatile uint32_t nlm_next_sysid = 0;	/* (g) */
 static recovery_cb nlm_recovery_func = NULL;	/* (c) */
 
 /*
+ * NLM kmem caches
+ */
+static struct kmem_cache *nlm_vnode_cache = NULL;
+
+/*
  * NLM NSM functions
  */
 static int nlm_svc_create_nsm(struct knetconfig *, struct nlm_nsm **);
 static void nlm_svc_destroy_nsm(struct nlm_nsm *);
 static struct nlm_nsm *nlm_svc_acquire_nsm(struct nlm_globals *);
 static void nlm_svc_release_nsm(struct nlm_nsm *);
+
+/*
+ * NLM vnode functions
+ */
+static int nlm_vnode_ctor(void *, void *, int);
+static void nlm_vnode_dtor(void *, void *);
 
 /*
  * Acquire the next sysid for remote locks not handled by the NLM.
@@ -338,8 +349,34 @@ nlm_svc_release_nsm(struct nlm_nsm *nsm)
 }
 
 /*********************************************************************
- * Client/Host functions
+ * NLM vnode functions
  */
+
+void
+nlm_vnodes_init(void)
+{
+	nlm_vnode_cache = kmem_cache_create("nlm_vnode_cache",
+	    sizeof (struct nlm_vnode), 0, nlm_vnode_ctor, nlm_vnode_dtor,
+	    NULL, NULL, NULL, 0);
+}
+
+static int
+nlm_vnode_ctor(void *datap, void *cdrarg, int kmflags)
+{
+	struct nlm_vnode *nvp = (struct nlm_vnode *)datap;
+
+	bzero(nvp, sizeof (*nvp));
+	return (0);
+}
+
+static void
+nlm_vnode_dtor(void *datap, void *cdrarg)
+{
+	struct nlm_vnode *nvp = (struct nlm_vnode *)datap;
+
+	ASSERT(nvp->nv_refs == 0);
+	ASSERT(nvp->nv_vp == NULL);
+}
 
 /*
  * Gets vnode from client netobject
@@ -427,14 +464,13 @@ nlm_vnode_findcreate(struct nlm_host *hostp, struct netobj *np)
 		return (nv);
 
 	/* nlm_vnode wasn't found, then create a new one */
-	/* XXX: maybe use a kmem_cache? */
-	new_nv = kmem_zalloc(sizeof (*new_nv), KM_SLEEP);
+	new_nv = kmem_cache_alloc(nlm_vnode_cache, KM_SLEEP);
 	mutex_enter(&hostp->nh_lock);
 	nv = nlm_vnode_find_locked(hostp, vp);
 	if (nv == NULL) {
 		nv = new_nv;
-		nv->nv_refs = 1;
 		nv->nv_vp = vp;
+		nv->nv_refs = 1;
 		TAILQ_INSERT_TAIL(&hostp->nh_vnodes, nv, nv_link);
 		mutex_exit(&hostp->nh_lock);
 		return (nv);
@@ -446,7 +482,8 @@ nlm_vnode_findcreate(struct nlm_host *hostp, struct netobj *np)
 	 */
 	nv->nv_refs++;
 	mutex_exit(&hostp->nh_lock);
-	kmem_free(new_nv, sizeof (*new_nv));
+	new_nv->nv_refs = 0;
+	kmem_cache_free(nlm_vnode_cache, new_nv);
 	VN_RELE(vp);
 
 	return (nv);

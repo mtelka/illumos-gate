@@ -333,6 +333,7 @@ struct nlm_owner_handle {
 /*
  * NLM internal functions for initialization.
  */
+void nlm_vnodes_init(void);
 void nlm_rpc_cache_init(void);
 
 /*
