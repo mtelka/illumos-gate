@@ -245,6 +245,7 @@ struct nlm_host {
 	int		nh_state;	/* (s) last seen NSM state of host */
 	kcondvar_t nh_rpcb_cv;
 	uint16_t nh_rpcb_sn;
+	enum clnt_stat nh_rpcb_ustat;
 	enum nlm_rpcb_state nh_rpcb_state;
 	enum nlm_host_state nh_monstate; /* (l) local NSM monitoring state */
 	time_t		nh_idle_timeout; /* (s) Time at which host is idle */

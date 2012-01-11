@@ -69,11 +69,8 @@ get_nlm_rpc_fromcache(struct nlm_host *hostp, int vers)
 /*
  * Update host's RPC binding (host->nh_addr).
  * The function is executed by only one thread at time.
- *
- * On success returns 0. If rpcb_getaddr() operation failed
- * returns -1.
  */
-static int
+static void
 update_host_rpcbinding(struct nlm_host *hostp, int vers)
 {
 	enum clnt_stat stat;
@@ -87,22 +84,13 @@ update_host_rpcbinding(struct nlm_host *hostp, int vers)
 	 * is fully updated.
 	 */
 	hostp->nh_rpcb_state = NRPCB_UPDATE_INPROGRESS;
+	hostp->nh_rpcb_ustat = RPC_SUCCESS;
 	mutex_exit(&hostp->nh_lock);
 
 	stat = rpcbind_getaddr(&hostp->nh_knc, NLM_PROG, vers, &hostp->nh_addr);
-	if (stat != RPC_SUCCESS) {
-		NLM_ERR("Failed to update RPC binding for host %s. [RPC err: %s]\n",
-		    hostp->nh_name, rpc_tpierr2name(stat));
-		ret = -1;
-		mutex_enter(&hostp->nh_lock);
+	mutex_enter(&hostp->nh_lock);
 
-		/*
-		 * No luck. May be the other time some thread calls this function
-		 * rpcbind_getaddr() does its job without errors.
-		 */
-		hostp->nh_rpcb_state = NRPCB_NEED_UPDATE;
-	} else {
-		mutex_enter(&hostp->nh_lock);
+	if (stat == RPC_SUCCESS) {
 		hostp->nh_rpcb_state = NRPCB_UPDATED;
 
 		/*
@@ -110,10 +98,12 @@ update_host_rpcbinding(struct nlm_host *hostp, int vers)
 		 */
 		if (++hostp->nh_rpcb_sn == 0)
 			hostp->nh_rpcb_sn = 1;
+	} else {
+		hostp->nh_rpcb_state = NRPCB_NEED_UPDATE;
 	}
 
+	hostp->nh_rpcb_ustat = stat;
 	cv_broadcast(&hostp->nh_rpcb_cv);
-	return (ret);
 }
 
 /*
@@ -173,8 +163,6 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 				mutex_exit(&hostp->nh_lock);
 				return (EINTR);
 			}
-
-			continue;
 		}
 
 		/*
@@ -182,14 +170,17 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 		 * If so, start RPC binding update operation.
 		 * NOTE: the operation can be by only one thread at time.
 		 */
-		if (hostp->nh_rpcb_state == NRPCB_NEED_UPDATE) {
-			rc = update_host_rpcbinding(hostp, vers);
-			if (rc < 0) {
-				mutex_exit(&hostp->nh_lock);
-				return (ENOENT);
-			}
+		if (hostp->nh_rpcb_state == NRPCB_NEED_UPDATE)
+			update_host_rpcbinding(hostp, vers);
 
-			break;
+		/*
+		 * Check if RPC error occured during RPC binding
+		 * update operation. If so, report a correspoding
+		 * error.
+		 */
+		if (hostp->nh_rpcb_ustat != RPC_SUCCESS) {
+			mutex_exit(&hostp->nh_lock);
+			return (ENOENT);
 		}
 	}
 
