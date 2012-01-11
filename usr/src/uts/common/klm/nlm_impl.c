@@ -51,6 +51,7 @@
 #include <sys/vnode.h>
 #include <sys/vfs.h>
 #include <sys/queue.h>
+#include <sys/sdt.h>
 #include <netinet/in.h>
 
 #include <rpc/rpc.h>
@@ -81,6 +82,18 @@
  * We check the host list for idle every few seconds.
  */
 #define	NLM_IDLE_PERIOD		5
+
+/*
+ * Number of attempts NLM tries to obtain RPC binding
+ * of local statd.
+ */
+#define NLM_NSM_RPCBIND_RETRIES 10
+
+/*
+ * Timeout (in seconds) NLM waits before making another
+ * attempt to obtain RPC binding of local statd.
+ */
+#define NLM_NSM_RPCBIND_TIMEOUT 5
 
 /*
  * Returns true if given sysid has active or sleeping locks
@@ -207,7 +220,7 @@ nlm_svc_create_nsm(struct knetconfig *knc, struct nlm_nsm **out_nsm)
 	struct nlm_nsm *nsm;
 	char myaddr[SYS_NMLN + 2];
 	enum clnt_stat stat;
-	int error;
+	int error, retries;
 
 	/*
 	 * Get an RPC client handle for the local statd.
@@ -220,15 +233,30 @@ nlm_svc_create_nsm(struct knetconfig *knc, struct nlm_nsm **out_nsm)
 	nb.maxlen = sizeof (myaddr);
 	nb.len = snprintf(nb.buf, nb.maxlen, "%s.", uts_nodename());
 
-	/* Get port of local statd */
-	stat = rpcbind_getaddr(knc, SM_PROG, SM_VERS, &nb);
+	/*
+	 * Try several times to get port of local statd service.
+	 * If rpcbind_getaddr returns either RPC_INTR or
+	 * RPC_PROGNOTREGISTERED, retry an attempt, but wait
+	 * for NLM_NSM_RPCBIND_TIMEOUT seconds berofore.
+	 */
+	for (retries = 0; retries < NLM_NSM_RPCBIND_RETRIES; retries++) {
+		stat = rpcbind_getaddr(knc, SM_PROG, SM_VERS, &nb);
+
+		if (stat != RPC_INTR && stat != RPC_PROGNOTREGISTERED)
+			break;
+
+		delay(SEC_TO_TICK(NLM_NSM_RPCBIND_TIMEOUT));
+	}
+
 	if (stat != RPC_SUCCESS) {
+		DTRACE_PROBE2(rpcbind__error, enum clnt_stat, stat,
+		    int, retries);
 		error = ENOENT;
 		goto err;
 	}
 
 	/*
-	 * Create RPC handle that'll be used for
+	 * Create a RPC handle that'll be used for
 	 * communication with local statd
 	 */
 	error = clnt_tli_kcreate(knc, &nb, SM_PROG, SM_VERS,
