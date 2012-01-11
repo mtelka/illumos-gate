@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
+ * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
  */
 
 /*
@@ -62,26 +62,6 @@ void (*lm_remove_file_locks)(int) = NULL;
 
 krwlock_t		lm_lck;
 zone_key_t		nlm_zone_key;
-
-/*
- * ****************************************************************
- * Stubs called in _init/_fini
- */
-
-/*
- * Init/fini our collection of "sysid" mappings, which are
- * local numeric short-hand identifiers for remote systems
- * for which we're tracking locks.  See lm_get_sysid().
- */
-void
-lm_sysid_init()
-{
-}
-
-void
-lm_sysid_fini()
-{
-}
 
 /*
  * Init/fini per-zone stuff for klm
@@ -144,7 +124,6 @@ _init()
 	int retval;
 
 	rw_init(&lm_lck, NULL, RW_DEFAULT, NULL);
-	lm_sysid_init();
 	nlm_init();
 
 	zone_key_create(&nlm_zone_key, lm_zone_init, NULL, lm_zone_fini);
@@ -159,7 +138,6 @@ _init()
 	 * mod_install failed! undo above, reverse order
 	 */
 
-	lm_sysid_fini();
 	(void) zone_key_delete(flock_zone_key);
 	flock_zone_key = ZONE_KEY_UNINITIALIZED;
 	(void) zone_key_delete(nlm_zone_key);
@@ -454,20 +432,22 @@ lm_rel_sysid(struct lm_sysid *sysid)
 }
 
 /*
- * Alloc/free a sysid_t (number).
+ * Alloc/free a sysid_t (a unique number between
+ * LM_SYSID and LM_SYSID_MAX).
+ *
  * Used by NFSv4 rfs4_op_lockt and smbsrv/smb_fsop_frlock,
  * both to represent non-local locks outside of klm.
  */
 sysid_t
-lm_alloc_sysidt()
+lm_alloc_sysidt(void)
 {
-	return (-1);
+	return (nlm_sysid_alloc());
 }
 
 void
-lm_free_sysidt(sysid_t s)
+lm_free_sysidt(sysid_t sysid)
 {
-	/* XXX - todo... */
+	nlm_sysid_free(sysid);
 }
 
 /* Access private member lms->sysid */
@@ -486,10 +466,7 @@ lm_sysidt(struct lm_sysid *lms)
 int
 lm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
 {
-	int safe;
-
-	safe = nlm_safelock(vp, fl, cr);
-	return (safe);
+	return (nlm_safelock(vp, fl, cr));
 }
 
 /*
@@ -500,10 +477,7 @@ lm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
 int
 lm_safemap(const vnode_t *vp)
 {
-	int safe;
-
-	safe = nlm_safemap(vp);
-	return (safe);
+	return (nlm_safemap(vp));
 }
 
 /*
@@ -514,10 +488,7 @@ lm_safemap(const vnode_t *vp)
 int
 lm_has_sleep(const vnode_t *vp)
 {
-	int has_sleep;
-
-	has_sleep = nlm_has_sleep(vp);
-	return (has_sleep);
+	return (nlm_has_sleep(vp));
 }
 
 /*

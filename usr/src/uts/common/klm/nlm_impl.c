@@ -51,6 +51,7 @@
 #include <sys/vnode.h>
 #include <sys/vfs.h>
 #include <sys/queue.h>
+#include <sys/bitmap.h>
 #include <sys/sdt.h>
 #include <netinet/in.h>
 
@@ -67,6 +68,7 @@
 #include <nfs/nfs_clnt.h>
 #include <nfs/export.h>
 #include <nfs/rnode.h>
+#include <nfs/lm.h>
 
 #include "nlm_impl.h"
 
@@ -83,14 +85,23 @@
 #define	NLM_NSM_RPCBIND_TIMEOUT 5
 
 /*
+ * Total number of sysids in NLM sysid bitmap
+ */
+#define NLM_BMAP_NITEMS	(LM_SYSID_MAX + 1)
+
+/*
+ * Number of ulong_t words in bitmap that is used
+ * for allocation of sysid numbers.
+ */
+#define	NLM_BMAP_WORDS  (NLM_BMAP_NITEMS / BT_NBIPUL)
+
+/*
  * Given an interger x, the macro is returned
  * -1 if x is negative,
  *  0 if x is zero
  *  1 if x is positive
  */
 #define	SIGN(x) (((x) < 0) - ((x) > 0))
-
-krwlock_t lm_lck;
 
 /*
  * List of all Zone globals nlm_globals instences
@@ -111,6 +122,15 @@ static volatile uint32_t nlm_next_sysid = 0;
  */
 static struct kmem_cache *nlm_hosts_cache = NULL;
 static struct kmem_cache *nlm_vhold_cache = NULL;
+
+/*
+ * A bitmap for allocation of new sysids.
+ * Sysid is a unique number between LM_SYSID
+ * and LM_SYSID_MAX. Sysid represents unique remote
+ * host that does file locks on the given host.
+ */
+static ulong_t	nlm_sysid_bmap[NLM_BMAP_WORDS];
+static int	nlm_sysid_nidx;
 
 /*
  * RPC service registrations for LOOPBACK,
@@ -136,6 +156,8 @@ static SVC_CALLOUT_TABLE nlm_sct_in = {
 	FALSE,
 	nlm_svcs_in
 };
+
+krwlock_t lm_lck;
 
 /*
  * NLM misc. function
@@ -237,6 +259,17 @@ nlm_init(void)
 
 	nlm_rpc_init();
 	TAILQ_INIT(&nlm_zones_list);
+
+	/* initialize sysids bitmap */
+	bzero(nlm_sysid_bmap, sizeof (nlm_sysid_bmap));
+	nlm_sysid_nidx = 1;
+
+	/*
+	 * Reserv the sysid #0, because it's associated
+	 * with local locks only. Don't let to allocate
+	 * it for remote locks.
+	 */
+	BT_SET(nlm_sysid_bmap, 0);
 }
 
 void
@@ -300,6 +333,49 @@ nlm_vp_active(const vnode_t *vp)
 
 	mutex_exit(&g->lock);
 	return (active);
+}
+
+/*
+ * Allocate new unique sysid.
+ * In case of failure (no available sysids)
+ * return LM_NOSYSID.
+ */
+sysid_t
+nlm_sysid_alloc(void)
+{
+	sysid_t ret_sysid = LM_NOSYSID;
+
+	rw_enter(&lm_lck, RW_WRITER);
+	if (nlm_sysid_nidx > LM_SYSID_MAX)
+		nlm_sysid_nidx = LM_SYSID;
+
+	if (!BT_TEST(nlm_sysid_bmap, nlm_sysid_nidx)) {
+		BT_SET(nlm_sysid_bmap, nlm_sysid_nidx);
+		ret_sysid = nlm_sysid_nidx++;
+	} else {
+		index_t id;
+
+		id = bt_availbit(nlm_sysid_bmap, NLM_BMAP_NITEMS);
+		if (id > 0) {
+			nlm_sysid_nidx = id + 1;
+			ret_sysid = id;
+			BT_SET(nlm_sysid_bmap, id);
+		}
+	}
+
+	rw_exit(&lm_lck);
+	return (ret_sysid);
+}
+
+void
+nlm_sysid_free(sysid_t sysid)
+{
+	ASSERT(sysid >= LM_SYSID && sysid <= LM_SYSID_MAX);
+
+	rw_enter(&lm_lck, RW_WRITER);
+	ASSERT(BT_TEST(nlm_sysid_bmap, sysid));
+	BT_CLEAR(nlm_sysid_bmap, sysid);
+	rw_exit(&lm_lck);
 }
 
 /*
