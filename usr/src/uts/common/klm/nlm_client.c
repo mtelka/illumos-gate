@@ -104,6 +104,7 @@ static int nlm_call_cancel(struct nlm4_lockargs *largs,
 
 static int nlm_local_getlk(vnode_t *vp, struct flock64 *fl, int flags);
 static int nlm_local_setlk(vnode_t *vp, struct flock64 *fl, int flags);
+static void nlm_track_vnode(struct host *hostp, vnode_t *vp);
 
 static void nlm_init_share(struct nlm4_share *share,
 	const struct shrlock *sl, struct netobj *fh,
@@ -389,6 +390,11 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 		NLM_ERR("nlm_frlock_setlk: Failed to set local lock. [err=%d]\n",
 			error);
 		/* XXX[DK]: unlock remote lock? */
+	} else {
+		/*
+		 * Remember all vnodes that were locked.
+		 */
+		nlm_track_vnode(hostp, vp);
 	}
 
 	return (error);
@@ -1181,6 +1187,11 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 		 */
 		NLM_ERR("NLM: set locally, err %d\n", error);
 		error = 0;
+	} else {
+		/*
+		 * Remember all vnodes with share reservations.
+		 */
+		nlm_track_vnode(hostp, vp);
 	}
 
 	/* Start monitoring this host. */

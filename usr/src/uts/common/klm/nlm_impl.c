@@ -491,6 +491,23 @@ nlm_vhold_release(struct nlm_host *hostp, struct nlm_vhold *nvp)
 	mutex_exit(&hostp->nh_lock);
 }
 
+bool_t
+nlm_vhold_stale(struct nlm_vhold *nvp)
+{
+	bool_t stale = FALSE;
+	vnode_t *vp;
+
+	ASSERT(nvp->nv_refcnt > 0);
+	nvp->nv_vp = nvp->nv_vp;
+
+	mutex_enter(&vp->v_lock);
+	if (vp->v_count == 0)
+		stale = TRUE;
+
+	mutex_exit(&vp->v_lock);
+	return (stale);
+}
+
 static int
 nlm_vhold_ctor(void *datap, void *cdrarg, int kmflags)
 {
