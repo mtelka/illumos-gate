@@ -46,6 +46,7 @@
 #include <sys/unistd.h>
 #include <sys/vnode.h>
 #include <sys/queue.h>
+#include <sys/sdt.h>
 
 #include <fs/fs_subr.h>
 #include <rpcsvc/nlm_prot.h>
@@ -925,8 +926,6 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *fl,
 	int retries = 3;	/* XXX */
 
 	bzero(&args, sizeof (args));
-	bzero(&res, sizeof (res));
-
 	nlm_init_lock(&args.alock, fl, fh, &oh);
 	oh.oh_sysid = nlm_host_get_sysid(host);
 
@@ -1002,8 +1001,6 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 	int error, retries;
 
 	bzero(&args, sizeof (args));
-	bzero(&res, sizeof (res));
-
 	nlm_init_lock(&args.alock, flp, fhp, &oh);
 	args.exclusive = (flp->l_type == F_WRLCK);
 	oh.oh_sysid = nlm_host_get_sysid(hostp);
@@ -1018,9 +1015,13 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 			return (ENOLCK);
 
 		xid = atomic_inc_32_nv(&nlm_xid);
+		DTRACE_PROBE3(test__rloop_start, nlm_rpc_t *, rpcp,
+		    int, retries, uint32_t, xid);
+
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
+		bzero(&res, sizeof (res));
 		stat = nlm_test_rpc(&args, &res, rpcp->nr_handle, vers);
 		nlm_host_rele_rpc(hostp, rpcp);
 
@@ -1032,6 +1033,7 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 			continue;
 		}
 
+		DTRACE_PROBE1(test__rloop_end, enum nlm_stats, res.stat.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_testres, (void *)&res);
 		if (res.stat.stat == nlm4_denied_grace_period) {
 			/*
