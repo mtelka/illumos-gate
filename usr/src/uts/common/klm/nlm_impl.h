@@ -469,6 +469,8 @@ nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res,
 extern enum clnt_stat
 nlm_unshare_rpc(nlm4_shareargs *args, nlm4_shareres *res,
 	CLIENT *client, rpcvers_t vers);
+extern enum clnt_stat
+nlm_null_rpc(CLIENT *client, rpcvers_t vers);
 
 
 /*

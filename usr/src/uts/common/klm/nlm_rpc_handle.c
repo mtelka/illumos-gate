@@ -123,6 +123,12 @@ refresh_nlm_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
 		    &hostp->nh_addr, 0, NLM_RPC_RETRIES, CRED());
 	}
 
+	if (ret == 0) {
+		enum clnt_stat stat;
+		NLM_WARN("Call null proc\n");
+		stat = nlm_null_rpc(rpcp->nr_handle, NULL);
+		NLM_WARN("result %d\n", stat);
+	}
 	return (ret);
 }
 
