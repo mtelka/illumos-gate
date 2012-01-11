@@ -420,6 +420,7 @@ void nlm_rpc_init(void);
 void nlm_rpc_cache_destroy(struct nlm_host *);
 void nlm_globals_register(struct nlm_globals *);
 void nlm_globals_unregister(struct nlm_globals *);
+int nlm_vp_active(const vnode_t *);
 
 /*
  * Client functions (nlm_client.c)
@@ -487,6 +488,7 @@ int nlm_host_get_state(struct nlm_host *);
 
 struct nlm_vhold *nlm_vhold_get(struct nlm_host *, vnode_t *);
 void nlm_vhold_release(struct nlm_host *, struct nlm_vhold *);
+struct nlm_vhold *nlm_vhold_find_locked(struct nlm_host *, const vnode_t *);
 
 struct nlm_slock *nlm_slock_register(struct nlm_globals *,
     struct nlm_host *, struct nlm4_lock *, struct vnode *);
@@ -511,6 +513,7 @@ void nlm_host_rele_rpc(struct nlm_host *, nlm_rpc_t *);
 /*
  * NLM server functions (nlm_service.c)
  */
+int nlm_vp_active(const vnode_t *vp);
 void nlm_do_notify1(nlm_sm_status *, void *, struct svc_req *);
 void nlm_do_notify2(nlm_sm_status *, void *, struct svc_req *);
 void nlm_do_test(nlm4_testargs *, nlm4_testres *,

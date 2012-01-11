@@ -423,8 +423,7 @@ lm_free_config(struct knetconfig *knc)
 int
 lm_vp_active(const vnode_t *vp)
 {
-	/* XXX - todo... */
-	return (0);
+	return (nlm_vp_active(vp));
 }
 
 /*

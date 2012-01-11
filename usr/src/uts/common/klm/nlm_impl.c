@@ -181,8 +181,6 @@ static bool_t nlm_host_has_locks(struct nlm_host *);
  */
 static int nlm_vhold_ctor(void *, void *, int);
 static void nlm_vhold_dtor(void *, void *);
-static struct nlm_vhold *nlm_vhold_find_locked(struct nlm_host *,
-    vnode_t *);
 static void nlm_vhold_destroy(struct nlm_host *,
     struct nlm_vhold *);
 static bool_t nlm_vhold_busy(struct nlm_host *, struct nlm_vhold *);
@@ -267,6 +265,41 @@ nlm_kmem_reclaim(void *cdrarg)
 		cv_broadcast(&g->nlm_gc_sched_cv);
 
 	rw_exit(&lm_lck);
+}
+
+/*
+ * Returns TRUE if the given vnode has
+ * any active or sleeping locks.
+ */
+int
+nlm_vp_active(const vnode_t *vp)
+{
+	struct nlm_globals *g;
+	struct nlm_host *hostp;
+	struct nlm_vhold *nvp;
+	int active = 0;
+
+	g = zone_getspecific(nlm_zone_key, curzone);
+
+	/*
+	 * Server side NLM has locks on the given vnode
+	 * if there exist a vhold object that holds
+	 * the given vnode "vp" in one of NLM hosts.
+	 */
+	mutex_enter(&g->lock);
+	hostp = avl_first(&g->nlm_hosts_tree);
+	while (hostp != NULL) {
+		nvp = nlm_vhold_find_locked(hostp, vp);
+		if (nvp != NULL) {
+			active = 1;
+			break;
+		}
+
+		hostp = AVL_NEXT(&g->nlm_hosts_tree, hostp);
+	}
+
+	mutex_exit(&g->lock);
+	return (active);
 }
 
 /*
@@ -790,8 +823,8 @@ nlm_vhold_dtor(void *datap, void *cdrarg)
 	ASSERT(nvp->nv_vp == NULL);
 }
 
-static struct nlm_vhold *
-nlm_vhold_find_locked(struct nlm_host *hostp, vnode_t *vp)
+struct nlm_vhold *
+nlm_vhold_find_locked(struct nlm_host *hostp, const vnode_t *vp)
 {
 	struct nlm_vhold *nvp = NULL;
 
