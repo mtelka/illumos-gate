@@ -284,12 +284,14 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	g = zone_getspecific(nlm_zone_key, curzone);
 	host = nlm_host_findcreate(g, name, netid, addr);
 	if (host == NULL) {
+		DTRACE_PROBE4(no__host, struct nlm_globals *, g,
+		    char *, name, char *, netid, struct netbuf *, addr);
 		status = nlm4_denied_nolocks;
 		goto doreply;
 	}
 
-	NLM_DEBUG(NLM_LL3, "nlm_do_lock(): name = %s sysid = %d\n",
-	    name, host->nh_sysid);
+	DTRACE_PROBE3(start, struct nlm_globals *, g,
+	    struct nlm_host *, host, nlm4_lockargs *, argp);
 
 	nv = nlm_vnode_findcreate(host, &argp->alock.fh);
 	if (nv == NULL) {
@@ -345,6 +347,9 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	flags = F_REMOTELOCK | FREAD | FWRITE;
 	error = VOP_FRLOCK(nv->nv_vp, F_SETLK, &fl, flags,
 	    (u_offset_t)0, NULL, CRED(), NULL);
+
+	DTRACE_PROBE3(setlk__res, struct flock64 *, &fl,
+	    int, flags, int, error);
 
 	switch (error) {
 	case 0:
@@ -451,6 +456,9 @@ doreply:
 
 	if (rpcp != NULL)
 		nlm_host_rele_rpc(rpcp);
+
+	DTRACE_PROBE3(end, struct nlm_globals *, g,
+	    struct nlm_host *, host, nlm4_res *, resp);
 
 	nlm_vnode_release(host, nv);
 	nlm_host_release(g, host);
@@ -731,7 +739,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 		goto out;
 	}
 
-	nlm_init_flock(&fl, &argp->alock, sysid);
+	nlm_init_flock(&fl, &argp->alock, host->nh_sysid);
 	fl.l_type = F_UNLCK;
 
 	/* BSD: VOP_ADVLOCK(nv->nv_vp, NULL, F_UNLCK, &fl, F_REMOTE); */
