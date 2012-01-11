@@ -764,7 +764,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	g = zone_getspecific(nlm_zone_key, curzone);
 	host = nlm_host_find(g, netid, addr);
 	if (host == NULL) {
-		resp->stat.stat = nlm4_denied_nolocks;
+		resp->stat.stat = nlm4_granted;
 		return;
 	}
 
@@ -778,7 +778,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 
 	vp = nlm_fh_to_vp(&argp->alock.fh);
 	if (vp == NULL) {
-		resp->stat.stat = nlm4_stale_fh;
+		resp->stat.stat = nlm4_granted;
 		goto out;
 	}
 
