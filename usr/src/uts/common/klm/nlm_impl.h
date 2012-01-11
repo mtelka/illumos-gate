@@ -276,6 +276,7 @@ struct nlm_host {
 	kmutex_t	nh_lock;
 	volatile uint_t	nh_refs;	/* (a) reference count */
 	TAILQ_ENTRY(nlm_host) nh_link; /* (z) per-zone list of hosts */
+	avl_node_t  nh_tree;
 	char		*nh_name;	/* (c) printable name of host */
 	char		*nh_netid;	/* TLI binding name */
 	struct knetconfig nh_knc;	/* (c) knetconfig for nh_addr */
@@ -325,6 +326,7 @@ struct nlm_globals {
 	kcondvar_t status_cv;
 	struct nlm_nsm *nlm_nsm; /* An RPC client handle that can be used to communicate
 		                        with the local NSM. */
+	avl_tree_t nlm_hosts_tree;
 	struct nlm_host_list nlm_hosts; /* (l) NLM hosts */
 	struct nlm_waiting_lock_list nlm_wlocks; /* (l) client-side waiting locks */
 	/* options from lockd */
@@ -453,6 +455,7 @@ int nlm_build_knetconfig(int nfmly, int nproto,
     /* OUT */ struct knetconfig *out_knc);
 
 
+extern int nlm_host_cmp(const void *p1, const void *p2);
 extern struct nlm_host *nlm_host_findcreate(struct nlm_globals *g, char *name,
     const char *netid, struct netbuf *addr);
 extern struct nlm_host * nlm_host_find(struct nlm_globals *g,

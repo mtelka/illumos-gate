@@ -893,7 +893,7 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	host->nh_name = strdup(name);
 	host->nh_netid = strdup(netid);
 	host->nh_knc = *knc;
-	bcopy(naddr, &host->nh_addr, sizeof (naddr));
+	bcopy(naddr, &host->nh_addr, sizeof (*naddr));
 
 	host->nh_state = 0;
 	host->nh_monstate = NLM_UNMONITORED;
@@ -965,19 +965,60 @@ nlm_check_idle(void)
 static int
 nlm_netbuf_addrs_cmp(nlm_addr_t *na1, nlm_addr_t *na2)
 {
+	int res;
+
+	if (na1->sa.sa_family < na2->sa.sa_family)
+		return (-1);
+	if (na1->sa.sa_family > na2->sa.sa_family)
+		return (1);
+
 	switch (na1->sa.sa_family) {
 	case AF_INET:
-		return (memcmp(&na1->sin.sin_addr, &na2->sin.sin_addr,
-		        sizeof (na1->sin.sin_addr)));
+		res = memcmp(&na1->sin.sin_addr, &na2->sin.sin_addr,
+		    sizeof (na1->sin.sin_addr));
+		break;
 	case AF_INET6:
-		return (memcmp(&na1->sin6.sin6_addr, &na2->sin6.sin6_addr,
-		        sizeof (na1->sin6.sin6_addr)));
+		res = memcmp(&na1->sin6.sin6_addr, &na2->sin6.sin6_addr,
+		    sizeof (na1->sin6.sin6_addr));
+		break;
 	default:
 		VERIFY(0);
-
-		/* Just to take away compiler warning */
-		return (-1);
+		break;
 	}
+
+	if (res < 0)
+		return (-1);
+	if (res > 0)
+		return (1);
+
+	return (0);
+}
+
+/*
+ * Compare two nlm hosts.
+ * Return values:
+ * -1: host1 is "smaller" than host2
+ *  0: host1 is equal to host2
+ *  1: host1 is "greater" than host2
+ */
+int
+nlm_host_cmp(const void *p1, const void *p2)
+{
+	struct nlm_host *h1 = (struct nlm_host *)p1;
+	struct nlm_host *h2 = (struct nlm_host *)p2;
+	int res;
+
+	res = nlm_netbuf_addrs_cmp(&h1->nh_addr, &h2->nh_addr);
+	if (res != 0)
+		return (res);
+
+	res = strcmp(h1->nh_netid, h2->nh_netid);
+	if (res < 0)
+		return (-1);
+	if (res > 0)
+		return (1);
+
+	return (0);
 }
 
 /*
@@ -986,21 +1027,23 @@ nlm_netbuf_addrs_cmp(nlm_addr_t *na1, nlm_addr_t *na2)
  */
 static struct nlm_host *
 nlm_host_find_locked(struct nlm_globals *g, const char *netid,
-    nlm_addr_t *naddr)
+    nlm_addr_t *naddr, avl_index_t *wherep)
 {
-	struct nlm_host *host;
+	struct nlm_host *hostp, key;
+	avl_index_t pos;
 
 	ASSERT(MUTEX_HELD(&g->lock));
 
-	TAILQ_FOREACH(host, &g->nlm_hosts, nh_link) {
-		if (nlm_netbuf_addrs_cmp(&host->nh_addr, naddr) == 0
-		    && strcmp(host->nh_netid, netid) == 0) {
-			host->nh_refs++;
-			break;
-		}
-	}
+	key.nh_netid = (char *)netid;
+	bcopy(naddr, &key.nh_addr, sizeof (*naddr));
+	hostp = avl_find(&g->nlm_hosts_tree, &key, &pos);
 
-	return (host);
+	if (hostp != NULL)
+		hostp->nh_refs++;
+	if (wherep != NULL)
+		*wherep = pos;
+
+	return (hostp);
 }
 
 /*
@@ -1018,7 +1061,7 @@ nlm_host_find(struct nlm_globals *g, const char *netid,
 	    naddr->sa.sa_family == AF_INET6);
 
 	mutex_enter(&g->lock);
-	hostp = nlm_host_find_locked(g, netid, naddr);
+	hostp = nlm_host_find_locked(g, netid, naddr, NULL);
 	mutex_exit(&g->lock);
 
 	return (hostp);
@@ -1041,13 +1084,14 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	struct nlm_host *host, *newhost;
 	struct knetconfig knc;
 	nlm_addr_t *naddr;
+	avl_index_t where;
 
 	naddr = (nlm_addr_t *)addr->buf;
 	VERIFY(naddr->sa.sa_family == AF_INET ||
 	    naddr->sa.sa_family == AF_INET6);
 
 	mutex_enter(&g->lock);
-	host = nlm_host_find_locked(g, netid, naddr);
+	host = nlm_host_find_locked(g, netid, naddr, NULL);
 	mutex_exit(&g->lock);
 	if (host != NULL)
 		goto done;
@@ -1062,9 +1106,10 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	 */
 	newhost = nlm_create_host(g, name, netid, &knc, naddr);
 	mutex_enter(&g->lock);
-	host = nlm_host_find_locked(g, netid, naddr);
+	host = nlm_host_find_locked(g, netid, naddr, &where);
 	if (host == NULL) {
 		newhost->nh_sysid = nlm_acquire_next_sysid();
+		avl_insert(&g->nlm_hosts_tree, newhost, where);
 		TAILQ_INSERT_TAIL(&g->nlm_hosts, newhost, nh_link);
 	}
 

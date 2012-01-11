@@ -92,6 +92,11 @@ lm_zone_init(zoneid_t zoneid)
 	struct nlm_globals *g;
 
 	g = kmem_zalloc(sizeof (*g), KM_SLEEP);
+
+	avl_create(&g->nlm_hosts_tree, nlm_host_cmp,
+	    sizeof (struct nlm_host),
+	    offsetof(struct nlm_host, nh_tree));
+
 	TAILQ_INIT(&g->nlm_hosts);
 	TAILQ_INIT(&g->nlm_wlocks);
 
