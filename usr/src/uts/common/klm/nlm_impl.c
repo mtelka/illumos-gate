@@ -228,19 +228,72 @@ nlm_get_rpc(struct knetconfig *knc, struct netbuf *addr,
 
 /*
  * Create an instance of nlm_nsm structure.
- * The function only allocates a structure, initializes
- * mutex and sets refcount to 1, handle field is NULL.
+ * The function establishes new (and the only one) connection
+ * with local statd and informs it that we're starting
+ * or restarting with call SM_SIMU_CRASH.
+ *
+ * In case of success the function returns 0 and newly allocated
+ * nlm_nsm is saved to out_nsm.
  */
-struct nlm_nsm *
-nlm_svc_create_nsm(void)
+int
+nlm_svc_create_nsm(struct knetconfig *knc, struct nlm_nsm **out_nsm)
 {
+	CLIENT *clnt = NULL;
+	struct netbuf nb;
 	struct nlm_nsm *nsm;
+	char myaddr[SYS_NMLN + 2];
+	enum clnt_stat stat;
+	int error;
 
-	nsm = kmem_zalloc(sizeof(*nsm), KM_SLEEP);
+	/*
+	 * Get an RPC client handle for the local statd.
+	 *
+	 * Create the "self" host address, which is like
+	 * "nodename.service" where the service is empty,
+	 * and nodename is the zone's node name.
+	 */
+	nb.buf = myaddr;
+	nb.maxlen = sizeof (myaddr);
+	nb.len = snprintf(nb.buf, nb.maxlen, "%s.", uts_nodename());
+
+	/* Get port of local statd */
+	stat = rpcbind_getaddr(knc, SM_PROG, SM_VERS, &nb);
+	if (stat != RPC_SUCCESS) {
+		error = ENOENT;
+		goto err;
+	}
+
+	/*
+	 * Create RPC handle that'll be used for
+	 * communication with local statd
+	 */
+	error = clnt_tli_kcreate(knc, &nb, SM_PROG, SM_VERS,
+	    0, NLM_RPC_RETRIES, CRED(), &clnt);
+	if (error != 0)
+		goto err;
+
+	stat = sm_simu_crash_1(NULL, NULL, clnt);
+	if (stat != RPC_SUCCESS) {
+		struct rpc_err rpcerr;
+
+		CLNT_GETERR(clnt, &rpcerr);
+		error = rpcerr.re_errno;
+		goto err;
+	}
+
+	nsm = kmem_zalloc(sizeof (*nsm), KM_SLEEP);
 	sema_init(&nsm->sem, 1, NULL, SEMA_DEFAULT, NULL);
 	nsm->refcnt = 1;
+	nsm->handle = clnt;
+	*out_nsm = nsm;
 
-	return nsm;
+	return (0);
+
+err:
+	if (clnt != NULL)
+		CLNT_DESTROY(clnt);
+
+	return (error);
 }
 
 /*
@@ -1324,55 +1377,21 @@ int
 nlm_svc_starting(struct nlm_globals *g, struct file *fp,
     const char *netid, struct knetconfig *knc)
 {
-	enum clnt_stat stat;
 	clock_t time_uptime;
-	char myaddr[SYS_NMLN + 2];
-	struct netbuf nb;
 	struct nlm_nsm *nsm;
-	CLIENT *clnt;
 	int err;
 
-	ASSERT(g->run_status == NLM_ST_STARTING);
-
-	/*
-	 * Get an RPC client handle for the local statd.
-	 *
-	 * Create the "self" host address, which is like
-	 * "nodename.service" where the service is empty,
-	 * and nodename is the zone's node name.
-	 */
-	nb.buf = myaddr;
-	nb.maxlen = sizeof (myaddr);
-	nb.len = snprintf(nb.buf, nb.maxlen, "%s.", uts_nodename());
-
-	clnt = nlm_get_rpc(knc, &nb, SM_PROG, SM_VERS);
-	if (clnt == NULL) {
-		NLM_ERR("NLM: internal error contacting NSM\n");
+	VERIFY(g->run_status == NLM_ST_STARTING);
+	err = nlm_svc_create_nsm(knc, &nsm);
+	if (err != 0) {
+		NLM_ERR("NLM: Failed to contact to local NSM: errno=%d\n", err);
 		err = EIO;
 		goto shutdown_lm;
 	}
-
-	/*
-	 * Inform statd that we're starting (or restarting)
-	 * with call SM_SIMU_CRASH.
-	 */
-	stat = sm_simu_crash_1(NULL, NULL, clnt);
-	if (stat != RPC_SUCCESS) {
-		struct rpc_err rpcerr;
-
-		CLNT_GETERR(clnt, &rpcerr);
-		NLM_ERR("NLM: unexpected error contacting NSM, "
-		    "stat=%d, errno=%d\n", stat, rpcerr.re_errno);
-		CLNT_DESTROY(clnt);
-		err = EIO;
-		goto shutdown_lm;
-	}
-
-	ASSERT(g->nlm_nsm == NULL);
-	nsm = nlm_svc_create_nsm();
-	nsm->handle = clnt;
 
 	mutex_enter(&g->lock);
+	VERIFY(g->nlm_nsm == NULL);
+
 	g->nlm_nsm = nsm;
 	time_uptime = ddi_get_lbolt();
 	g->grace_threshold = time_uptime +
@@ -1380,6 +1399,7 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 	g->next_idle_check = time_uptime +
 	    SEC_TO_TICK(NLM_IDLE_PERIOD);
 	g->run_status = NLM_ST_UP;
+
 	mutex_exit(&g->lock);
 
 	/* Register endpoint used for communications with local NLM */
