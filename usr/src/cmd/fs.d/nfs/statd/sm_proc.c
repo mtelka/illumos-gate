@@ -447,6 +447,7 @@ insert_mon(monp)
 	 * Record the name, and all addresses which have been registered
 	 * for this name, in the filesystem name space.
 	 */
+	syslog(LOG_ERR, "DBG: new mon %s\n", new->id.mon_id.mon_name);
 	record_name(new->id.mon_id.mon_name, 1);
 	if (regfiles_only == 0) {
 		mutex_lock(&name_addrlock);
@@ -649,6 +650,7 @@ send_notice(mon_name, state)
 	monitor_q = mon_table[hash].sm_monhdp;
 
 	next = monitor_q;
+	syslog(LOG_ERR, "DBG: send_notice: %s, %p\n", mon_name, monitor_q);
 	while (next != (struct mon_entry *)NULL) {
 		if (hostname_eq(next->id.mon_id.mon_name, mon_name)) {
 			monp = &next->id;
