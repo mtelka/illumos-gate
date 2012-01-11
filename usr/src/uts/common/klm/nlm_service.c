@@ -906,7 +906,7 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	struct netbuf *addr;
 	char *netid;
 	char *name;
-	int error, flags, sysid;
+	int error, flags;
 	struct shrlock shr;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
@@ -921,9 +921,9 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 		resp->stat = nlm4_denied_nolocks;
 		return;
 	}
-	sysid = host->nh_sysid;
 
-	NLM_DEBUG(NLM_LL3, "nlm_do_share(): name = %s sysid = %d\n", name, sysid);
+	DTRACE_PROBE3(share__start, struct nlm_globals *, g,
+	    struct nlm_host *, host, nlm4_shareargs *, argp);
 
 	if (argp->reclaim == 0 &&
 	    ddi_get_lbolt() < nlm_grace_threshold) {
@@ -947,6 +947,9 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	resp->stat = error ? nlm4_denied : nlm4_granted;
 
 out:
+	DTRACE_PROBE3(share__end, struct nlm_globals *, g,
+	    struct nlm_host *, host, nlm4_shareres *, resp);
+
 	nlm_vnode_release(host, nv, FALSE);
 	nlm_host_release(g, host);
 }
@@ -965,7 +968,7 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	struct netbuf *addr;
 	char *netid;
 	char *name;
-	int error, flags, sysid;
+	int error, flags;
 	struct shrlock shr;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
@@ -980,9 +983,9 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 		resp->stat = nlm4_denied_nolocks;
 		return;
 	}
-	sysid = host->nh_sysid;
 
-	NLM_DEBUG(NLM_LL3, "nlm_do_unshare(): name = %s sysid = %d\n", name, sysid);
+	DTRACE_PROBE3(unshare__start, struct nlm_globals *, g,
+	    struct nlm_host *, host, nlm4_shareargs *, argp);
 
 	if (argp->reclaim == 0 &&
 	    ddi_get_lbolt() < nlm_grace_threshold) {
@@ -1007,6 +1010,9 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	resp->stat = nlm4_granted;
 
 out:
+	DTRACE_PROBE3(unshare__end, struct nlm_globals *, g,
+	    struct nlm_host *, host, nlm4_shareres *, resp);
+
 	nlm_vnode_release(host, nv, TRUE);
 	nlm_host_release(g, host);
 }

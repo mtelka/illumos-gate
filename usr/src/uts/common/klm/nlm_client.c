@@ -1119,25 +1119,34 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	int flags, struct netobj *fh, int vers)
 {
 	struct shrlock shlk;
+	struct nlm_vnode *nvp = NULL;
 	mntinfo_t *mi;
 	servinfo_t *sv;
 	const char *netid;
 	struct nlm_host *host = NULL;
 	int error, xflags;
 	struct nlm_globals *g;
+	bool_t check_locks = FALSE;
 
 	mi = VTOMI(vp);
 	sv = mi->mi_curr_serv;
 
 	netid = nlm_netid_from_knetconfig(sv->sv_knconf);
 	if (netid == NULL) {
-		cmn_err(CE_NOTE, "nlm_shrlock: unknown NFS netid");
-		error = ENOSYS;
-		goto out;
+		NLM_ERR("nlm_shrlock: unknown NFS netid\n");
+		return (ENOSYS);
 	}
 
 	g = zone_getspecific(nlm_zone_key, curzone);
 	host = nlm_host_findcreate(g, sv->sv_hostname, netid, &sv->sv_addr);
+	if (host == NULL)
+		return (ENOSYS);
+
+	nvp = nlm_vnode_findcreate(host, vp);
+	if (nvp == NULL) {
+		error = ENOLCK;
+		goto out;
+	}
 
 	/*
 	 * Fill in s_sysid for the local locking calls.
@@ -1154,6 +1163,9 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 		 */
 		(void) nlm_local_shrlock(vp, &shlk, cmd, flags);
 		error = nlm_call_unshare(vp, &shlk, host, fh, vers);
+		if (error == 0)
+			check_locks = TRUE;
+
 		goto out;
 	}
 
@@ -1186,8 +1198,8 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	nlm_host_monitor(g, host, 0);
 
 out:
-	if (host)
-		nlm_host_release(g, host);
+	nlm_vnode_release(host, nvp, check_locks);
+	nlm_host_release(g, host);
 
 	return (error);
 }
@@ -1217,11 +1229,7 @@ out:
 int
 nlm_local_shrlock(vnode_t *vp, struct shrlock *shr, int cmd, int flags)
 {
-	int err;
-
-	err = fs_shrlock(vp, cmd, shr, flags, CRED(), NULL);
-
-	return (err);
+	return (fs_shrlock(vp, cmd, shr, flags, CRED(), NULL));
 }
 
 /*

@@ -164,6 +164,7 @@ static struct nlm_host *nlm_create_host(struct nlm_globals *g,
 static int nlm_netbuf_addrs_cmp(nlm_addr_t *na1, nlm_addr_t *na2);
 static struct nlm_host *nlm_host_find_locked(struct nlm_globals *g,
     const char *netid, nlm_addr_t *naddr, avl_index_t *wherep);
+static bool_t nlm_host_has_locks_on_vnode(struct nlm_host *hostp, vnode_t *vp);
 
 /*
  * NLM client/server sleeping locks functions
@@ -600,11 +601,9 @@ nlm_vnode_findcreate_fh(struct nlm_host *hostp, struct netobj *fh)
  * If check_locks argument is TRUE and if no one
  * uses given nlm_vnode (i.e. if its reference counter
  * is 0), nlm_vnode_release() asks local os/flock manager
- * whether given host has any locks on given vnode.
- * If there no any active locks, nlm_vnode is freed and
- * vnode it holds is released.
- *
- * TODO[DK]: Support checks of share reservations
+ * whether given host has any locks (and share reservations)
+ * on given  If there no any active locks, nlm_vnode is
+ * freed and vnode it holds is released.
  */
 void
 nlm_vnode_release(struct nlm_host *hostp,
@@ -649,10 +648,12 @@ nlm_vnode_release(struct nlm_host *hostp,
 	 * This is done only once.
 	 */
 	nvp->nv_flags &= ~NV_CHECKLOCKS;
-	if (flk_has_remote_locks_for_sysid(nvp->nv_vp, hostp->nh_sysid) ||
-	    flk_has_remote_locks_for_sysid(nvp->nv_vp,
-	        hostp->nh_sysid | NLM_SYSID_CLIENT)) {
-		/* Given host has locks on a vnode, don't release it */
+	if (nlm_host_has_locks_on_vnode(hostp, nvp->nv_vp)) {
+		/*
+		 * Given host has locks or share reservations
+		 * on the vnode, so don't release it
+		 */
+
 		mutex_exit(&hostp->nh_lock);
 		return;
 	}
@@ -737,7 +738,7 @@ nlm_destroy_client_locks(struct nlm_host *host)
 }
 
 /*********************************************************************
- * NLM vnode functions
+ * NLM host functions
  */
 
 static int
@@ -780,6 +781,21 @@ nlm_host_destroy(struct nlm_host *hostp)
 	cv_destroy(&hostp->nh_rpcb_cv);
 
 	kmem_cache_free(nlm_hosts_cache, hostp);
+}
+
+/*
+ * The function returns TRUE if the host "hostp" has
+ * any locks or shared reservations on the vnode "vp".
+ */
+static bool_t
+nlm_host_has_locks_on_vnode(struct nlm_host *hostp, vnode_t *vp)
+{
+	int32_t sysid = nlm_host_get_sysid(hostp);
+
+	return (flk_has_remote_locks_for_sysid(vp, sysid)
+	    || flk_has_remote_locks_for_sysid(vp, sysid | NLM_SYSID_CLIENT)
+	    || shr_has_remote_shares(vp, sysid)
+	    || shr_has_remote_shares(vp, sysid | NLM_SYSID_CLIENT));
 }
 
 void
