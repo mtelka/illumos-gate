@@ -63,15 +63,6 @@
 #define	NLM_X_RECLAIM	1
 #define	NLM_X_BLOCKING	2
 
-/*
- * Timeout (in seconds) that tells how long client
- * should wait on the blocking lock request until
- * server sends a reply or cancelation event happens.
- * After the timeout expires, client should resend
- * its sleeping lock request.
- */
-#define NLM_SLRESEND_TIMEO 10
-
 static volatile uint32_t nlm_xid = 1;
 
 static int nlm_init_fh_by_vp(vnode_t *, struct netobj *, rpcvers_t *);
@@ -832,7 +823,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		flk_invoke_callbacks(flcb, FLK_BEFORE_SLEEP);
 		nfs_rw_exit(&rnp->r_lkserlock);
 
-		error = nlm_slock_wait(g, nslp, NLM_SLRESEND_TIMEO);
+		error = nlm_slock_wait(g, nslp, g->retrans_tmo);
 
 		/*
 		 * NFS expects that we return with rnode->r_lkserlock
