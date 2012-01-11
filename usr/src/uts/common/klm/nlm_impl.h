@@ -331,6 +331,7 @@ enum nlm_rpcb_state {
  *   nh_rpcb_state: host's RPC binding state (see enum nlm_rpcb_state
  *                  for more details).
  *   nh_monstate: host NSM state (see enum nlm_host_state for more info).
+ *   nh_nsm_state: last seen host's state reported by NSM
  *   nh_idle_timeout: host idle timeout. When expired host is freed.
  *   nh_rpchc: host's RPC handles cache.
  *   nh_vholds: an AVL tree containing a tack of all vnodes given
@@ -353,6 +354,7 @@ struct nlm_host {
 	enum clnt_stat             nh_rpcb_ustat;
 	enum nlm_rpcb_state        nh_rpcb_state;
 	enum nlm_host_state        nh_monstate;
+	int                        nh_nsm_state;
 	time_t                     nh_idle_timeout;
 	struct nlm_rpch_list       nh_rpchc;
 	avl_tree_t                 nh_vholds;
@@ -533,8 +535,8 @@ void nlm_host_unmonitor(struct nlm_globals *g, struct nlm_host *host);
  */
 void nlm_host_release(struct nlm_globals *g, struct nlm_host *host);
 
-void nlm_host_notify_server(struct nlm_host *host, int newstate);
-void nlm_host_notify_client(struct nlm_host *host);
+void nlm_host_notify_server(struct nlm_host *host, int32_t state);
+void nlm_host_notify_client(struct nlm_host *host, int32_t state);
 
 /*
  * Return the system ID for a host.

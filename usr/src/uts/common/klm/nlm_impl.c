@@ -855,29 +855,8 @@ nlm_client_recovery_start(void *arg)
  * locking state.
  */
 void
-nlm_host_notify_server(struct nlm_host *host, int newstate)
+nlm_host_notify_server(struct nlm_host *host, int32_t state)
 {
-
-	NLM_DEBUG(NLM_LL2, "host notify server\n");
-	if (newstate) {
-		NLM_DEBUG(NLM_LL2, "NLM: host %s (sysid %d) rebooted, new "
-		    "state is %d\n", host->nh_name,
-		    host->nh_sysid, newstate);
-	}
-
-	/*
-	 * Cleanup for a "crashed" NFS client.
-	 * (For whom we are the server.)
-	 */
-
-	mutex_enter(&host->nh_lock);
-
-	nlm_destroy_client_pending(host);
-	nlm_destroy_client_locks(host);
-
-	host->nh_state = newstate;
-
-	mutex_exit(&host->nh_lock);
 }
 
 /*
@@ -895,7 +874,7 @@ nlm_host_notify_server(struct nlm_host *host, int newstate)
  */
 
 void
-nlm_host_notify_client(struct nlm_host *host)
+nlm_host_notify_client(struct nlm_host *host, int32_t state)
 {
 
 	/*
@@ -914,24 +893,6 @@ mark that one is starting.  (b) get the list of locks for this sysid.
 if no locks, mark recovery complete now and don't bother starting the
 recovery thread.  If there are some locks, store that list in the host
 object and start the recovery thread.  mark recovery as 'running'. */
-
-#if 0 /* FIXME[DK] */
-	 */
-	if (host->nh_monstate != NLM_RECOVERING &&
-	    nlm_sysid_has_locks(NLM_SYSID_CLIENT | host->nh_sysid)) {
-
-		/* XXX: Use a dynamic taskq here? */
-
-		struct thread *td;
-		host->nh_monstate = NLM_RECOVERING;
-
-		/* rele this ref. i nlm_client_recovery_start */
-		atomic_inc_uint(&host->nh_refs);
-
-		kthread_add(nlm_client_recovery_start, host, curproc, &td, 0, 0,
-		    "NFS lock recovery for %s", host->nh_name);
-	}
-#endif
 }
 
 /*

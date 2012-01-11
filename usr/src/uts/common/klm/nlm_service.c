@@ -58,10 +58,8 @@
 #include <rpc/xdr.h>
 #include <rpc/pmap_prot.h>
 #include <rpc/pmap_clnt.h>
-/* #include <rpc/rpcb_clnt.h> ? */
 #include <rpc/rpcb_prot.h>
 
-/* #include <rpcsvc/nfs_proto.h> */
 #include <rpcsvc/nlm_prot.h>
 #include <rpcsvc/sm_inter.h>
 
@@ -100,9 +98,20 @@ nlm_init_flock(struct flock64 *fl, struct nlm4_lock *nl, int sysid)
 
 /*
  * Call-back from NFS statd, used to notify that one of our
- * hosts had a status change.  (XXX always a restart?)
+ * hosts had a status change. The host can be either an
+ * NFS client, NFS server or both.
+ * According to NSM protocol description, the state is a
+ * number that is increases monotonically each time the
+ * state of host changes. An even number indicates that
+ * the host is doen, while an odd number indicates that
+ * the host is up.
  *
- * The host may be either an NFS client, NFS server or both.
+ * Here we ignore this even/odd difference of status number
+ * reported by the NSM, we launch notification handlers
+ * every time the state is changed. The reason we why do so
+ * is that client and server can talk to each other using
+ * connectionless transport and it's easy to lose packet
+ * containing NSM notification with status number update.
  *
  * In nlm_host_monitor(), we put the sysid in the private data
  * that statd carries in this callback, so we can easliy find
@@ -116,15 +125,19 @@ nlm_do_notify1(nlm_sm_status *argp, void *res, struct svc_req *sr)
 	struct nlm_globals *g;
 	struct nlm_host *host;
 
-	NLM_DEBUG(NLM_LL3, "nlm_do_notify1(): mon_name = %s\n", argp->mon_name);
 	g = zone_getspecific(nlm_zone_key, curzone);
 	bcopy(&argp->priv, &sysid, sizeof (sysid));
+
+	DTRACE_PROBE2(nsm__notify, uint32_t, sysid,
+	    int, argp->state);
+
 	host = nlm_host_find_by_sysid(g, sysid);
-	if (host) {
-		nlm_host_notify_server(host, argp->state);
-		nlm_host_notify_client(host);
-		nlm_host_release(g, host);
-	}
+	if (host == NULL)
+		return;
+
+	nlm_host_notify_server(host, argp->state);
+	nlm_host_notify_client(host, argp->state);
+	nlm_host_release(g, host);
 }
 
 /*
