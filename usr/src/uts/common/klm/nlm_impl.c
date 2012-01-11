@@ -233,7 +233,7 @@ static enum clnt_stat nlm_nsm_unmon_all(struct nlm_nsm *);
 static int nlm_host_ctor(void *, void *, int);
 static void nlm_host_dtor(void *, void *);
 static void nlm_host_destroy(struct nlm_host *);
-static struct nlm_host *nlm_create_host(struct nlm_globals *,
+static struct nlm_host *nlm_host_create(struct nlm_globals *,
     char *, const char *, struct knetconfig *, struct netbuf *);
 static struct nlm_host *nlm_host_find_locked(struct nlm_globals *,
     const char *, struct netbuf *, avl_index_t *);
@@ -1083,7 +1083,7 @@ nlm_host_wait_grace(struct nlm_host *hostp)
  * netid.
  */
 static struct nlm_host *
-nlm_create_host(struct nlm_globals *g, char *name,
+nlm_host_create(struct nlm_globals *g, char *name,
     const char *netid, struct knetconfig *knc, struct netbuf *naddr)
 {
 	struct nlm_host *host;
@@ -1402,7 +1402,7 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	 * Do allocations (etc.) outside of mutex,
 	 * and then check again before inserting.
 	 */
-	newhost = nlm_create_host(g, name, netid, &knc, addr);
+	newhost = nlm_host_create(g, name, netid, &knc, addr);
 	newhost->nh_sysid = nlm_sysid_alloc();
 	if (newhost->nh_sysid == LM_NOSYSID)
 		goto out;
