@@ -304,12 +304,6 @@ enum nlm_rpcb_state {
 	NRPCB_UPDATED
 };
 
-typedef union nlm_addr {
-	struct sockaddr_in sin;
-	struct sockaddr_in6 sin6;
-	struct sockaddr sa;
-} nlm_addr_t;
-
 /*
  * NLM host object is the most major structure in NLM.
  * It identifies remote client or remote server or both.
@@ -352,7 +346,7 @@ struct nlm_host {
 	char                      *nh_name;
 	char                      *nh_netid;
 	struct knetconfig          nh_knc;
-	nlm_addr_t                 nh_addr;
+	struct netbuf              nh_addr;
 	int32_t                    nh_sysid;
 	int                        nh_state;
 	kcondvar_t                 nh_rpcb_cv;

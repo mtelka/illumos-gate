@@ -81,7 +81,6 @@ update_host_rpcbinding(struct nlm_host *hostp, int vers)
 {
 	enum clnt_stat stat;
 	int ret = 0;
-	struct netbuf nb;
 
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
 
@@ -94,13 +93,7 @@ update_host_rpcbinding(struct nlm_host *hostp, int vers)
 	hostp->nh_rpcb_ustat = RPC_SUCCESS;
 	mutex_exit(&hostp->nh_lock);
 
-	nb.buf = (void *)&hostp->nh_addr;
-	if (hostp->nh_addr.sa.sa_family == AF_INET)
-		nb.len = nb.maxlen = sizeof (hostp->nh_addr.sin);
-	else /* AF_INET6 */
-		nb.len = nb.maxlen = sizeof (hostp->nh_addr.sin6);
-
-	stat = rpcbind_getaddr(&hostp->nh_knc, NLM_PROG, vers, &nb);
+	stat = rpcbind_getaddr(&hostp->nh_knc, NLM_PROG, vers, &hostp->nh_addr);
 	mutex_enter(&hostp->nh_lock);
 
 	hostp->nh_rpcb_state = ((stat == RPC_SUCCESS) ?
@@ -120,38 +113,16 @@ static int
 refresh_nlm_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
 {
 	int ret;
-	struct netbuf nb;
-	nlm_addr_t tmp_naddr;
-
-	ASSERT(MUTEX_HELD(&hostp->nh_lock));
-
-	/*
-	 * It's important to make a copy of host address
-	 * structure before we call tli_kcreate/tli_kinit.
-	 * It's unsafe to pass hostp->nh_addr there directly,
-	 * because whily these functions are doing copy of the
-	 * address to RPC handle private structures, some other
-	 * thread can refresh RPC binding and rewrite port number.
-	 */
-	bcopy(&hostp->nh_addr, &tmp_naddr, sizeof (tmp_naddr));
-	mutex_exit(&hostp->nh_lock);
-
-	nb.buf = (char *)&tmp_naddr;
-	if (tmp_naddr.sa.sa_family == AF_INET)
-		nb.len = nb.maxlen = sizeof (tmp_naddr.sin);
-	else /* AF_INET6 */
-		nb.len = nb.maxlen = sizeof (tmp_naddr.sin6);
 
 	if (rpcp->nr_handle == NULL) {
-		ret = clnt_tli_kcreate(&hostp->nh_knc, &nb,
+		ret = clnt_tli_kcreate(&hostp->nh_knc, &hostp->nh_addr,
 		    NLM_PROG, rpcp->nr_vers, 0, NLM_RPC_RETRIES,
 		    CRED(), &rpcp->nr_handle);
 	} else {
 		ret = clnt_tli_kinit(rpcp->nr_handle, &hostp->nh_knc,
-		    &nb, 0, NLM_RPC_RETRIES, CRED());
+		    &hostp->nh_addr, 0, NLM_RPC_RETRIES, CRED());
 	}
 
-	mutex_enter(&hostp->nh_lock);
 	return (ret);
 }
 
@@ -207,15 +178,14 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 	}
 
 	rpcp = get_nlm_rpc_fromcache(hostp, vers);
+	mutex_exit(&hostp->nh_lock);
 	if (rpcp == NULL) {
 		/*
 		 * There weren't any RPC handles in a host
 		 * cache. No luck, just create a new one.
 		 */
-		mutex_exit(&hostp->nh_lock);
 		rpcp = kmem_cache_alloc(nlm_rpch_cache, KM_SLEEP);
 		rpcp->nr_vers = vers;
-		mutex_enter(&hostp->nh_lock);
 	}
 
 	/*
@@ -228,12 +198,12 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 		 * that it will be reinitialized later wihout
 		 * errors by somebody else...
 		 */
+		mutex_enter(&hostp->nh_lock);
 		nlm_host_rele_rpc(hostp, rpcp);
 		mutex_exit(&hostp->nh_lock);
 		return (rc);
 	}
 
-	mutex_exit(&hostp->nh_lock);
 	DTRACE_PROBE2(end, struct nlm_host *, hostp,
 	    nlm_rpc_t *, rpcp);
 

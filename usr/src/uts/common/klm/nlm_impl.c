@@ -154,16 +154,17 @@ static int nlm_vhold_cmp(const void *, const void *);
  * NLM host functions
  */
 static void nlm_free_idle_hosts(struct nlm_globals *g);
+static void nlm_copy_netbuf(struct netbuf *dst, struct netbuf *src);
 static int nlm_host_ctor(void *datap, void *cdrarg, int kmflags);
 static void nlm_host_dtor(void *datap, void *cdrarg);
 static void nlm_reclaim(void *cdrarg);
 static void nlm_host_destroy(struct nlm_host *hostp);
 static struct nlm_host *nlm_create_host(struct nlm_globals *g,
     char *name, const char *netid,
-    struct knetconfig *knc, nlm_addr_t *naddr);
-static int nlm_netbuf_addrs_cmp(nlm_addr_t *na1, nlm_addr_t *na2);
+    struct knetconfig *knc, struct netbuf *naddr);
+static int nlm_netbuf_addrs_cmp(struct netbuf *nb1, struct netbuf *nb2);
 static struct nlm_host *nlm_host_find_locked(struct nlm_globals *g,
-    const char *netid, nlm_addr_t *naddr, avl_index_t *wherep);
+    const char *netid, struct netbuf *naddr, avl_index_t *wherep);
 static bool_t nlm_host_has_locks_on_vnode(struct nlm_host *hostp, vnode_t *vp);
 
 /*
@@ -738,6 +739,17 @@ nlm_destroy_client_locks(struct nlm_host *host)
  * NLM host functions
  */
 
+static void
+nlm_copy_netbuf(struct netbuf *dst, struct netbuf *src)
+{
+	ASSERT(src->len <= src->maxlen);
+
+	dst->maxlen = src->maxlen;
+	dst->len = src->len;
+	dst->buf = kmem_zalloc(src->maxlen, KM_SLEEP);
+	bcopy(src->buf, dst->buf, src->len);
+}
+
 static int
 nlm_host_ctor(void *datap, void *cdrarg, int kmflags)
 {
@@ -767,6 +779,7 @@ nlm_host_destroy(struct nlm_host *hostp)
 
 	strfree(hostp->nh_name);
 	strfree(hostp->nh_netid);
+	kmem_free(hostp->nh_addr.buf, sizeof (struct netbuf));
 
 	nlm_rpc_cache_destroy(hostp);
 	ASSERT(TAILQ_EMPTY(&hostp->nh_rpchc));
@@ -927,7 +940,7 @@ object and start the recovery thread.  mark recovery as 'running'. */
  */
 static struct nlm_host *
 nlm_create_host(struct nlm_globals *g, char *name,
-    const char *netid, struct knetconfig *knc, nlm_addr_t *naddr)
+    const char *netid, struct knetconfig *knc, struct netbuf *naddr)
 {
 	struct nlm_host *host;
 
@@ -940,7 +953,7 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	host->nh_name = strdup(name);
 	host->nh_netid = strdup(netid);
 	host->nh_knc = *knc;
-	bcopy(naddr, &host->nh_addr, sizeof (*naddr));
+	nlm_copy_netbuf(&host->nh_addr, naddr);
 
 	host->nh_state = 0;
 	host->nh_monstate = NLM_UNMONITORED;
@@ -1021,9 +1034,17 @@ nlm_free_idle_hosts(struct nlm_globals *g)
  *   1: nb1's address is "greater" than nb2's
  */
 static int
-nlm_netbuf_addrs_cmp(nlm_addr_t *na1, nlm_addr_t *na2)
+nlm_netbuf_addrs_cmp(struct netbuf *nb1, struct netbuf *nb2)
 {
+	union nlm_addr {
+		struct sockaddr sa;
+		struct sockaddr_in sin;
+		struct sockaddr_in6 sin6;
+	} *na1, *na2;
 	int res;
+
+	na1 = (union nlm_addr *)nb1->buf;
+	na2 = (union nlm_addr *)nb2->buf;
 
 	if (na1->sa.sa_family < na2->sa.sa_family)
 		return (-1);
@@ -1075,7 +1096,7 @@ nlm_host_cmp(const void *p1, const void *p2)
  */
 static struct nlm_host *
 nlm_host_find_locked(struct nlm_globals *g, const char *netid,
-    nlm_addr_t *naddr, avl_index_t *wherep)
+    struct netbuf *naddr, avl_index_t *wherep)
 {
 	struct nlm_host *hostp, key;
 	avl_index_t pos;
@@ -1083,7 +1104,10 @@ nlm_host_find_locked(struct nlm_globals *g, const char *netid,
 	ASSERT(MUTEX_HELD(&g->lock));
 
 	key.nh_netid = (char *)netid;
-	bcopy(naddr, &key.nh_addr, sizeof (*naddr));
+	key.nh_addr.buf = naddr->buf;
+	key.nh_addr.len = naddr->len;
+	key.nh_addr.maxlen = naddr->maxlen;
+
 	hostp = avl_find(&g->nlm_hosts_tree, &key, &pos);
 
 	if (hostp != NULL) {
@@ -1105,14 +1129,9 @@ nlm_host_find(struct nlm_globals *g, const char *netid,
     struct netbuf *addr)
 {
 	struct nlm_host *hostp;
-	nlm_addr_t *naddr;
-
-	naddr = (nlm_addr_t *)addr->buf;
-	VERIFY(naddr->sa.sa_family == AF_INET ||
-	    naddr->sa.sa_family == AF_INET6);
 
 	mutex_enter(&g->lock);
-	hostp = nlm_host_find_locked(g, netid, naddr, NULL);
+	hostp = nlm_host_find_locked(g, netid, addr, NULL);
 	mutex_exit(&g->lock);
 
 	return (hostp);
@@ -1134,15 +1153,10 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	int err;
 	struct nlm_host *host, *newhost;
 	struct knetconfig knc;
-	nlm_addr_t *naddr;
 	avl_index_t where;
 
-	naddr = (nlm_addr_t *)addr->buf;
-	VERIFY(naddr->sa.sa_family == AF_INET ||
-	    naddr->sa.sa_family == AF_INET6);
-
 	mutex_enter(&g->lock);
-	host = nlm_host_find_locked(g, netid, naddr, NULL);
+	host = nlm_host_find_locked(g, netid, addr, NULL);
 	mutex_exit(&g->lock);
 	if (host != NULL)
 		goto done;
@@ -1155,9 +1169,9 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	 * Do allocations (etc.) outside of mutex,
 	 * and then check again before inserting.
 	 */
-	newhost = nlm_create_host(g, name, netid, &knc, naddr);
+	newhost = nlm_create_host(g, name, netid, &knc, addr);
 	mutex_enter(&g->lock);
-	host = nlm_host_find_locked(g, netid, naddr, &where);
+	host = nlm_host_find_locked(g, netid, addr, &where);
 	if (host == NULL) {
 		newhost->nh_sysid = nlm_acquire_next_sysid();
 
