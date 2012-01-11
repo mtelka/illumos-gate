@@ -226,16 +226,6 @@ lm_svc(struct lm_svc_args *args)
 	 * Build knetconfig, checking arg values.
 	 * Also come up with the "netid" string.
 	 * (With some knowledge of /etc/netconfig)
-	 *
-	 * FIXME[DK]: Later we have to decide how to pass
-	 * netid/knetconfig arguments from user-space in a better way.
-	 * For now we have pre-defined static table of all netid/knetconfigs
-	 * KLM can deal with. So I see two ways:
-	 * 1) User space passes only netid. Kernel then lookups valid knetconfig
-	 *    by given netid.
-	 * 2) Kernel builds and dynamically registers all netids/knetconfigs
-	 *    user-space passes. In this case we don't need pre-defined knetconfigs
-	 *    table in the kernel.
 	 */
 	bzero(&knc, sizeof (knc));
 	switch (args->n_proto) {
@@ -373,11 +363,6 @@ lm_shutdown(void)
 
 	g->run_status = NLM_ST_STOPPING;
 	pid = g->lockd_pid;
-	if (pid == 0) {
-		mutex_exit(&g->lock);
-		return (ESRCH);
-	}
-
 	mutex_exit(&g->lock);
 	nlm_svc_stopping(g);
 
@@ -385,8 +370,8 @@ lm_shutdown(void)
 	p = prfind(pid);
 	if (p != NULL)
 		psignal(p, SIGTERM);
-	mutex_exit(&pidlock);
 
+	mutex_exit(&pidlock);
 	return (0);
 }
 

@@ -465,6 +465,7 @@ int nlm_safemap(const vnode_t *vp);
 int nlm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr);
 int nlm_has_sleep(const vnode_t *vp);
 void nlm_reclaim_client(struct nlm_globals *, struct nlm_host *);
+void nlm_client_cancel_all(struct nlm_globals *, struct nlm_host *);
 
 
 /* nlm_rpc_clnt.c */

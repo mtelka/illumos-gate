@@ -102,6 +102,8 @@ static int nlmsvcpool(int max_servers);
 static	void	usage(void);
 
 extern	int	_nfssys(int, void *);
+static void sigterm_handler(void);
+static void shutdown_lockd(void);
 
 extern int	daemonize_init(void);
 extern void	daemonize_fini(int fd);
@@ -143,6 +145,7 @@ main(int ac, char *av[])
 	sigset_t sgset;
 	int c, pid, ret, val;
 	int pipe_fd = -1;
+	struct sigaction act;
 
 	MyName = *av;
 
@@ -376,6 +379,15 @@ main(int ac, char *av[])
 	}
 
 	/*
+	 * Install atexit and sigterm handlers
+	 */
+	act.sa_handler = sigterm_handler;
+	act.sa_flags = 0;
+
+	(void) sigaction(SIGTERM, &act, NULL);
+	(void) atexit(shutdown_lockd);
+
+	/*
 	 * Now open up for signal delivery
 	 */
 	(void) thr_sigsetmask(SIG_UNBLOCK, &sgset, NULL);
@@ -479,6 +491,20 @@ ncdev_to_rdev(const char *ncdev)
 		return (NODEV);
 	return (st.st_rdev);
 }
+
+static void
+sigterm_handler(void)
+{
+	/* to call atexit handler */
+	exit(0);
+}
+
+static void
+shutdown_lockd(void)
+{
+	(void )_nfssys(KILL_LOCKMGR, NULL);
+}
+
 
 /*
  * Establish NLM service thread.

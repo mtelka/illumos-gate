@@ -148,6 +148,7 @@ static enum clnt_stat nlm_nsm_simu_crash(struct nlm_nsm *);
 static enum clnt_stat nlm_nsm_stat(struct nlm_nsm *, int32_t *);
 static enum clnt_stat nlm_nsm_mon(struct nlm_nsm *, char *, uint16_t);
 static enum clnt_stat nlm_nsm_unmon(struct nlm_nsm *, char *);
+static enum clnt_stat nlm_nsm_unmon_all(struct nlm_nsm *);
 
 /*
  * NLM vhold functions
@@ -370,6 +371,9 @@ nlm_gc(struct nlm_globals *g)
 			nlm_host_unmonitor(g, hostp);
 			nlm_host_destroy(hostp);
 			mutex_enter(&g->lock);
+			if (g->run_status == NLM_ST_STOPPING)
+				break;
+
 		}
 
 		DTRACE_PROBE(gc__end);
@@ -541,6 +545,7 @@ nlm_nsm_fini(struct nlm_nsm *nsm)
 {
 	kmem_free(nsm->ns_addr.buf, nsm->ns_addr.maxlen);
 	CLNT_DESTROY(nsm->ns_handle);
+	nsm->ns_handle = NULL;
 	sema_destroy(&nsm->ns_sem);
 }
 
@@ -621,6 +626,28 @@ nlm_nsm_unmon(struct nlm_nsm *nsm, char *hostname)
 
 	sema_v(&nsm->ns_sem);
 	stat = sm_unmon_1(&args, &res, nsm->ns_handle);
+	sema_p(&nsm->ns_sem);
+
+	return (stat);
+}
+
+static enum clnt_stat
+nlm_nsm_unmon_all(struct nlm_nsm *nsm)
+{
+	struct my_id args;
+	struct sm_stat res;
+	enum clnt_stat stat;
+
+	bzero(&args, sizeof (args));
+	bzero(&res, sizeof (res));
+
+	args.my_name = uts_nodename();
+	args.my_prog = NLM_PROG;
+	args.my_vers = NLM_SM;
+	args.my_proc = NLM_SM_NOTIFY1;
+
+	sema_v(&nsm->ns_sem);
+	stat = sm_unmon_all_1(&args, &res, nsm->ns_handle);
 	sema_p(&nsm->ns_sem);
 
 	return (stat);
@@ -872,7 +899,6 @@ nlm_host_dtor(void *datap, void *cdrarg)
 static void
 nlm_host_unregister(struct nlm_globals *g, struct nlm_host *hostp)
 {
-	ASSERT(MUTEX_HELD(&g->lock));
 	ASSERT(hostp->nh_refs == 0);
 
 	avl_remove(&g->nlm_hosts_tree, hostp);
@@ -1277,12 +1303,16 @@ struct nlm_host *
 nlm_host_find(struct nlm_globals *g, const char *netid,
     struct netbuf *addr)
 {
-	struct nlm_host *hostp;
+	struct nlm_host *hostp = NULL;
 
 	mutex_enter(&g->lock);
-	hostp = nlm_host_find_locked(g, netid, addr, NULL);
-	mutex_exit(&g->lock);
+	if (g->run_status != NLM_ST_UP)
+		goto out;
 
+	hostp = nlm_host_find_locked(g, netid, addr, NULL);
+
+out:
+	mutex_exit(&g->lock);
 	return (hostp);
 }
 
@@ -1305,6 +1335,11 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	avl_index_t where;
 
 	mutex_enter(&g->lock);
+	if (g->run_status != NLM_ST_UP) {
+		mutex_exit(&g->lock);
+		return (NULL);
+	}
+
 	host = nlm_host_find_locked(g, netid, addr, NULL);
 	mutex_exit(&g->lock);
 	if (host != NULL)
@@ -1360,6 +1395,9 @@ nlm_host_find_by_sysid(struct nlm_globals *g, int sysid)
 	struct nlm_host *hostp = NULL;
 
 	mutex_enter(&g->lock);
+	if (g->run_status != NLM_ST_UP)
+		goto out;
+
 	mod_hash_find(g->nlm_hosts_hash,
 	    (mod_hash_key_t)(uintptr_t)sysid,
 	    (mod_hash_val_t)&hostp);
@@ -1795,15 +1833,7 @@ nlm_svc_add_ep(struct nlm_globals *g, struct file *fp,
 }
 
 /*
- * The first transport passed in by the user-level lockd is
- * the loopback we'll use to talk to the statd.  Check that
- * we get what we're expecting, and setup the RPC client
- * handle we'll used to talk to statd.
- *
- * Call chain: lm_svc -> klm_start_lm
- * NOTE: g->run_status must be NLM_ST_STARTING
- * Called  before lockd starts up service on the
- * first endpoint.
+ * Start NLM service.
  */
 int
 nlm_svc_starting(struct nlm_globals *g, struct file *fp,
@@ -1853,12 +1883,9 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 		goto shutdown_lm;
 	}
 
-	mutex_enter(&g->lock);
-	time_uptime = ddi_get_lbolt();
-	g->grace_threshold = time_uptime + SEC_TO_TICK(g->grace_period);
+	g->grace_threshold = ddi_get_lbolt() +
+		SEC_TO_TICK(g->grace_period);
 	g->run_status = NLM_ST_UP;
-
-	mutex_exit(&g->lock);
 
 	/* Register endpoint used for communications with local NLM */
 	error = nlm_svc_add_ep(g, fp, netid, knc);
@@ -1868,104 +1895,76 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 	return (0);
 
 shutdown_lm:
-	/* XXX[DK]: Probably we should call nlm_svc_stopping here... */
 	mutex_enter(&g->lock);
-	g->run_status = NLM_ST_DOWN;
-	g->lockd_pid = 0;
+	g->run_status = NLM_ST_STOPPING;
 	mutex_exit(&g->lock);
-	nlm_nsm_fini(&g->nlm_nsm);
 
+	nlm_svc_stopping(g);
 	return (error);
 }
 
 /*
- * Called by klmmod.c when lockd is going away.
- * Note: run_status == NLM_ST_STOPPING
- * XXX: figure out where to call this...
+ * Stop NLM service, cleanup all resources
+ * NLM owns at the moment.
+ *
+ * NOTE: NFS code can call NLM while it's
+ * stopping or even if it's shut down. Any attemp
+ * to lock file either on client or on the server
+ * will fail if NLM isn't in NLM_ST_UP state.
  */
 void
 nlm_svc_stopping(struct nlm_globals *g)
 {
-	struct nlm_host *host, *nhost;
-	struct nlm_nsm *nsm;
+	ASSERT(g->run_status == NLM_ST_STOPPING);
+	mutex_enter(&g->lock);
 
 	/*
-	 * Trash all the existing state so that if the server
-	 * restarts, it gets a clean slate. This is complicated by the
-	 * possibility that there may be other threads trying to make
-	 * client locking requests.
-
-Set a flag to prevent creation of new host entries.
-Walk existing host entries marking them "dead".
-Wait for threads using them to leave...
-
-	 * First we fake a client reboot notification which will
-	 * cancel any pending async locks and purge remote lock state
-	 * from the local lock manager. We release the reference from
-	 * nlm_hosts to the host (which may remove it from the list
-	 * and free it). After this phase, the only entries in the
-	 * nlm_host list should be from other threads performing
-	 * client lock requests. We arrange to defer closing the
-	 * sockets until the last RPC client handle is released.
+	 * Ask NLM GC thread to exit and wait until it do dies.
 	 */
-#if 0 /* XXX */
-	mutex_enter(&g->lock);
-	nlm_cancel_all_wait_locks(g);
+	cv_signal(&g->nlm_gc_sched_cv);
+	while (g->nlm_gc_thread != NULL)
+		cv_wait(&g->nlm_gc_finish_cv, &g->lock);
 
-	/* TAILQ_FOREACH_SAFE */
-	host = TAILQ_FIRST(&g->nlm_hosts);
-	while (host != NULL) {
-		nhost = TAILQ_NEXT(host, nh_link);
-		mutex_exit(&g->lock);
-		nlm_host_notify_server(host, 0);
-		/* nlm_host_release(host)	* XXX wrong... */
-		mutex_enter(&g->lock);
-		host = nhost;
-	}
-	/* TAILQ_FOREACH_SAFE */
-	host = TAILQ_FIRST(&g->nlm_hosts);
-	while (host != NULL) {
-		nhost = TAILQ_NEXT(host, nh_link);
-		mutex_enter(&host->nh_lock);
-
-		if (host->nh_srvrpc.nr_client ||
-		    host->nh_clntrpc.nr_client) {
-			if (host->nh_addr.ss_family == AF_INET)
-				v4_used++;
-#ifdef INET6
-			if (host->nh_addr.ss_family == AF_INET6)
-				v6_used++;
-#endif
-			/*
-			 * Note that the rpc over udp code copes
-			 * correctly with the fact that a socket may
-			 * be used by many rpc handles.
-			 */
-			if (host->nh_srvrpc.nr_client)
-				CLNT_CONTROL(host->nh_srvrpc.nr_client,
-				    CLSET_FD_CLOSE, 0);
-			if (host->nh_clntrpc.nr_client)
-				CLNT_CONTROL(host->nh_clntrpc.nr_client,
-				    CLSET_FD_CLOSE, 0);
-		}
-
-		mutex_exit(&host->nh_lock);
-		host = nhost;
-	}
-
-	nsm = g->nlm_nsm;
-	g->nlm_nsm = NULL;
 	mutex_exit(&g->lock);
 
-	nlm_svc_release_nsm(nsm);
+	/*
+	 * Cleanup locks owned by NLM hosts.
+	 * NOTE: New hosts won't be created while
+	 * NLM is topping.
+	 */
+	while (!avl_is_empty(&g->nlm_hosts_tree)) {
+		struct nlm_host *hostp;
 
-	if (!v4_used)
-		soclose(nlm_socket);
-	nlm_socket = NULL;
-	if (!v6_used)
-		soclose(nlm_socket6);
-	nlm_socket6 = NULL;
-#endif /* XXX */
+		hostp = avl_first(&g->nlm_hosts_tree);
+
+		/* Cleanup all client and server side locks */
+		nlm_client_cancel_all(g, hostp);
+		nlm_host_notify_server(hostp, 0);
+
+		mutex_enter(&hostp->nh_lock);
+		nlm_host_gc_vholds(hostp);
+		if (hostp->nh_refs > 0 || nlm_host_has_locks(hostp)) {
+			/*
+			 * Oh, it seems the host is still busy, let
+			 * it some time to release and go to the
+			 * next one.
+			 */
+
+			mutex_exit(&hostp->nh_lock);
+			continue;
+		}
+
+		mutex_exit(&hostp->nh_lock);
+		nlm_host_unregister(g, hostp);
+		nlm_host_destroy(hostp);
+	}
+
+	ASSERT(TAILQ_EMPTY(&g->nlm_slocks));
+
+	(void) nlm_nsm_unmon_all(&g->nlm_nsm);
+	nlm_nsm_fini(&g->nlm_nsm);
+	g->lockd_pid = 0;
+	g->run_status = NLM_ST_DOWN;
 }
 
 /*
