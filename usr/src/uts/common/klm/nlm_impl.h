@@ -424,6 +424,8 @@ extern int nlm_shrlock(struct vnode *, int, struct shrlock *, int,
 extern int nlm_safemap(const vnode_t *);
 extern int nlm_safelock(vnode_t *, const struct flock64 *, cred_t *);
 extern int nlm_has_sleep(const vnode_t *);
+extern void nlm_register_lock_locally(struct vnode *, struct lm_sysid *,
+    struct flock64 *, int, u_offset_t);
 int nlm_vp_active(const vnode_t *vp);
 void nlm_sysid_free(sysid_t);
 int nlm_vp_active(const vnode_t *);

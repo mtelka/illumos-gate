@@ -510,6 +510,23 @@ nlm_has_sleep(const vnode_t *vp)
 	return (has_slocks);
 }
 
+void
+nlm_register_lock_locally(struct vnode *vp, struct lm_sysid *ls,
+    struct flock64 *flk, int flags, u_offset_t offset)
+{
+	int sysid = 0;
+
+	if (ls != NULL) {
+		sysid = nlm_host_get_sysid(ls->ls_host) |
+			LM_SYSID_CLIENT;
+	}
+
+	flk->l_sysid = sysid;
+	convoff(vp, flk, 0, (offset_t)offset);
+	(void) nlm_local_setlk(vp, flk, flags);
+}
+
+
 /*
  * The BSD code had functions here to "reclaim" (destroy)
  * remote locks when a vnode is being forcibly destroyed.
