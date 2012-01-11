@@ -674,7 +674,7 @@ static int
 nlm_local_setlk(vnode_t *vp, struct flock64 *fl, int flags)
 {
 	VERIFY(fl->l_whence == SEEK_SET);
-	return (reclock(vp, fl, SETFLCK | SLPFLCK, flags, 0, NULL));
+	return (reclock(vp, fl, SETFLCK, flags, 0, NULL));
 }
 
 /*
