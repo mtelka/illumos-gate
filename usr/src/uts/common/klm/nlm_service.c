@@ -919,7 +919,7 @@ nlm_do_free_all(nlm4_notify *argp, void *res, struct svc_req *sr)
 	addr = svc_getrpccaller(sr->rq_xprt);
 
 	g = zone_getspecific(nlm_zone_key, curzone);
-	host = nlm_host_findcreate(g, name, netid, addr);
+	host = nlm_host_find(g, netid, addr);
 	if (host == NULL) {
 		/* nothing to do */
 		return;
