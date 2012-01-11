@@ -214,7 +214,7 @@ enum nlm_host_state {
 	NLM_UNMONITORED,
 	NLM_MONITORED,
 	NLM_MONITOR_FAILED,
-	NLM_RECOVERING,
+	NLM_RECOVERING
 };
 
 typedef struct nlm_rpc {
