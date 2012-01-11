@@ -1112,7 +1112,7 @@ nlm_host_find_locked(struct nlm_globals *g, const char *netid,
 
 	if (hostp != NULL) {
 		hostp->nh_refs++;
-		if (hostp->nh_refs == 1)
+		if (TAILQ_NEXT(hostp, nh_link) == NULL)
 			TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
 	}
 	if (wherep != NULL)
