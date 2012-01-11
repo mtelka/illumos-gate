@@ -97,6 +97,9 @@ lm_zone_init(zoneid_t zoneid)
 	    sizeof (struct nlm_host),
 	    offsetof(struct nlm_host, nh_tree));
 
+	g->nlm_hosts_hash = mod_hash_create_idhash("nlm_host_by_sysid",
+	    64, mod_hash_null_valdtor);
+
 	TAILQ_INIT(&g->nlm_hosts);
 	TAILQ_INIT(&g->nlm_wlocks);
 

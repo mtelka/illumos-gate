@@ -1109,7 +1109,21 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	host = nlm_host_find_locked(g, netid, naddr, &where);
 	if (host == NULL) {
 		newhost->nh_sysid = nlm_acquire_next_sysid();
+
+		/*
+		 * Insert host to the hosts AVL tree that is
+		 * used to lookup by <netid, address> pair.
+		 */
 		avl_insert(&g->nlm_hosts_tree, newhost, where);
+
+		/*
+		 * Insert host ot the hosts hash table that is
+		 * used to lookup host by sysid.
+		 */
+		(void) mod_hash_insert(g->nlm_hosts_hash,
+		    (mod_hash_key_t)(uintptr_t)newhost->nh_sysid,
+		    (mod_hash_val_t)newhost);
+
 		TAILQ_INSERT_TAIL(&g->nlm_hosts, newhost, nh_link);
 	}
 
@@ -1137,18 +1151,18 @@ done:
 struct nlm_host *
 nlm_host_find_by_sysid(struct nlm_globals *g, int sysid)
 {
-	struct nlm_host *host;
+	mod_hash_val_t hval;
+	struct nlm_host *hostp = NULL;
 
 	mutex_enter(&g->lock);
-	TAILQ_FOREACH(host, &g->nlm_hosts, nh_link) {
-		if (host->nh_sysid == sysid) {
-			atomic_inc_uint(&host->nh_refs);
-			break;
-		}
+	if (mod_hash_find(g->nlm_hosts_hash,
+	        (mod_hash_key_t)(uintptr_t)sysid, &hval) == 0) {
+		hostp = (struct nlm_host *)hval;
+		hostp->nh_refs++;
 	}
 
 	mutex_exit(&g->lock);
-	return (host);
+	return (hostp);
 }
 
 /*

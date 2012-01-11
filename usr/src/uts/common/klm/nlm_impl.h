@@ -39,6 +39,7 @@
 
 #include <sys/cmn_err.h>
 #include <sys/queue.h>
+#include <sys/modhash.h>
 #include <sys/avl.h>
 
 #define	RPC_MSGOUT(args...)	cmn_err(CE_NOTE, args)
@@ -327,6 +328,7 @@ struct nlm_globals {
 	struct nlm_nsm *nlm_nsm; /* An RPC client handle that can be used to communicate
 		                        with the local NSM. */
 	avl_tree_t nlm_hosts_tree;
+	mod_hash_t *nlm_hosts_hash;
 	struct nlm_host_list nlm_hosts; /* (l) NLM hosts */
 	struct nlm_waiting_lock_list nlm_wlocks; /* (l) client-side waiting locks */
 	/* options from lockd */
