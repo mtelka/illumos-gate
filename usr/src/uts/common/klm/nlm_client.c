@@ -500,7 +500,7 @@ nlm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
 		return (0);
 
 	va.va_mask = AT_MODE;
-	err = nfs3getattr(vp, &va, cr);
+	err = VOP_GETATTR(vp, &va, 0, cr, NULL);
 	if (err != 0)
 		return (0);
 
