@@ -148,7 +148,6 @@ static void nlm_svc_release_nsm(struct nlm_nsm *);
  */
 static int nlm_vhold_ctor(void *, void *, int);
 static void nlm_vhold_dtor(void *, void *);
-static int nlm_vhold_cmp(const void *, const void *);
 
 /*
  * NLM host functions
@@ -412,21 +411,6 @@ nlm_svc_release_nsm(struct nlm_nsm *nsm)
  */
 
 static int
-nlm_vhold_cmp(const void *p1, const void *p2)
-{
-	const struct nlm_vhold *nvp1 = (const struct nlm_vhold *)p1;
-	const struct nlm_vhold *nvp2 = (const struct nlm_vhold *)p2;
-	int ret;
-
-	if (nvp1->nv_vp < nvp2->nv_vp)
-		return (-1);
-	if (nvp1->nv_vp > nvp2->nv_vp)
-		return (1);
-
-	return (0);
-}
-
-static int
 nlm_vhold_ctor(void *datap, void *cdrarg, int kmflags)
 {
 	struct nlm_vhold *nvp = (struct nlm_vhold *)datap;
@@ -474,24 +458,18 @@ nlm_fh_to_vnode(struct netobj *fh)
  * NOTE: hostp->nh_lock must be locked.
  */
 static struct nlm_vhold *
-nlm_vhold_find_locked(struct nlm_host *hostp,
-    vnode_t *vp, avl_index_t *wherep)
+nlm_vhold_find_locked(struct nlm_host *hostp, vnode_t *vp)
 {
-	struct nlm_vhold *nvp, key;
-	avl_index_t pos;
+	struct nlm_vhold *nvp = NULL;
 
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
+	(void )mod_hash_find(hostp->nh_vholds_by_vp, (mod_hash_key_t)vp,
+	    (mod_hash_val_t)&nvp);
 
-	bzero(&key, sizeof (key));
-	key.nv_vp = vp;
-
-	nvp = avl_find(&hostp->nh_vholds, &key, &pos);
 	if (nvp != NULL) {
 		nvp->nv_refs++;
 		nvp->nv_flags &= ~NLM_NH_JUSTBORN;
 	}
-	if (wherep != NULL)
-		*wherep = pos;
 
 	return (nvp);
 }
@@ -505,7 +483,7 @@ nlm_vhold_find(struct nlm_host *hostp, vnode_t *vp)
 	struct nlm_vhold *nvp;
 
 	mutex_enter(&hostp->nh_lock);
-	nvp = nlm_vhold_find_locked(hostp, vp, NULL);
+	nvp = nlm_vhold_find_locked(hostp, vp);
 	mutex_exit(&hostp->nh_lock);
 
 	return (nvp);
@@ -519,10 +497,9 @@ struct nlm_vhold *
 nlm_vhold_findcreate(struct nlm_host *hostp, vnode_t *vp)
 {
 	struct nlm_vhold *nvp, *new_nvp = NULL;
-	avl_index_t where;
 
 	mutex_enter(&hostp->nh_lock);
-	nvp = nlm_vhold_find_locked(hostp, vp, NULL);
+	nvp = nlm_vhold_find_locked(hostp, vp);
 	mutex_exit(&hostp->nh_lock);
 	if (nvp != NULL)
 		goto out;
@@ -535,7 +512,7 @@ nlm_vhold_findcreate(struct nlm_host *hostp, vnode_t *vp)
 	 * Check if another thread already has created
 	 * the same nlm_vhold.
 	 */
-	nvp = nlm_vhold_find_locked(hostp, vp, &where);
+	nvp = nlm_vhold_find_locked(hostp, vp);
 	if (nvp == NULL) {
 		nvp = new_nvp;
 		new_nvp = NULL;
@@ -544,7 +521,9 @@ nlm_vhold_findcreate(struct nlm_host *hostp, vnode_t *vp)
 		nvp->nv_refs = 1;
 		nvp->nv_flags = NLM_NH_JUSTBORN;
 		VN_HOLD(nvp->nv_vp);
-		avl_insert(&hostp->nh_vholds, nvp, where);
+
+		VERIFY(mod_hash_insert(hostp->nh_vholds_by_vp,
+		        (mod_hash_key_t)vp, (mod_hash_val_t)nvp) == 0);
 		TAILQ_INSERT_TAIL(&hostp->nh_vholds_list, nvp, nv_link);
 	}
 
@@ -662,7 +641,10 @@ nlm_vhold_release(struct nlm_host *hostp,
 	 * Now we free to delete nlm_vhold and drop a vnode
 	 * it holds.
 	 */
-	avl_remove(&hostp->nh_vholds, nvp);
+	VERIFY(mod_hash_remove(hostp->nh_vholds_by_vp,
+	        (mod_hash_key_t)nvp->nv_vp,
+	        (mod_hash_val_t)&nvp) == 0);
+
 	TAILQ_REMOVE(&hostp->nh_vholds_list, nvp, nv_link);
 	mutex_exit(&hostp->nh_lock);
 
@@ -784,8 +766,8 @@ nlm_host_destroy(struct nlm_host *hostp)
 
 	nlm_rpc_cache_destroy(hostp);
 
-	ASSERT(avl_is_empty(&hostp->nh_vholds));
-	avl_destroy(&hostp->nh_vholds);
+	ASSERT(TAILQ_EMPTY(&hostp->nh_vholds_list));
+	mod_hash_destroy_ptrhash(hostp->nh_vholds_by_vp);
 
 	mutex_destroy(&hostp->nh_lock);
 	cv_destroy(&hostp->nh_rpcb_cv);
@@ -920,9 +902,8 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	host->nh_monstate = NLM_UNMONITORED;
 	host->nh_rpcb_state = NRPCB_NEED_UPDATE;
 
-	avl_create(&host->nh_vholds, nlm_vhold_cmp,
-	    sizeof (struct nlm_vhold),
-	    offsetof(struct nlm_vhold, nv_tree));
+	host->nh_vholds_by_vp = mod_hash_create_ptrhash("nlm vholds hash",
+	    32, mod_hash_null_valdtor, sizeof (vnode_t));
 
 	TAILQ_INIT(&host->nh_vholds_list);
 	TAILQ_INIT(&host->nh_srv_slocks);
@@ -1147,9 +1128,9 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 		 * Insert host ot the hosts hash table that is
 		 * used to lookup host by sysid.
 		 */
-		(void) mod_hash_insert(g->nlm_hosts_hash,
-		    (mod_hash_key_t)(uintptr_t)newhost->nh_sysid,
-		    (mod_hash_val_t)newhost);
+		VERIFY(mod_hash_insert(g->nlm_hosts_hash,
+		        (mod_hash_key_t)(uintptr_t)newhost->nh_sysid,
+		        (mod_hash_val_t)newhost) == 0);
 	}
 
 	mutex_exit(&g->lock);
@@ -1220,7 +1201,7 @@ nlm_host_release(struct nlm_globals *g, struct nlm_host *hostp)
 	 * sleeping) has a nlm_vhold associated with it.
 	 */
 	if (hostp->nh_refs != 0 ||
-	    !avl_is_empty(&hostp->nh_vholds)) {
+	    !TAILQ_EMPTY(&hostp->nh_vholds_list)) {
 		mutex_exit(&g->lock);
 		return;
 	}
