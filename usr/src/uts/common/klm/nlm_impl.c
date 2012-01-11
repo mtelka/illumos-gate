@@ -974,11 +974,13 @@ nlm_check_idle(void)
  * that belong to NC_TCP[6] or NC_UDP[6] protofamily.
  * Port part of netbuf is ignored.
  *
- * If addresses are equal, the function returns TRUE and FALSE
- * otherwise.
+ * Return values:
+ *  -1: nb1's address is "smaller" than nb2's
+ *   0: addresses are equal
+ *   1: nb1's address is "greater" than nb2's
  */
-static bool_t
-nlm_netbuf_addrs_equal(struct netbuf *nb1, struct netbuf *nb2)
+static int
+nlm_netbuf_addrs_cmp(struct netbuf *nb1, struct netbuf *nb2)
 {
 	union {
 		struct sockaddr_in *sin;
@@ -990,16 +992,18 @@ nlm_netbuf_addrs_equal(struct netbuf *nb1, struct netbuf *nb2)
 
 	switch (addr1.sin->sin_family) {
 	case AF_INET:
-		return (addr1.sin->sin_addr.s_addr ==
-		    addr2.sin->sin_addr.s_addr);
+		return (memcmp(&addr1.sin->sin_addr.s_addr,
+		        &addr2.sin->sin_addr.s_addr,
+		        sizeof (addr1.sin->sin_addr.s_addr)));
 	case AF_INET6:
-		return (IN6_ARE_ADDR_EQUAL(&addr1.sin6->sin6_addr,
-		        &addr2.sin6->sin6_addr));
+		    return (memcmp(&addr1.sin6->sin6_addr,
+		            &addr2.sin6->sin6_addr,
+		            sizeof (&addr1.sin6->sin6_addr)));
 	default:
 		VERIFY(0);
 
 		/* Just to take away compiler warning */
-		return (FALSE);
+		return (-1);
 	}
 }
 
@@ -1016,7 +1020,7 @@ nlm_host_find_locked(struct nlm_globals *g, const char *netid,
 	ASSERT(MUTEX_HELD(&g->lock));
 
 	TAILQ_FOREACH(host, &g->nlm_hosts, nh_link) {
-		if (nlm_netbuf_addrs_equal(&host->nh_addr, addr)
+		if (nlm_netbuf_addrs_cmp(&host->nh_addr, addr) == 0
 		    && strcmp(host->nh_netid, netid) == 0) {
 			host->nh_refs++;
 			break;
