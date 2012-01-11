@@ -91,11 +91,19 @@
  */
 #define NLM_NSM_RPCBIND_TIMEOUT 5
 
+/*
+ * Given an interger x, the macro is returned
+ * -1 if x is negative,
+ *  0 if x is zero
+ *  1 if x is positive
+ */
+#define SIGN(x) (((x) < 0) - ((x) > 0))
+
 kmutex_t lm_lck;
 
 /*
  * Grace period handling. The value of nlm_grace_threshold is the
- * value of ddi_get_lbolt() after which we are serving requests normally.
+ * Value of ddi_get_lbolt() after which we are serving requests normally.
  */
 clock_t nlm_grace_threshold;
 
@@ -1075,12 +1083,7 @@ nlm_netbuf_addrs_cmp(nlm_addr_t *na1, nlm_addr_t *na2)
 		break;
 	}
 
-	if (res < 0)
-		return (-1);
-	if (res > 0)
-		return (1);
-
-	return (0);
+	return (SIGN(res));
 }
 
 /*
@@ -1102,12 +1105,7 @@ nlm_host_cmp(const void *p1, const void *p2)
 		return (res);
 
 	res = strcmp(h1->nh_netid, h2->nh_netid);
-	if (res < 0)
-		return (-1);
-	if (res > 0)
-		return (1);
-
-	return (0);
+	return (SIGN(res));
 }
 
 /*
