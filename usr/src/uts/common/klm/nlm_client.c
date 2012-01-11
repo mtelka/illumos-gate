@@ -440,7 +440,7 @@ int
 nlm_safemap(const vnode_t *vp)
 {
 	struct locklist *ll, *ll_next;
-	struct nlm_waiting_lock *nw;
+	nlm_slock_clnt_t *nscp;
 	struct nlm_globals *g;
 	int safe = 1;
 
@@ -462,9 +462,9 @@ nlm_safemap(const vnode_t *vp)
 	/* Then check sleeping locks if any */
 	g = zone_getspecific(nlm_zone_key, curzone);
 	mutex_enter(&g->lock);
-	TAILQ_FOREACH(nw, &g->nlm_wlocks, nw_link) {
-		if ((nw->nw_lock.l_offset != 0) ||
-		    (nw->nw_lock.l_len != 0)) {
+	TAILQ_FOREACH(nscp, &g->nlm_clnt_slocks, nsc_link) {
+		if ((nscp->nsc_lock.l_offset != 0) ||
+		    (nscp->nsc_lock.l_len != 0)) {
 			safe = 0;
 			break;
 		}
@@ -482,7 +482,7 @@ nlm_has_sleep(const vnode_t *vp)
 
 	g = zone_getspecific(nlm_zone_key, curzone);
 	mutex_enter(&g->lock);
-	empty = TAILQ_EMPTY(&g->nlm_wlocks);
+	empty = TAILQ_EMPTY(&g->nlm_clnt_slocks);
 	mutex_exit(&g->lock);
 
 	return (!empty);
@@ -664,7 +664,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	struct nlm_owner_handle oh;
 	struct nlm_globals *g;
 	rnode_t *rnp = VTOR(vp);
-	void *wait_handle = NULL;
+	nlm_slock_clnt_t *sleeping_lock = NULL;
 	int error, retries;
 
 	bzero(&args, sizeof (args));
@@ -678,7 +678,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 
 	if (xflags & NLM_X_BLOCKING) {
 		args.block = TRUE;
-		wait_handle = nlm_register_wait_lock(g, hostp,
+		sleeping_lock = nlm_slock_clnt_register(g, hostp,
 		    &args.alock, vp);
 	}
 
@@ -745,7 +745,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	 * the server side (by some reason), our work
 	 * is finished.
 	 */
-	if (wait_handle == NULL || res.stat.stat != nlm4_blocked)
+	if (sleeping_lock == NULL || res.stat.stat != nlm4_blocked)
 		goto out;
 
 	/*
@@ -763,8 +763,8 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	flk_invoke_callbacks(flcb, FLK_BEFORE_SLEEP);
 	nfs_rw_exit(&rnp->r_lkserlock);
 
-	error = nlm_wait_lock(g, wait_handle, (bool_t) INTR(vp));
-	wait_handle = NULL; /* nlm_wait_lock destroys wait_handle */
+	error = nlm_slock_clnt_wait(g, sleeping_lock, (bool_t) INTR(vp));
+	sleeping_lock = NULL; /* nlm_slock_clnt_wait destroys sleeping_lock */
 
 	/*
 	 * NFS expects that we return with rnode->r_lkserlock
@@ -796,8 +796,8 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	}
 
 out:
-	if (wait_handle != NULL)
-		nlm_deregister_wait_lock(g, wait_handle);
+	if (sleeping_lock != NULL)
+		nlm_slock_clnt_deregister(g, sleeping_lock);
 
 	return (error);
 }

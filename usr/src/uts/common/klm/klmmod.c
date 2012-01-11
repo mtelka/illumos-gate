@@ -101,7 +101,7 @@ lm_zone_init(zoneid_t zoneid)
 	    64, mod_hash_null_valdtor);
 
 	TAILQ_INIT(&g->nlm_idle_hosts);
-	TAILQ_INIT(&g->nlm_wlocks);
+	TAILQ_INIT(&g->nlm_clnt_slocks);
 
 	mutex_init(&g->lock, NULL, MUTEX_DEFAULT, NULL);
 	g->lockd_pid = 0;

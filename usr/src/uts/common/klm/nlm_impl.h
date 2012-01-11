@@ -199,20 +199,29 @@ enum nlm_wait_state {
 };
 
 /*
- * A pending client-side lock request (we are the client)
- * stored on the nh_waiting list of the NLM host.
+ * A sleeping client-side lock request (we are the client)
+ * stored on nlm_clnt_slocks of nlm_globals.
+ *  nlm_slock_clnt_t
+ *   nw_state: Sleeping lock state.
+ *             (see nlm_wait_state for more information)
+ *   nw_cond: Condvar that is used when sleeping lock
+ *            needs to wait for a GRANT callback
+ *   nw_lock: nlm4_lock structure that is sent to the server
+ *   nw_fh: Filehandle that corresponds to nw_vp
+ *   nw_host: A host owning this sleeping lock
+ *   nw_vp: A vnode sleeping lock is waiting on.
+ *   nw_link: A list node for nlm_globals->nlm_clnt_slocks list.
  */
-struct nlm_waiting_lock {
-	TAILQ_ENTRY(nlm_waiting_lock) nw_link;	/* (l) */
-	enum nlm_wait_state	nw_state;	/* (l) */
-	kcondvar_t	nw_cond;		/* (l) */
-	nlm4_lock	nw_lock;		/* (c) */
-	struct netobj	nw_fh;			/* (c) */
-	int32_t		nw_sysid;		/* (c) */
-	struct nlm_host *nw_host;		/* (c) */
-	struct vnode	*nw_vp;			/* (c) */
-};
-TAILQ_HEAD(nlm_waiting_lock_list, nlm_waiting_lock);
+typedef struct nlm_slock_clnt {
+	enum nlm_wait_state  nsc_state;
+	kcondvar_t           nsc_cond;
+	nlm4_lock            nsc_lock;
+	struct netobj        nsc_fh;
+	struct nlm_host     *nsc_host;
+	struct vnode        *nsc_vp;
+	TAILQ_ENTRY(nlm_slock_clnt) nsc_link;
+} nlm_slock_clnt_t;
+TAILQ_HEAD(nlm_slock_clnt_list, nlm_slock_clnt);
 
 
 /*
@@ -326,7 +335,7 @@ struct nlm_globals {
 	avl_tree_t nlm_hosts_tree;
 	mod_hash_t *nlm_hosts_hash;
 	struct nlm_host_list nlm_idle_hosts;
-	struct nlm_waiting_lock_list nlm_wlocks; /* (l) client-side waiting locks */
+	struct nlm_slock_clnt_list nlm_clnt_slocks;
 	/* options from lockd */
 	int cn_idle_tmo;
 	int grace_period;
@@ -491,35 +500,15 @@ struct nlm_vnode * nlm_vnode_findcreate_fh(struct nlm_host *hostp,
 void nlm_vnode_release(struct nlm_host *hostp,
     struct nlm_vnode *nvp, bool_t check_locks);
 
-
 /*
- * When sending a blocking lock request, we need to track the request
- * in our waiting lock list. We add an entry to the waiting list
- * before we send the lock RPC so that we can cope with a granted
- * message arriving at any time. Call this function before sending the
- * lock rpc. If the lock succeeds, call nlm_deregister_wait_lock with
- * the handle this function returns, otherwise nlm_wait_lock. Both
- * will remove the entry from the waiting list.
+ * Sleeping locks functions
  */
-extern void *nlm_register_wait_lock(struct nlm_globals *g,
+extern nlm_slock_clnt_t *nlm_slock_clnt_register(struct nlm_globals *g,
     struct nlm_host *host, struct nlm4_lock *lock, struct vnode *vp);
-
-/*
- * Deregister a blocking lock request. Call this if the lock succeeded
- * without blocking.
- */
-extern void nlm_deregister_wait_lock(struct nlm_globals *g, void *handle);
-
-/*
- * Wait for a granted callback for a blocked lock request, waiting at
- * most timo ticks. If no granted message is received within the
- * timeout, return EWOULDBLOCK. If a signal interrupted the wait,
- * return EINTR - the caller must arrange to send a cancellation to
- * the server. In both cases, the request is removed from the waiting
- * list.
- */
-extern int nlm_wait_lock(struct nlm_globals *g,
-    void *handle, bool_t is_intr);
+extern void nlm_slock_clnt_deregister(struct nlm_globals *g,
+    nlm_slock_clnt_t *nscp);
+extern int nlm_slock_clnt_wait(struct nlm_globals *g,
+    nlm_slock_clnt_t *nscp, bool_t is_intr);
 
 int nlm_cancel_async_lock(struct nlm_async_lock *af);
 void nlm_free_async_lock(struct nlm_async_lock *af);
