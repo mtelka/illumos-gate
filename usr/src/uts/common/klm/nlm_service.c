@@ -51,6 +51,7 @@
 #include <sys/vnode.h>
 #include <sys/vfs.h>
 #include <sys/queue.h>
+#include <sys/sdt.h>
 
 #include <rpc/rpc.h>
 #include <rpc/xdr.h>
@@ -710,12 +711,14 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	g = zone_getspecific(nlm_zone_key, curzone);
 	host = nlm_host_find(g, name, netid, addr);
 	if (host == NULL) {
+		DTRACE_PROBE4(no__host, struct nlm_globals *, g,
+		    char *, name, char *, netid, struct netbuf *, addr);
 		resp->stat.stat = nlm4_denied_nolocks;
 		return;
 	}
 
-	sysid = host->nh_sysid;
-	NLM_DEBUG(NLM_LL3, "nlm_do_unlock(): name = %s sysid = %d\n", name, sysid);
+	DTRACE_PROBE3(start, struct nlm_globals *, g,
+	    struct nlm_host *, host, nlm4_unlockargs *, argp);
 
 	nv = nlm_vnode_find(host, &argp->alock.fh);
 	if (nv == NULL) {
@@ -740,7 +743,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	 * Ignore the error - there is no result code for failure,
 	 * only for grace period.
 	 */
-	(void) error;
+	DTRACE_PROBE1(unlock__res, int, error);
 	resp->stat.stat = nlm4_granted;
 
 out:
@@ -771,6 +774,9 @@ out:
 			nlm_host_rele_rpc(rpcp);
 		}
 	}
+
+	DTRACE_PROBE3(end, struct nlm_globals *, g,
+	    struct nlm_host *, host, nlm4_res *, resp);
 
 	nlm_vnode_release(host, nv);
 	nlm_host_release(g, host);
