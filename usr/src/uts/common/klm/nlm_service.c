@@ -767,12 +767,18 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
+	/*
+	 * NLM_UNLOCK operation doesn't have an error code
+	 * denoting that operation failed, os we always
+	 * return nlm4_granted except the situation when
+	 * server is in a grace period.
+	 */
+	resp->stat.stat = nlm4_granted;
+
 	g = zone_getspecific(nlm_zone_key, curzone);
 	host = nlm_host_find(g, netid, addr);
-	if (host == NULL) {
-		resp->stat.stat = nlm4_granted;
+	if (host == NULL)
 		return;
-	}
 
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_unlockargs *, argp);
@@ -783,10 +789,8 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	}
 
 	vp = nlm_fh_to_vp(&argp->alock.fh);
-	if (vp == NULL) {
-		resp->stat.stat = nlm4_granted;
+	if (vp == NULL)
 		goto out;
-	}
 
 	nlm_init_flock(&fl, &argp->alock, nlm_host_get_sysid(host));
 	fl.l_type = F_UNLCK;
@@ -796,13 +800,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	    F_REMOTELOCK | FREAD | FWRITE,
 	    (u_offset_t)0, NULL, CRED(), NULL);
 
-	/*
-	 * Ignore the error - there is no result code for failure,
-	 * only for grace period.
-	 */
 	DTRACE_PROBE1(unlock__res, int, error);
-	resp->stat.stat = nlm4_granted;
-
 out:
 	/*
 	 * If we have a callback funtion, use that to
