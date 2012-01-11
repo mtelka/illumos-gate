@@ -650,6 +650,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	struct nlm_vhold *nvp = NULL;
 	nlm_rpc_t *rpcp = NULL;
 	char *netid;
+	char *name;
 	int error;
 	bool_t slreq_unreg = FALSE;
 	struct flock64 fl;
@@ -657,9 +658,10 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
+	name = argp->alock.caller_name;
 
 	g = zone_getspecific(nlm_zone_key, curzone);
-	host = nlm_host_find(g, netid, addr);
+	host = nlm_host_findcreate(g, name, netid, addr);
 	if (host == NULL) {
 		resp->stat.stat = nlm4_denied_nolocks;
 		return;
@@ -741,6 +743,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	nlm_rpc_t *rpcp = NULL;
 	vnode_t *vp = NULL;
 	char *netid;
+	char *name;
 	int error;
 	bool_t nvp_check_locks = FALSE;
 	struct flock64 fl;
@@ -749,6 +752,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
+	name = argp->alock.caller_name;
 
 	/*
 	 * NLM_UNLOCK operation doesn't have an error code
@@ -759,9 +763,10 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	resp->stat.stat = nlm4_granted;
 
 	g = zone_getspecific(nlm_zone_key, curzone);
-	host = nlm_host_find(g, netid, addr);
+	host = nlm_host_findcreate(g, name, netid, addr);
 	if (host == NULL)
 		return;
+
 	if (cb != NULL) {
 		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
 		if (error != 0)
