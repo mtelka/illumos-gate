@@ -59,6 +59,7 @@
 struct nlm_host;
 struct vnode;
 struct exportinfo;
+struct shrlock;
 struct _kthread;
 
 /*
@@ -223,6 +224,26 @@ struct nlm_slock {
 TAILQ_HEAD(nlm_slock_list, nlm_slock);
 
 /*
+ * Share reservation description. NLM tracks all active
+ * share reservations made by the client side, so that
+ * they can be easily recovered if remote NLM server
+ * reboots. Share reservations tracking is also useful
+ * when NLM needs to determine whether host owns any
+ * resources on the system and can't be destroyed.
+ *
+ * nlm_shres:
+ *   ns_shr: share reservation description
+ *   ns_vp: a pointer to vnode where share reservation is located
+ *   ns_next: next nlm_shres instance (or NULL if next item isn't
+ *            present).
+ */
+struct nlm_shres {
+	struct shrlock		*ns_shr;
+	vnode_t			*ns_vp;
+	struct nlm_shres	*ns_next;
+};
+
+/*
  * NLM RPC handle object.
  *
  * In kRPC subsystem it's unsafe to use one RPC handle by
@@ -309,8 +330,9 @@ enum nlm_rpcb_state {
  *   nh_rpcb_state: host's RPC binding state (see enum nlm_rpcb_state
  *                  for more details).
  *   nh_rpchc: host's RPC handles cache.
- *   nh_vholds_by_vp: a hash table of all vholds host owns. (used for lookup)
+ *   nh_vholds_by_vp: a hash table of all vholds host owns. (used for lookup) 
  *   nh_vholds_list: a linked list of all vholds host owns. (used for iteration)
+ *   nh_shrlist: a list of all active share resevations on the client side.
  *   nh_reclaimer: a pointer to reclamation thread (kthread_t)
  *                 NULL if reclamation thread doesn't exist
  */
@@ -334,6 +356,7 @@ struct nlm_host {
 	struct nlm_rpch_list	nh_rpchc;		/* (l) */
 	mod_hash_t		*nh_vholds_by_vp;	/* (l) */
 	struct nlm_vhold_list	nh_vholds_list;		/* (l) */
+	struct nlm_shres	*nh_shrlist;		/* (l) */
 	kthread_t		*nh_reclaimer;		/* (l) */
 };
 TAILQ_HEAD(nlm_host_list, nlm_host);
@@ -557,6 +580,9 @@ int nlm_slreq_register(struct nlm_host *,
     struct nlm_vhold *, struct flock64 *);
 int nlm_slreq_unregister(struct nlm_host *,
     struct nlm_vhold *, struct flock64 *);
+
+void nlm_shres_track(struct nlm_host *, vnode_t *, struct shrlock *);
+void nlm_shres_untrack(struct nlm_host *, vnode_t *, struct shrlock *);
 
 int nlm_host_wait_grace(struct nlm_host *);
 int nlm_host_cmp(const void *, const void *);

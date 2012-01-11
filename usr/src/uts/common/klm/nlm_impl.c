@@ -252,10 +252,13 @@ static bool_t nlm_vhold_busy(struct nlm_host *, struct nlm_vhold *);
 static void nlm_vhold_clean(struct nlm_vhold *, int);
 
 /*
- * NLM client/server sleeping locks functions
+ * NLM client/server sleeping locks/share reservation functions
  */
 struct nlm_slreq *nlm_slreq_find_locked(struct nlm_host *,
     struct nlm_vhold *, struct flock64 *);
+static struct nlm_shres *nlm_shres_create_item(struct shrlock *, vnode_t *);
+static void nlm_shres_destroy_item(struct nlm_shres *);
+static bool_t nlm_shres_equal(struct shrlock *, struct shrlock *);
 
 /*
  * NLM initialization functions.
@@ -1212,31 +1215,11 @@ nlm_host_has_locks(struct nlm_host *hostp)
 		return (TRUE);
 
 	/*
-	 * FIXME: We don't handle share reservations here.
-	 * The reason is that there's no
-	 * function similar to flk_sysid_has_locks() for share
-	 * reservations, so we can not determine whether host
-	 * has any shares. Actually os/share.c can answer a question
-	 * whether particular _vnode_ has any shares. But on the
-	 * client side we don't have a track of vnodes. The problem
-	 * having collection of touched vnodes on the client side
-	 * is that client (in contrast to server) must release vnode
-	 * (by VN_RELE) ASAP, because NFS code won't be able to
-	 * unmount the filesystem with some vnodes in use, it also
-	 * has a tricy part of file removing code that would affect
-	 * us if we would track vnodes on the client. NFS file
-	 * removing functions (see nfs3_remove() as an example)
-	 * won't remove a file if its vnode is held by someone.
-	 * Instead it just renames a file and gives it randomly
-	 * generated name (for example: .nfsB701). I don't know
-	 * why it does this...
-	 * So for this moment I don't know how to check whether
-	 * host has share reservations without keeping track
-	 * of vnodes touched by the host on the client side.
-	 * Moreover, I don't know how to track vnodes on the
-	 * client side without some modification of NFSv2/NFSv3
-	 * code.
+	 * Check whether host has any share reservations
+	 * registered on the client sied.
 	 */
+	if (hostp->nh_shrlist != NULL)
+		return (TRUE);
 
 	return (FALSE);
 }
@@ -1845,6 +1828,124 @@ nlm_slreq_find_locked(struct nlm_host *hostp, struct nlm_vhold *nvp,
 	}
 
 	return (slr);
+}
+
+/*
+ * NLM tracks active share reservations made on the client side.
+ * It needs to have a track of share reservations for two purposes
+ * 1) to determine if nlm_host is busy (if it has active locks and/or
+ *    share reservations, it is)
+ * 2) to recover active share reservations when NLM server reports
+ *    that it has rebooted.
+ *
+ * Unfortunately Illumos local share reservations manager (see os/share.c)
+ * doesn't have an ability to lookup all reservations on the system
+ * by sysid (like local lock manager) or get all reservations by sysid.
+ * It tracks reservations per vnode and is able to get/looup them
+ * on particular vnode. It's not what NLM needs. Thus it has that ugly
+ * share reservations tracking scheme.
+ */
+
+void
+nlm_shres_track(struct nlm_host *hostp, vnode_t *vp, struct shrlock *shrp)
+{
+	struct nlm_shres *nsp, *nsp_new;
+
+	/*
+	 * NFS code must fill the s_owner, so that
+	 * s_own_len is never 0.
+	 */
+	ASSERT(shrp->s_own_len > 0);
+	nsp_new = nlm_shres_create_item(shrp, vp);
+
+	mutex_enter(&hostp->nh_lock);
+	for (nsp = hostp->nh_shrlist; nsp != NULL; nsp = nsp->ns_next)
+		if (nsp->ns_vp == vp && nlm_shres_equal(shrp, nsp->ns_shr))
+			break;
+
+	if (nsp != NULL) {
+		/*
+		 * Found a duplicate. Do nothing.
+		 */
+
+		goto out;
+	}
+
+	nsp = nsp_new;
+	nsp_new = NULL;
+	nsp->ns_next = hostp->nh_shrlist;
+	hostp->nh_shrlist = nsp;
+
+out:
+	mutex_exit(&hostp->nh_lock);
+	if (nsp_new != NULL)
+		nlm_shres_destroy_item(nsp_new);
+}
+
+void
+nlm_shres_untrack(struct nlm_host *hostp, vnode_t *vp, struct shrlock *shrp)
+{
+	struct nlm_shres *nsp, *nsp_prev = NULL;
+
+	mutex_enter(&hostp->nh_lock);
+	nsp = hostp->nh_shrlist;
+	while (nsp != NULL) {
+		if (nsp->ns_vp == vp && nlm_shres_equal(shrp, nsp->ns_shr)) {
+			struct nlm_shres *nsp_del;
+
+			nsp_del = nsp;
+			nsp = nsp->ns_next;
+			if (nsp_prev != NULL)
+				nsp_prev->ns_next = nsp;
+			else
+				hostp->nh_shrlist = nsp;
+
+			nlm_shres_destroy_item(nsp_del);
+			continue;
+		}
+
+		nsp_prev = nsp;
+		nsp = nsp->ns_next;
+	}
+
+	mutex_exit(&hostp->nh_lock);
+}
+
+static bool_t
+nlm_shres_equal(struct shrlock *shrp1, struct shrlock *shrp2)
+{
+	if (shrp1->s_sysid	== shrp2->s_sysid	&&
+	    shrp1->s_pid	== shrp2->s_pid		&&
+	    shrp1->s_own_len	== shrp2->s_own_len	&&
+	    bcmp(shrp1->s_owner, shrp2->s_owner,
+	    shrp1->s_own_len) == 0)
+		return (TRUE);
+
+	return (FALSE);
+}
+
+static struct nlm_shres *
+nlm_shres_create_item(struct shrlock *shrp, vnode_t *vp)
+{
+	struct nlm_shres *nsp;
+
+	nsp = kmem_alloc(sizeof (*nsp), KM_SLEEP);
+	nsp->ns_shr = kmem_alloc(sizeof (*shrp), KM_SLEEP);
+	bcopy(shrp, nsp->ns_shr, sizeof (*shrp));
+	nsp->ns_shr->s_owner = kmem_alloc(shrp->s_own_len, KM_SLEEP);
+	bcopy(shrp->s_owner, nsp->ns_shr->s_owner, shrp->s_own_len);
+	nsp->ns_vp = vp;
+
+	return (nsp);
+}
+
+static void
+nlm_shres_destroy_item(struct nlm_shres *nsp)
+{
+	kmem_free(nsp->ns_shr->s_owner,
+	    nsp->ns_shr->s_own_len);
+	kmem_free(nsp->ns_shr, sizeof (struct shrlock));
+	kmem_free(nsp, sizeof (*nsp));
 }
 
 /*

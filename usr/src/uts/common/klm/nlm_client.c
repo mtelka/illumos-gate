@@ -1142,6 +1142,7 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 		 * then clear the remote share.
 		 */
 		(void) nlm_local_shrlock(vp, &shlk, cmd, flags);
+		nlm_shres_untrack(host, vp, &shlk);
 		error = nlm_call_unshare(vp, &shlk, host, fh, vers);
 		goto out;
 	}
@@ -1167,7 +1168,7 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 		error = 0;
 	}
 
-	/* Start monitoring this host. */
+	nlm_shres_track(host, vp, &shlk);
 	nlm_host_monitor(g, host, 0);
 
 out:
