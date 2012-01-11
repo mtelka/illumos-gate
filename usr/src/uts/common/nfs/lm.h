@@ -154,15 +154,13 @@ extern int lm_vp_active(const struct vnode *);
 extern sysid_t		   lm_alloc_sysidt(void);
 extern void		   lm_free_sysidt(sysid_t);
 
-#else /* _KERNEL */
+#endif /* _KERNEL */
 
 #ifdef __STDC__
 extern int lm_shutdown(void);
 #else
 extern int lm_shutdown();
 #endif /* __STDC__ */
-
-#endif /* _KERNEL */
 
 #ifdef __cplusplus
 }
