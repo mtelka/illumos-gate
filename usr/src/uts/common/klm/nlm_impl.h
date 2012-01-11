@@ -241,7 +241,6 @@ enum nlm_host_state {
 typedef struct nlm_rpc {
 	CLIENT		*nr_handle;
 	rpcvers_t	nr_vers;
-	int         nr_sn;
 	TAILQ_ENTRY(nlm_rpc) nr_link;
 } nlm_rpc_t;
 TAILQ_HEAD(nlm_rpch_list, nlm_rpc);
@@ -284,7 +283,6 @@ struct nlm_host {
 	int32_t		nh_sysid;	/* (c) our allocaed system ID */
 	int		nh_state;	/* (s) last seen NSM state of host */
 	kcondvar_t nh_rpcb_cv;
-	uint16_t nh_rpcb_sn;
 	enum clnt_stat nh_rpcb_ustat;
 	enum nlm_rpcb_state nh_rpcb_state;
 	enum nlm_host_state nh_monstate; /* (l) local NSM monitoring state */

@@ -103,17 +103,8 @@ update_host_rpcbinding(struct nlm_host *hostp, int vers)
 	stat = rpcbind_getaddr(&hostp->nh_knc, NLM_PROG, vers, &nb);
 	mutex_enter(&hostp->nh_lock);
 
-	if (stat == RPC_SUCCESS) {
-		hostp->nh_rpcb_state = NRPCB_UPDATED;
-
-		/*
-		 * RPC binding serial number shouldn't be 0.
-		 */
-		if (++hostp->nh_rpcb_sn == 0)
-			hostp->nh_rpcb_sn = 1;
-	} else {
-		hostp->nh_rpcb_state = NRPCB_NEED_UPDATE;
-	}
+	hostp->nh_rpcb_state = ((stat == RPC_SUCCESS) ?
+	    NRPCB_UPDATED : NRPCB_NEED_UPDATE);
 
 	hostp->nh_rpcb_ustat = stat;
 	cv_broadcast(&hostp->nh_rpcb_cv);
@@ -133,15 +124,14 @@ refresh_nlm_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
 	nlm_addr_t tmp_naddr;
 
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
-	rpcp->nr_sn = hostp->nh_rpcb_sn;
 
 	/*
 	 * It's important to make a copy of host address
-	 * structure at the same time we get the serial number
-	 * that uniquely denotes given binding. And it's important
-	 * to do it atomically. We need to be sure that given
-	 * binding's serial number is congruent to actual content
-	 * of the host's address.
+	 * structure before we call tli_kcreate/tli_kinit.
+	 * It's unsafe to pass hostp->nh_addr there directly,
+	 * because whily these functions are doing copy of the
+	 * address to RPC handle private structures, some other
+	 * thread can refresh RPC binding and rewrite port number.
 	 */
 	bcopy(&hostp->nh_addr, &tmp_naddr, sizeof (tmp_naddr));
 	mutex_exit(&hostp->nh_lock);
@@ -229,22 +219,18 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 	}
 
 	/*
-	 * Check if binding is not "fresh".
-	 * If so, renew it.
+	 * Refresh RPC binding
 	 */
-	if (rpcp->nr_handle == NULL ||
-	    rpcp->nr_sn != hostp->nh_rpcb_sn) {
-		rc = refresh_nlm_rpc(hostp, rpcp);
-		if (rc != 0) {
-			/*
-			 * Just put handle back to the cache in hope
-			 * that it will be reinitialized later wihout
-			 * errors by somebody else...
-			 */
-			nlm_host_rele_rpc(hostp, rpcp);
-			mutex_exit(&hostp->nh_lock);
-			return (rc);
-		}
+	rc = refresh_nlm_rpc(hostp, rpcp);
+	if (rc != 0) {
+		/*
+		 * Just put handle back to the cache in hope
+		 * that it will be reinitialized later wihout
+		 * errors by somebody else...
+		 */
+		nlm_host_rele_rpc(hostp, rpcp);
+		mutex_exit(&hostp->nh_lock);
+		return (rc);
 	}
 
 	mutex_exit(&hostp->nh_lock);

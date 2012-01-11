@@ -137,11 +137,12 @@ _init()
 	int retval;
 
 	mutex_init(&lm_lck, NULL, MUTEX_DEFAULT, NULL);
+	lm_sysid_init();
+	nlm_init();
+
 	zone_key_create(&nlm_zone_key, lm_zone_init, NULL, lm_zone_fini);
 	/* Per-zone lockmgr data.  See: os/flock.c */
 	zone_key_create(&flock_zone_key, flk_zone_init, NULL, flk_zone_fini);
-	lm_sysid_init();
-	nlm_init();
 
 	retval = mod_install(&modlinkage);
 	if (retval == 0)

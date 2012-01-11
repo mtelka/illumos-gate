@@ -91,11 +91,7 @@
  */
 #define NLM_NSM_RPCBIND_TIMEOUT 5
 
-/*
- * Returns true if given sysid has active or sleeping locks
- */
-#define nlm_sysid_has_locks(sysid)	  \
-	flk_sysid_has_locks(sysid, FLK_QUERY_ACTIVE | FLK_QUERY_SLEEPING)
+kmutex_t lm_lck;
 
 /*
  * Grace period handling. The value of nlm_grace_threshold is the
@@ -936,8 +932,9 @@ So, here:  (a) check if there's a recovery thread yet, and if not,
 mark that one is starting.  (b) get the list of locks for this sysid.
 if no locks, mark recovery complete now and don't bother starting the
 recovery thread.  If there are some locks, store that list in the host
-object and start the recovery thread.  mark recovery as 'running'.
+object and start the recovery thread.  mark recovery as 'running'. */
 
+#if 0 /* FIXME[DK] */
 	 */
 	if (host->nh_monstate != NLM_RECOVERING &&
 	    nlm_sysid_has_locks(NLM_SYSID_CLIENT | host->nh_sysid)) {
@@ -950,11 +947,10 @@ object and start the recovery thread.  mark recovery as 'running'.
 		/* rele this ref. i nlm_client_recovery_start */
 		atomic_inc_uint(&host->nh_refs);
 
-#if 0 /* FIXME[DK] */
 		kthread_add(nlm_client_recovery_start, host, curproc, &td, 0, 0,
 		    "NFS lock recovery for %s", host->nh_name);
-#endif
 	}
+#endif
 }
 
 /*
@@ -980,7 +976,6 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	host->nh_state = 0;
 	host->nh_monstate = NLM_UNMONITORED;
 	host->nh_rpcb_state = NRPCB_NEED_UPDATE;
-	host->nh_rpcb_sn = 1;
 
 	avl_create(&host->nh_vnodes, nlm_vnode_cmp,
 	    sizeof (struct nlm_vnode),
