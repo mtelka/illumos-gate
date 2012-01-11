@@ -57,14 +57,10 @@
 
 #include "nlm_impl.h"
 
-#define	PID_MAX	MAX_MAXPID
-
 /* Extra flags for nlm_call_lock() - xflags */
 #define	NLM_X_RECLAIM	1
 #define	NLM_X_BLOCKING	2
 
-kmutex_t nlm_svid_lock;
-static struct unrhdr *nlm_svid_allocator;
 static volatile uint32_t nlm_xid = 1;
 
 static int nlm_map_status(nlm4_stats stat);
@@ -109,18 +105,6 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 
 static int
 nlm_local_shrlock(vnode_t *vp, struct shrlock *sl, int cmd, int flags);
-
-/* XXX - call this somewhere... */
-static void
-nlm_client_init(void *dummy)
-{
-	int i;
-
-	mutex_init(&nlm_svid_lock, "NLM svid lock", MUTEX_DEFAULT, NULL);
-#if 0	/* XXX */
-	nlm_svid_allocator = new_unrhdr(PID_MAX + 2, INT_MAX, &nlm_svid_lock);
-#endif
-}
 
 static int
 nlm_msg(kthread_t *td, const char *server, const char *msg, int error)
