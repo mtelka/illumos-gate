@@ -1014,7 +1014,7 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 
 	netid = nlm_netid_from_knetconfig(sv->sv_knconf);
 	if (netid == NULL) {
-		cmn_err(CE_NOTE, "nlm_frlock: unknown NFS netid");
+		cmn_err(CE_NOTE, "nlm_shrlock: unknown NFS netid");
 		error = ENOSYS;
 		goto out;
 	}

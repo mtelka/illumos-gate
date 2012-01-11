@@ -121,6 +121,7 @@ struct nlm_globals {
 /* XXX: temporary... */
 extern zone_key_t nlm_zone_key;
 extern clock_t nlm_grace_threshold;
+extern void nlm_init(void);
 
 
 /*
@@ -147,6 +148,20 @@ extern clock_t nlm_grace_threshold;
  * (c)		const until freeing
  * (a)		modified using atomic ops
  */
+
+/*
+ * The in-kernel RPC (kRPC) subsystem uses TLI/XTI, and
+ * therfore needs _both_ a knetconfig and an address when
+ * establishing a network endpoint.  We keep a collection
+ * of the knetconfig structs for all our RPC bindings and
+ * find one when needed using the "netid".
+ */
+struct nlm_knc {
+	TAILQ_ENTRY(nlm_knc) nc_link;	/* (l) global list of NCs */
+	const char *nc_netid;
+	struct knetconfig nc_conf;
+};
+TAILQ_HEAD(nlm_knc_list, nlm_knc);
 
 /*
  * List of vnodes in use by some client.  We (the server) keep
@@ -226,6 +241,7 @@ struct nlm_host {
 	TAILQ_ENTRY(nlm_host) nh_link; /* (g) global list of hosts */
 	char		*nh_name;	/* (c) printable name of host */
 	char		*nh_netid;	/* TLI binding name */
+	struct knetconfig nh_knc;	/* (c) knetconfg for nh_addr */
 	struct netbuf	nh_addr;	/* (c) remote address of host */
 	int32_t		nh_sysid;	/* (c) our allocaed system ID */
 	struct nlm_rpc	nh_srvrpc;	/* (l) RPC for server replies */

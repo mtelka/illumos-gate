@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
+ * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -116,10 +116,12 @@ int nlm_nsm_state;
 
 
 /*
- * A lock to protect the host list and waiting lock list.
+ * A lock to protect "global" lists. (hosts, netconfigs)
+ * XXX: Move these variables into nlm_globals...
  */
 static kmutex_t nlm_global_lock;
 
+static struct nlm_knc_list nlm_kncl;	/* (g) */
 static struct nlm_host_list nlm_hosts;	/* (g) */
 static int32_t nlm_next_sysid = 1;	/* (g) */
 
@@ -131,35 +133,17 @@ void nlm_cancel_wait_locks(struct nlm_host *);
 
 /*
  * Initialise NLM globals.
+ * XXX: Move this init work to lm_zone_init...
  */
-#if 0	/* XXX */
-static void
-nlm_init(void *dummy)
+void
+nlm_init()
 {
 	int error;
 
 	mutex_init(&nlm_global_lock, "nlm_global_lock", MUTEX_DEFAULT, NULL);
 	TAILQ_INIT(&nlm_hosts);
-
-	error = syscall_register(&nlm_syscall_offset, &nlm_syscall_sysent,
-	    &nlm_syscall_prev_sysent);
-	if (error)
-		NLM_ERR("Can't register NLM syscall\n");
-	else
-		nlm_syscall_registered = TRUE;
+	TAILQ_INIT(&nlm_kncl);
 }
-#endif	/* XXX */
-
-#if 0	/* XXX */
-static void
-nlm_uninit(void *dummy)
-{
-
-	if (nlm_syscall_registered)
-		syscall_deregister(&nlm_syscall_offset,
-		    &nlm_syscall_prev_sysent);
-}
-#endif	/* XXX */
 
 /*
  * The in-kernel RPC (kRPC) subsystem uses TLI/XTI, which needs
@@ -168,27 +152,62 @@ nlm_uninit(void *dummy)
  * the user-level lockd, allowing fetch by "netid".
  */
 
+/*
+ * Clear out (empty) the list of knetconfigs.
+ * Called when restarting.
+ */
 static void
 nlm_nc_clear(struct nlm_globals *g)
 {
-	/* XXX todo */
-}
+	struct nlm_knc *nc;
 
-static void
-nlm_nc_add(struct nlm_globals *g, const char *netid, struct knetconfig *knc)
-{
-	/* XXX todo */
+	mutex_enter(&nlm_global_lock);
+	while (!TAILQ_EMPTY(&nlm_kncl)) {
+		nc = TAILQ_FIRST(&nlm_kncl);
+		TAILQ_REMOVE(&nlm_kncl, nc, nc_link);
+		kmem_free(nc, sizeof (nc));
+	}
+	mutex_exit(&nlm_global_lock);
 }
 
 /*
- * Lookup (and hold) a knetconfig from one of our
- * service bindings.
+ * Add an entry the list of knetconfigs.
  */
-static struct knetconfig *
-nlm_knetconfig_from_netid(const char *netid)
+static void
+nlm_nc_add(struct nlm_globals *g, const char *netid, struct knetconfig *knc)
 {
-	/* XXX todo */
-	return (NULL);
+	struct nlm_knc *nc;
+
+	nc = kmem_zalloc(sizeof (*nc), KM_SLEEP);
+	nc->nc_netid = netid;
+	nc->nc_conf = *knc;
+
+	mutex_enter(&nlm_global_lock);
+	TAILQ_INSERT_TAIL(&nlm_kncl, nc, nc_link);
+	mutex_exit(&nlm_global_lock);
+}
+
+/*
+ * Lookup knetconfig from one of our service bindings,
+ * and copy it to *knc, or return EINVAL.
+ */
+static int
+nlm_nc_lookup(const char *netid, struct knetconfig *knc)
+{
+	struct nlm_knc *nc;
+	int rc = EINVAL;
+
+	mutex_enter(&nlm_global_lock);
+	TAILQ_FOREACH(nc, &nlm_kncl, nc_link) {
+		if (0 == strcmp(netid, nc->nc_netid)) {
+			*knc = nc->nc_conf;
+			rc = 0;
+			break;
+		}
+	}
+	mutex_exit(&nlm_global_lock);
+
+	return (rc);
 }
 
 void
@@ -269,17 +288,12 @@ nlm_copy_netobj(struct netobj *dst, struct netobj *src)
  * find one when needed using the "netid".
  */
 static CLIENT *
-nlm_get_rpc(const char *netid, struct netbuf *addr,
+nlm_get_rpc(struct knetconfig *knc, struct netbuf *addr,
 	rpcprog_t prog, rpcvers_t vers)
 {
-	struct knetconfig *knc = NULL;
 	CLIENT *clnt = NULL;
 	enum clnt_stat stat;
 	int error;
-
-	knc = nlm_knetconfig_from_netid(netid);
-	if (knc == NULL)
-		goto out;
 
 	/*
 	 * Contact the remote RPCBIND service to find the
@@ -287,17 +301,17 @@ nlm_get_rpc(const char *netid, struct netbuf *addr,
 	 * XXX: Use a copy of the addr. here?
 	 */
 	stat = rpcbind_getaddr(knc, prog, vers, addr);
-	if (stat != RPC_SUCCESS)
-		goto out;
-
+	if (stat != RPC_SUCCESS) {
+		/* XXX: NLM_DEBUG? */
+		return (NULL);
+	}
 	error = clnt_tli_kcreate(knc, addr, prog, vers,
 	    0, 0, CRED(), &clnt);
-	if (error != 0)
-		clnt = NULL;
+	if (error != 0) {
+		/* XXX: NLM_DEBUG? */
+		return (NULL);
+	}
 
-out:
-	if (knc != NULL)
-		nlm_knetconfig_rele(knc);
 	return (clnt);
 }
 
@@ -380,7 +394,11 @@ nlm_vnode_release(struct nlm_host *host, struct nlm_vnode *nv)
 	 * those are not required to balance.)
 	 *
 	 * Current solution:  Just keep vnodes held until
-	 * this host struct reaches its idle timeout.
+	 * this host struct reaches its idle timeout,
+	 * and then ask the os/flock code if this host
+	 * still owns any locks.
+	 *
+	 * XXX idle timeouts not yet fully implemented.
 	 */
 #if 0	/* XXX */
 	if (nv->nv_refs == 0) {
@@ -683,8 +701,14 @@ static struct nlm_host *
 nlm_create_host(char *name, const char *netid, struct netbuf *addr)
 {
 	struct nlm_host *host;
+	struct knetconfig knc;
+	int err;
 
-	ASSERT(MUTEX_HELD(&nlm_global_lock));
+	err = nlm_nc_lookup(netid, &knc);
+	if (err != 0) {
+		NLM_DEBUG(1, "NLM: netid %s invalid\n", netid);
+		return (NULL);
+	}
 
 	host = kmem_zalloc(sizeof (*host), KM_SLEEP);
 
@@ -693,6 +717,7 @@ nlm_create_host(char *name, const char *netid, struct netbuf *addr)
 
 	host->nh_name = strdup(name);
 	host->nh_netid = strdup(netid);
+	host->nh_knc = knc;
 	nlm_copy_netbuf(&host->nh_addr, addr);
 
 	host->nh_state = 0;
@@ -808,6 +833,10 @@ nlm_host_findcreate(char *name, const char *netid, struct netbuf *addr)
 	 * and then check again before inserting.
 	 */
 	newhost = nlm_create_host(name, netid, addr);
+	if (newhost == NULL) {
+		/* XXX: DEBUG? */
+		return (NULL);
+	}
 
 	mutex_enter(&nlm_global_lock);
 	host = nlm_host_find_locked(name, netid, addr);
@@ -1061,7 +1090,7 @@ nlm_host_get_rpc(struct nlm_host *host, int vers, bool_t isserver)
 
 	if (!rpc->nr_client) {
 		mutex_exit(&host->nh_lock);
-		client = nlm_get_rpc(host->nh_netid, &host->nh_addr,
+		client = nlm_get_rpc(&host->nh_knc, &host->nh_addr,
 		    NLM_PROG, vers);
 		mutex_enter(&host->nh_lock);
 
@@ -1101,8 +1130,9 @@ nlm_host_get_state(struct nlm_host *host)
 }
 
 /*
- * Our local client-side code calls this to block on a
- * remote lock.  (See nlm_call_lock).
+ * Our local client-side code calls this to block on a remote lock.
+ * (See nlm_call_lock).  This is here (in the server-side code)
+ * because this server function gets the granted callback.
  */
 void *
 nlm_register_wait_lock(
@@ -1283,9 +1313,9 @@ nlm_svc_add_ep(struct nlm_globals *g, struct file *fp,
 	 * both for detecting close of the last transport,
 	 * and to build outgoing transport handles when
 	 * RPC service code need to build a CLIENT handle
-	 * to call back to some host.  XXX - todo
+	 * to call back to some host.
 	 */
-	/* nlm_nc_add(XXX) */
+	nlm_nc_add(g, netid, knc);
 
 	return (err);
 }
@@ -1308,17 +1338,10 @@ nlm_svc_starting(struct nlm_globals *g,
 	char myaddr[SYS_NMLN + 2];
 	struct netbuf nb;
 
-	if (0 != strcmp(knc->knc_protofmly, NC_LOOPBACK)) {
-		NLM_ERR("NLM: starting, wrong protofmly");
-		return (EINVAL);
-	}
-
 	/*
-	 * Initialize the list of netconfigs.
-	 * Must do this before nlm_get_rpc().
+	 * Clear out the old list of netconfigs, if any.
 	 */
 	nlm_nc_clear(g);
-	nlm_nc_add(g, netid, knc);
 
 	/*
 	 * Get an RPC client handle for the local statd.
@@ -1331,7 +1354,7 @@ nlm_svc_starting(struct nlm_globals *g,
 	nb.maxlen = sizeof (myaddr);
 	nb.len = snprintf(nb.buf, nb.maxlen, "%s.", uts_nodename());
 
-	nlm_nsm = nlm_get_rpc(netid, &nb, SM_PROG, SM_VERS);
+	nlm_nsm = nlm_get_rpc(knc, &nb, SM_PROG, SM_VERS);
 	if (nlm_nsm == NULL) {
 		NLM_ERR("NLM: internal error contacting NSM");
 		return (EIO);

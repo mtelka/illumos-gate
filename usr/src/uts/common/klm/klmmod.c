@@ -103,6 +103,8 @@ _init()
 	zone_key_create(&flock_zone_key, flk_zone_init, NULL, flk_zone_fini);
 	lm_sysid_init();
 
+	nlm_init();	/* XXX - temporary... */
+
 	retval = mod_install(&modlinkage);
 	if (retval == 0)
 		return (0);
@@ -233,10 +235,20 @@ lm_svc(struct lm_svc_args *args)
 	}
 
 	/*
-	 * First caller does initialization.  The state change is
-	 * just for observability, while nlm_svc_starting runs.
+	 * There is no separate "initialize" sub-call for nfssys,
+	 * and we want to do some one-time work when the first
+	 * binding comes in.  This is slightly hack-ish, but we
+	 * know that lockd binds the loopback transport first,
+	 * so we piggy back initializations on that call.
 	 */
-	if (g->run_status == NLM_ST_DOWN) {
+	if (args->n_fmly == LM_LOOPBACK) {
+
+		if (g->run_status != NLM_ST_DOWN) {
+			mutex_exit(&g->lock);
+			err = EINVAL;
+			goto out;
+		}
+
 		g->run_status = NLM_ST_STARTING;
 		g->lockd_pid = curproc->p_pid;
 

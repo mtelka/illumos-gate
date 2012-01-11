@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
+ * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -548,7 +548,7 @@ out:
 /*
  * NLM_CANCEL, NLM_CANCEL_MSG,
  * NLM4_CANCEL, NLM4_CANCEL_MSG,
- * Client gives waiting for a blocking lock.
+ * Client gives up waiting for a blocking lock.
  */
 void
 nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
@@ -821,7 +821,7 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 /*
  * NLM_FREE_ALL, NLM4_FREE_ALL
  *
- * Destroy all lock state for the calling host.
+ * Destroy all lock state for the calling client.
  */
 void
 nlm_do_free_all(nlm4_notify *argp, void *res, struct svc_req *sr)
