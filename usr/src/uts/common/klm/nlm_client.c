@@ -728,6 +728,7 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 	int error;
 
 	bzero(&cargs, sizeof (cargs));
+	bzero(&res, sizeof (res));
 
 	xid = atomic_inc_32_nv(&nlm_xid);
 	/* XXX: Use largs->cookie here? (same xid) */
