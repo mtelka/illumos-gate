@@ -708,13 +708,13 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	addr = svc_getrpccaller(sr->rq_xprt);
 
 	g = zone_getspecific(nlm_zone_key, curzone);
-	host = nlm_host_findcreate(g, name, netid, addr);
+	host = nlm_host_find(g, name, netid, addr);
 	if (host == NULL) {
 		resp->stat.stat = nlm4_denied_nolocks;
 		return;
 	}
-	sysid = host->nh_sysid;
 
+	sysid = host->nh_sysid;
 	NLM_DEBUG(NLM_LL3, "nlm_do_unlock(): name = %s sysid = %d\n", name, sysid);
 
 	nv = nlm_vnode_find(host, &argp->alock.fh);

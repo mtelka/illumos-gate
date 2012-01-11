@@ -848,6 +848,22 @@ nlm_host_find_locked(struct nlm_globals *g, char *name,
 	return (host);
 }
 
+/*
+ * Find NLM host for the given name and address.
+ */
+struct nlm_host *
+nlm_host_find(struct nlm_globals *g, char *name,
+    const char *netid, struct netbuf *addr)
+{
+	struct nlm_host *hostp;
+
+	mutex_enter(&g->lock);
+	hostp = nlm_host_find_locked(g, name, netid, addr);
+	mutex_exit(&g->lock);
+
+	return (hostp);
+}
+
 
 /*
  * Find or create an NLM host for the given name and address.
@@ -889,8 +905,8 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 		newhost->nh_sysid = nlm_acquire_next_sysid();
 		TAILQ_INSERT_TAIL(&g->nlm_hosts, newhost, nh_link);
 	}
-	mutex_exit(&g->lock);
 
+	mutex_exit(&g->lock);
 	if (host != NULL) {
 		nlm_host_destroy(newhost);
 		newhost = NULL;

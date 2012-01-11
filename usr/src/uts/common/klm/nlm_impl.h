@@ -426,6 +426,9 @@ extern struct nlm_host *nlm_find_host_by_addr(struct netbuf *addr,
 
 struct nlm_host *nlm_host_findcreate(struct nlm_globals *g, char *name,
     const char *netid, struct netbuf *addr);
+struct nlm_host * nlm_host_find(struct nlm_globals *g, char *name,
+    const char *netid, struct netbuf *addr);
+
 struct nlm_host *nlm_host_find_by_sysid(struct nlm_globals *g, int sysid);
 
 /*
