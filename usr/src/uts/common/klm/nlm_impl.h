@@ -212,37 +212,45 @@ struct nlm_vhold {
 };
 TAILQ_HEAD(nlm_vhold_list, nlm_vhold);
 
-enum nlm_wait_state {
-	NLM_WS_UNKNOWN = 0,
-	NLM_WS_BLOCKED,
-	NLM_WS_GRANTED,
-	NLM_WS_CANCELLED
-};
+/*
+ * Client side sleeping lock state.
+ * - NLM_SL_BLOCKED: some thread is blocked on this lock
+ * - NLM_SL_GRANTED: server granted us the lock
+ * - NLM_SL_CANCELLED: the lock is cancelled (i.e. invalid/inactive)
+ */
+typedef enum nlm_slock_state {
+	NLM_SL_UNKNOWN = 0,
+	NLM_SL_BLOCKED,
+	NLM_SL_GRANTED,
+	NLM_SL_CANCELLED
+} nlm_slock_state_t;
 
 /*
- * A client-sode sleeping lock request (we are the client)
- * stored on nlm_clnt_slocks of nlm_globals.
- *  nlm_slock_clnt_t
- *   nsc_state: Sleeping lock state.
- *             (see nlm_wait_state for more information)
- *   nsc_cond: Condvar that is used when sleeping lock
+ * A client side sleeping lock request (set by F_SETLKW)
+ * stored in nlm_slocks collection of nlm_globals.
+ *
+ *  struct nlm_slock
+ *   nsl_state: Sleeping lock state.
+ *             (see nlm_slock_state for more information)
+ *   nsl_cond: Condvar that is used when sleeping lock
  *            needs to wait for a GRANT callback
- *   nsc_lock: nlm4_lock structure that is sent to the server
- *   nsc_fh: Filehandle that corresponds to nw_vp
- *   nsc_host: A host owning this sleeping lock
- *   nsc_vp: A vnode sleeping lock is waiting on.
- *   nsc_link: A list node for nlm_globals->nlm_clnt_slocks list.
+ *            or cancellation event.
+ *   nsl_lock: nlm4_lock structure that is sent to the server
+ *   nsl_fh: Filehandle that corresponds to nw_vp
+ *   nsl_host: A host owning this sleeping lock
+ *   nsl_vp: A vnode sleeping lock is waiting on.
+ *   nsl_link: A list node for nlm_globals->nlm_slocks list.
  */
-typedef struct nlm_slock_clnt {
-	enum nlm_wait_state  nsc_state;
-	kcondvar_t           nsc_cond;
-	nlm4_lock            nsc_lock;
-	struct netobj        nsc_fh;
-	struct nlm_host     *nsc_host;
-	struct vnode        *nsc_vp;
-	TAILQ_ENTRY(nlm_slock_clnt) nsc_link;
-} nlm_slock_clnt_t;
-TAILQ_HEAD(nlm_slock_clnt_list, nlm_slock_clnt);
+struct nlm_slock {
+	nlm_slock_state_t	nsl_state;
+	kcondvar_t		nsl_cond;
+	nlm4_lock		nsl_lock;
+	struct netobj		nsl_fh;
+	struct nlm_host		*nsl_host;
+	struct vnode		*nsl_vp;
+	TAILQ_ENTRY(nlm_slock)	nsl_link;
+};
+TAILQ_HEAD(nlm_slock_list, nlm_slock);
 
 /*
  * NLM host.
@@ -391,7 +399,7 @@ struct nlm_globals {
 	avl_tree_t                  nlm_hosts_tree;
 	mod_hash_t                 *nlm_hosts_hash;
 	struct nlm_host_list        nlm_idle_hosts;
-	struct nlm_slock_clnt_list  nlm_clnt_slocks;
+	struct nlm_slock_list       nlm_slocks;
 	int                         cn_idle_tmo;
 	int                         grace_period;
 	int                         retrans_tmo;
@@ -551,12 +559,10 @@ void nlm_vhold_release(struct nlm_host *hostp, struct nlm_vhold *nvp);
 /*
  * Sleeping locks (client side)
  */
-extern nlm_slock_clnt_t *nlm_slock_clnt_register(struct nlm_globals *g,
-    struct nlm_host *host, struct nlm4_lock *lock, struct vnode *vp);
-extern void nlm_slock_clnt_deregister(struct nlm_globals *g,
-    nlm_slock_clnt_t *nscp);
-extern int nlm_slock_clnt_wait(struct nlm_globals *g,
-    nlm_slock_clnt_t *nscp, bool_t is_intr);
+struct nlm_slock *nlm_slock_register(struct nlm_globals *,
+    struct nlm_host *, struct nlm4_lock *, struct vnode *);
+void nlm_slock_unregister(struct nlm_globals *, struct nlm_slock *);
+int nlm_slock_wait(struct nlm_globals *, struct nlm_slock *, uint_t);
 
 /*
  * Sleeping lock requests (server side)

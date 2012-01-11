@@ -175,8 +175,7 @@ static bool_t nlm_host_has_locks(struct nlm_host *hostp);
 /*
  * NLM client/server sleeping locks functions
  */
-static void nlm_slock_clnt_destroy(nlm_slock_clnt_t *nscp);
-static void nlm_cancel_all_wait_locks(struct nlm_globals *g);
+static void nlm_slock_destroy(struct nlm_slock *);
 struct nlm_slreq *nlm_slreq_find_locked(struct nlm_host *,
     struct nlm_vhold *, struct flock64 *);
 
@@ -981,13 +980,13 @@ nlm_create_host(struct nlm_globals *g, char *name,
 void
 nlm_host_cancel_slocks(struct nlm_globals *g, struct nlm_host *hostp)
 {
-	nlm_slock_clnt_t *nscp;
+	struct nlm_slock *nslp;
 
 	mutex_enter(&g->lock);
-	while ((nscp = TAILQ_FIRST(&g->nlm_clnt_slocks)) != NULL) {
-		if (nscp->nsc_host == hostp) {
-			nscp->nsc_state = NLM_WS_CANCELLED;
-			cv_broadcast(&nscp->nsc_cond);
+	while ((nslp = TAILQ_FIRST(&g->nlm_slocks)) != NULL) {
+		if (nslp->nsl_host == hostp) {
+			nslp->nsl_state = NLM_SL_CANCELLED;
+			cv_broadcast(&nslp->nsl_cond);
 		}
 	}
 
@@ -1486,101 +1485,120 @@ nlm_host_get_state(struct nlm_host *hostp)
  */
 
 /*
- * Our local client-side code calls this to block on a remote lock.
- * (See nlm_call_lock). This is here (in the server-side code)
- * because this server function gets the granted callback.
+ * Register client side sleeping lock.
+ *
+ * Our client code calls this to keep information
+ * about sleeping lock somewhere. When it receives
+ * grant callback from server or when it just
+ * needs to remove all sleeping locks from vnode,
+ * it uses this information for remove/apply lock
+ * properly.
  */
-nlm_slock_clnt_t *
-nlm_slock_clnt_register(
+struct nlm_slock *
+nlm_slock_register(
 	struct nlm_globals *g,
 	struct nlm_host *host,
 	struct nlm4_lock *lock,
 	struct vnode *vp)
 {
 	struct nlm_owner_handle *oh;
-	nlm_slock_clnt_t *nscp;
+	struct nlm_slock *nslp;
 
 	ASSERT(lock->oh.n_len == sizeof (*oh));
 
 	oh = (void *) lock->oh.n_bytes;
-	nscp = kmem_zalloc(sizeof (*nscp), KM_SLEEP);
-	cv_init(&nscp->nsc_cond, NULL, CV_DEFAULT, NULL);
-	nscp->nsc_lock = *lock;
-	nlm_copy_netobj(&nscp->nsc_fh, &nscp->nsc_lock.fh);
-	nscp->nsc_state = NLM_WS_BLOCKED;
-	nscp->nsc_host = host;
-	nscp->nsc_vp = vp;
+	nslp = kmem_zalloc(sizeof (*nslp), KM_SLEEP);
+	cv_init(&nslp->nsl_cond, NULL, CV_DEFAULT, NULL);
+	nslp->nsl_lock = *lock;
+	nlm_copy_netobj(&nslp->nsl_fh, &nslp->nsl_lock.fh);
+	nslp->nsl_state = NLM_SL_BLOCKED;
+	nslp->nsl_host = host;
+	nslp->nsl_vp = vp;
 
 	mutex_enter(&g->lock);
-	TAILQ_INSERT_TAIL(&g->nlm_clnt_slocks, nscp, nsc_link);
+	TAILQ_INSERT_TAIL(&g->nlm_slocks, nslp, nsl_link);
 	mutex_exit(&g->lock);
 
-	return (nscp);
+	return (nslp);
 }
 
 /*
- * Remove this lock from the wait list.
+ * Remove this lock from the wait list and destroy it.
  */
 void
-nlm_slock_clnt_deregister(struct nlm_globals *g, nlm_slock_clnt_t *nscp)
+nlm_slock_unregister(struct nlm_globals *g, struct nlm_slock *nslp)
 {
 	mutex_enter(&g->lock);
-	TAILQ_REMOVE(&g->nlm_clnt_slocks, nscp, nsc_link);
+	TAILQ_REMOVE(&g->nlm_slocks, nslp, nsl_link);
 	mutex_exit(&g->lock);
 
-	nlm_slock_clnt_destroy(nscp);
+	kmem_free(nslp->nsl_fh.n_bytes, nslp->nsl_fh.n_len);
+	cv_destroy(&nslp->nsl_cond);
+	kmem_free(nslp, sizeof (*nslp));
 }
 
 /*
- * Wait for a granted callback for a blocked lock request.
- * If a signal interrupted the wait, return EINTR -
- * the caller must arrange to send a cancellation to
- * the server. On success return 0.
+ * Wait for a granted callback or cancellation event
+ * for a sleeping lock.
+ *
+ * If a signal interrupted the wait or if the lock
+ * was cancelled, return EINTR - the caller must arrange to send
+ * a cancellation to the server.
+ *
+ * If timeout occurred, return ETIMEDOUT - the caller must
+ * resend the lock request to the server.
+ *
+ * On success return 0.
  */
 int
-nlm_slock_clnt_wait(struct nlm_globals *g,
-    nlm_slock_clnt_t *nscp, bool_t is_intr)
+nlm_slock_wait(struct nlm_globals *g,
+    struct nlm_slock *nslp, uint_t timeo_secs)
 {
-	struct nlm_host *host = nscp->nsc_host;
-	int error = 0;
+	struct nlm_host *host = nslp->nsl_host;
+	clock_t timeo_ticks;
+	int cv_res, error;
 
 	/*
 	 * If the granted message arrived before we got here,
 	 * nw->nw_state will be GRANTED - in that case, don't sleep.
 	 */
+	cv_res = 1;
+	timeo_ticks = ddi_get_lbolt() + SEC_TO_TICK(timeo_secs);
+
 	mutex_enter(&g->lock);
-	if (nscp->nsc_state == NLM_WS_BLOCKED) {
-		if (!is_intr)
-			cv_wait(&nscp->nsc_cond, &g->lock);
-		else {
-			if (cv_wait_sig(&nscp->nsc_cond, &g->lock) == 0)
-				error = EINTR;
-		}
+	if (nslp->nsl_state == NLM_SL_BLOCKED) {
+		cv_res = cv_timedwait_sig(&nslp->nsl_cond,
+		    &g->lock, timeo_ticks);
 	}
 
-	TAILQ_REMOVE(&g->nlm_clnt_slocks, nscp, nsc_link);
-	mutex_exit(&g->lock);
+	/*
+	 * No matter why we wake up, if the lock was
+	 * cancelled, let the function caller to know
+	 * about it by returning EINTR.
+	 */
+	if (nslp->nsl_state == NLM_SL_CANCELLED) {
+		error = EINTR;
+		goto out;
+	}
 
-	if (error == 0) { /* Got cv_signal or didn't block */
+	if (cv_res <= 0) {
+		/* We was woken up either by timeout or interrupt */
+		error = (cv_res < 0) ? ETIMEDOUT : EINTR;
+
 		/*
 		 * The granted message may arrive after the
 		 * interrupt/timeout but before we manage to lock the
-		 * mutex. Detect this by examining nw_lock.
+		 * mutex. Detect this by examining nslp.
 		 */
-		if (nscp->nsc_state == NLM_WS_CANCELLED)
-			error = EINTR;
-
-	} else { /* Was interrupted */
-		/*
-		 * The granted message may arrive after the
-		 * interrupt/timeout but before we manage to lock the
-		 * mutex. Detect this by examining nw_lock.
-		 */
-		if (nscp->nsc_state == NLM_WS_GRANTED)
+		if (nslp->nsl_state == NLM_SL_GRANTED)
 			error = 0;
+	} else { /* awaken via cv_signal or didn't block */
+		error = 0;
+		VERIFY(nslp->nsl_state == NLM_SL_GRANTED);
 	}
 
-	nlm_slock_clnt_destroy(nscp);
+out:
+	mutex_exit(&g->lock);
 	return (error);
 }
 
@@ -1588,11 +1606,8 @@ nlm_slock_clnt_wait(struct nlm_globals *g,
  * Destroy nlm_waiting_lock structure instance
  */
 static void
-nlm_slock_clnt_destroy(nlm_slock_clnt_t *nscp)
+nlm_slock_destroy(struct nlm_slock *nslp)
 {
-	kmem_free(nscp->nsc_fh.n_bytes, nscp->nsc_fh.n_len);
-	cv_destroy(&nscp->nsc_cond);
-	kmem_free(nscp, sizeof (*nscp));
 }
 
 /*
@@ -1682,24 +1697,6 @@ nlm_slreq_find_locked(struct nlm_host *hostp, struct nlm_vhold *nvp,
 	}
 
 	return (slr);
-}
-
-/*
- * Cancel all wait locks registered on the moment
- * function is called.
- * NOTE: nlm_cancel_all_wait_locks must be called
- * with g->lock acquired.
- */
-static void
-nlm_cancel_all_wait_locks(struct nlm_globals *g)
-{
-	nlm_slock_clnt_t * nscp;
-
-	ASSERT(MUTEX_HELD(&g->lock));
-	TAILQ_FOREACH(nscp, &g->nlm_clnt_slocks, nsc_link) {
-		nscp->nsc_state = NLM_WS_CANCELLED;
-		cv_broadcast(&nscp->nsc_cond);
-	}
 }
 
 /* ******************************************************************* */

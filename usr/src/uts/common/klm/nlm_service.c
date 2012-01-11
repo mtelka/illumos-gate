@@ -838,7 +838,7 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 	struct nlm_globals *g;
 	struct nlm_owner_handle *oh;
 	struct nlm_host *host;
-	nlm_slock_clnt_t *nscp;
+	struct nlm_slock *nslp;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
@@ -854,19 +854,19 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 	resp->stat.stat = nlm4_denied;
 
 	mutex_enter(&g->lock);
-	TAILQ_FOREACH(nscp, &g->nlm_clnt_slocks, nsc_link) {
-		if ((nscp->nsc_state != NLM_WS_BLOCKED) ||
-		    (nscp->nsc_host != host))
+	TAILQ_FOREACH(nslp, &g->nlm_slocks, nsl_link) {
+		if ((nslp->nsl_state != NLM_SL_BLOCKED) ||
+		    (nslp->nsl_host != host))
 			continue;
 
-		if (argp->alock.svid == nscp->nsc_lock.svid &&
-		    argp->alock.l_offset == nscp->nsc_lock.l_offset &&
-		    argp->alock.l_len == nscp->nsc_lock.l_len &&
-		    argp->alock.fh.n_len == nscp->nsc_lock.fh.n_len &&
-		    memcmp(argp->alock.fh.n_bytes, nscp->nsc_lock.fh.n_bytes,
-		        nscp->nsc_lock.fh.n_len) == 0) {
-			nscp->nsc_state = NLM_WS_GRANTED;
-			cv_broadcast(&nscp->nsc_cond);
+		if (argp->alock.svid == nslp->nsl_lock.svid &&
+		    argp->alock.l_offset == nslp->nsl_lock.l_offset &&
+		    argp->alock.l_len == nslp->nsl_lock.l_len &&
+		    argp->alock.fh.n_len == nslp->nsl_lock.fh.n_len &&
+		    memcmp(argp->alock.fh.n_bytes, nslp->nsl_lock.fh.n_bytes,
+		        nslp->nsl_lock.fh.n_len) == 0) {
+			nslp->nsl_state = NLM_SL_GRANTED;
+			cv_broadcast(&nslp->nsl_cond);
 			resp->stat.stat = nlm4_granted;
 			break;
 		}

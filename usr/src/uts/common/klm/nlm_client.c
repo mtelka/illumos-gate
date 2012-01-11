@@ -63,6 +63,15 @@
 #define	NLM_X_RECLAIM	1
 #define	NLM_X_BLOCKING	2
 
+/*
+ * Timeout (in seconds) that tells how long client
+ * should wait on the blocking lock request until
+ * server sends a reply or cancelation event happens.
+ * After the timeout expires, client should resend
+ * its sleeping lock request.
+ */
+#define NLM_SLRESEND_TIMEO 10
+
 static volatile uint32_t nlm_xid = 1;
 
 static int nlm_map_status(nlm4_stats stat);
@@ -503,7 +512,7 @@ int
 nlm_safemap(const vnode_t *vp)
 {
 	struct locklist *ll, *ll_next;
-	nlm_slock_clnt_t *nscp;
+	struct nlm_slock *nslp;
 	struct nlm_globals *g;
 	int safe = 1;
 
@@ -526,10 +535,10 @@ nlm_safemap(const vnode_t *vp)
 	/* Then check sleeping locks if any */
 	g = zone_getspecific(nlm_zone_key, curzone);
 	mutex_enter(&g->lock);
-	TAILQ_FOREACH(nscp, &g->nlm_clnt_slocks, nsc_link) {
-		if (nscp->nsc_vp == vp &&
-			((nscp->nsc_lock.l_offset != 0) ||
-			 (nscp->nsc_lock.l_len != 0))) {
+	TAILQ_FOREACH(nslp, &g->nlm_slocks, nsl_link) {
+		if (nslp->nsl_vp == vp &&
+			((nslp->nsl_lock.l_offset != 0) ||
+			 (nslp->nsl_lock.l_len != 0))) {
 			safe = 0;
 			break;
 		}
@@ -547,7 +556,7 @@ nlm_has_sleep(const vnode_t *vp)
 
 	g = zone_getspecific(nlm_zone_key, curzone);
 	mutex_enter(&g->lock);
-	empty = TAILQ_EMPTY(&g->nlm_clnt_slocks);
+	empty = TAILQ_EMPTY(&g->nlm_slocks);
 	mutex_exit(&g->lock);
 
 	return (!empty);
@@ -698,7 +707,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	struct nlm_owner_handle oh;
 	struct nlm_globals *g;
 	rnode_t *rnp = VTOR(vp);
-	nlm_slock_clnt_t *sleeping_lock = NULL;
+	struct nlm_slock *nslp = NULL;
 	uint32_t xid;
 	int error;
 
@@ -717,8 +726,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 
 	if (xflags & NLM_X_BLOCKING) {
 		args.block = TRUE;
-		sleeping_lock = nlm_slock_clnt_register(g, hostp,
-		    &args.alock, vp);
+		nslp = nlm_slock_register(g, hostp, &args.alock, vp);
 	}
 
 	for (;;) {
@@ -755,84 +763,94 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 			continue;
 		}
 
-		break;
-	}
 
-	switch (res.stat.stat) {
-	case nlm4_granted:
-	case nlm4_blocked:
-		error = 0;
-		break;
+		switch (res.stat.stat) {
+		case nlm4_granted:
+		case nlm4_blocked:
+			error = 0;
+			break;
 
-	case nlm4_denied:
-		error = ENOLCK;
-		break;
+		case nlm4_denied:
+			error = ENOLCK;
+			break;
 
-	default:
-		error = nlm_map_status(res.stat.stat);
-	}
+		default:
+			error = nlm_map_status(res.stat.stat);
+		}
 
-	/*
-	 * If we deal with either non-blocking lock or
-	 * with a blocking locks that wasn't blocked on
-	 * the server side (by some reason), our work
-	 * is finished.
-	 */
-	if (sleeping_lock == NULL ||
-	    res.stat.stat != nlm4_blocked ||
-		error != 0)
-		goto out;
-
-	/*
-	 * The server should call us back with a
-	 * granted message when the lock succeeds.
-	 * In order to deal with broken servers,
-	 * lost granted messages, or server reboots,
-	 * we will also re-try every few seconds.
-	 *
-	 * Note: We're supposed to call these
-	 * flk_invoke_callbacks when blocking.
-	 * Take care on rnode->r_lkserlock, we should
-	 * release it before going to sleep.
-	 */
-	flk_invoke_callbacks(flcb, FLK_BEFORE_SLEEP);
-	nfs_rw_exit(&rnp->r_lkserlock);
-
-	error = nlm_slock_clnt_wait(g, sleeping_lock, (bool_t) INTR(vp));
-	sleeping_lock = NULL; /* nlm_slock_clnt_wait destroys sleeping_lock */
-
-	/*
-	 * NFS expects that we return with rnode->r_lkserlock
-	 * locked on write, lock it back.
-	 *
-	 * NOTE: nfs_rw_enter_sig() can be either interruptible
-	 * or not. It depends on options of NFS mount. Here
-	 * we're _always_ uninterruptible (independently of mount
-	 * options), because nfs_frlock/nfs3_frlock expects that
-	 * we return with rnode->r_lkserlock acquired. So we don't
-	 * want our lock attempt to be interrupted by a signal.
-	 */
-	nfs_rw_enter_sig(&rnp->r_lkserlock, RW_WRITER, 0);
-	flk_invoke_callbacks(flcb, FLK_AFTER_SLEEP);
-
-	if (error) {
 		/*
-		 * We need to call the server to cancel our lock request.
-		 * NOTE: we need to disable signals in order to prevent
-		 * interruption of network RPC calls.
+		 * If we deal with either non-blocking lock or
+		 * with a blocking locks that wasn't blocked on
+		 * the server side (by some reason), our work
+		 * is finished.
 		 */
-		k_sigset_t oldmask, newmask;
+		if (nslp == NULL			||
+		    res.stat.stat != nlm4_blocked	||
+		    error != 0)
+			goto out;
 
-		DTRACE_PROBE1(cancel__lock, int, error);
-		sigfillset(&newmask);
-		sigreplace(&newmask, &oldmask);
-		nlm_call_cancel(&args, hostp, vers);
-		sigreplace(&oldmask, (k_sigset_t *)NULL);
+		/*
+		 * The server should call us back with a
+		 * granted message when the lock succeeds.
+		 * In order to deal with broken servers,
+		 * lost granted messages, or server reboots,
+		 * we will also re-try every few seconds.
+		 *
+		 * Note: We're supposed to call these
+		 * flk_invoke_callbacks when blocking.
+		 * Take care on rnode->r_lkserlock, we should
+		 * release it before going to sleep.
+		 */
+		flk_invoke_callbacks(flcb, FLK_BEFORE_SLEEP);
+		nfs_rw_exit(&rnp->r_lkserlock);
+
+		error = nlm_slock_wait(g, nslp, NLM_SLRESEND_TIMEO);
+
+		/*
+		 * NFS expects that we return with rnode->r_lkserlock
+		 * locked on write, lock it back.
+		 *
+		 * NOTE: nfs_rw_enter_sig() can be either interruptible
+		 * or not. It depends on options of NFS mount. Here
+		 * we're _always_ uninterruptible (independently of mount
+		 * options), because nfs_frlock/nfs3_frlock expects that
+		 * we return with rnode->r_lkserlock acquired. So we don't
+		 * want our lock attempt to be interrupted by a signal.
+		 */
+		nfs_rw_enter_sig(&rnp->r_lkserlock, RW_WRITER, 0);
+		flk_invoke_callbacks(flcb, FLK_AFTER_SLEEP);
+
+		if (error == 0) {
+			break;
+		} else if (error == EINTR) {
+			/*
+			 * We need to call the server to cancel our lock request.
+			 * NOTE: we need to disable signals in order to prevent
+			 * interruption of network RPC calls.
+			 */
+			k_sigset_t oldmask, newmask;
+
+			DTRACE_PROBE1(cancel__lock, int, error);
+			sigfillset(&newmask);
+			sigreplace(&newmask, &oldmask);
+			nlm_call_cancel(&args, hostp, vers);
+			sigreplace(&oldmask, (k_sigset_t *)NULL);
+		} else {
+			/*
+			 * Timeout happened, resend the lock request to
+			 * the server. Well, we're a bit paranoid here,
+			 * but keep in mind previous request could lost
+			 * (especially with conectionless transport).
+			 */
+
+			ASSERT(error == ETIMEDOUT);
+			continue;
+		}
 	}
 
 out:
-	if (sleeping_lock != NULL)
-		nlm_slock_clnt_deregister(g, sleeping_lock);
+	if (nslp != NULL)
+		nlm_slock_unregister(g, nslp);
 
 	return (error);
 }
