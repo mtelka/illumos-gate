@@ -103,8 +103,13 @@ update_host_rpcbinding(struct nlm_host *hostp, int vers)
 		hostp->nh_rpcb_state = NRPCB_NEED_UPDATE;
 	} else {
 		mutex_enter(&hostp->nh_lock);
-		hostp->nh_rpcb_update_time = ddi_get_lbolt();
 		hostp->nh_rpcb_state = NRPCB_UPDATED;
+
+		/*
+		 * RPC binding serial number shouldn't be 0.
+		 */
+		if (++hostp->nh_rpcb_sn == 0)
+			hostp->nh_rpcb_sn = 1;
 	}
 
 	cv_broadcast(&hostp->nh_rpcb_cv);
@@ -113,36 +118,28 @@ update_host_rpcbinding(struct nlm_host *hostp, int vers)
 
 /*
  * Refresh RPC handle taken from host handles cache.
- * RPC handle passed to this function can be in one of
- * thee states:
- *  1) Uninitialized (rcp->nr_handle is NULL)
- *     In this case we need to allocate new CLIENT for RPC
- *     handle by calling clnt_tli_kcreate
- *  2) Not fresh (the last time it was used was _before_
- *     update of host's RPC binding).
- *     In this case we need to reinitialize handle with new
- *     RPC binding (host->nh_addr) by calling clnt_tli_kinit.
- *  3) Fresh
- *     In this case reinitialization isn't required.
+ * The function is called when either nr_handle of
+ * nlm_rpc_t is NULL or rpcp->nr_sn is not equal to
+ * host's nh_rpcb_sn.
  */
 static int
-refresh_nlm_rpc(nlm_rpc_t *rpcp)
+refresh_nlm_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
 {
-	int ret = 0;
-	struct nlm_host *hostp = rpcp->nr_owner;
+	int ret;
 
-	ASSERT(rpcp->nr_owner != NULL);
+	ASSERT(MUTEX_HELD(&hostp->nh_lock));
+
+	rpcp->nr_sn = hostp->nh_rpcb_sn;
+	mutex_exit(&hostp->nh_lock);
 	if (rpcp->nr_handle == NULL) {
 		ret = clnt_tli_kcreate(&hostp->nh_knc, &hostp->nh_addr,
 		    NLM_PROG, rpcp->nr_vers, 0, 0, CRED(), &rpcp->nr_handle);
-	} else if (rpcp->nr_refresh_time < hostp->nh_rpcb_update_time) {
+	} else {
 		ret = clnt_tli_kinit(rpcp->nr_handle, &hostp->nh_knc,
 		    &hostp->nh_addr, 0, 0, CRED());
 	}
 
-	if (ret == 0)
-		rpcp->nr_refresh_time = ddi_get_lbolt();
-
+	mutex_enter(&hostp->nh_lock);
 	return (ret);
 }
 
@@ -209,19 +206,26 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 		mutex_enter(&hostp->nh_lock);
 	}
 
-	mutex_exit(&hostp->nh_lock);
-	rc = refresh_nlm_rpc(rpcp);
-	if (rc != 0) {
-		/*
-		 * Just put handle back to the cache in hope
-		 * that it will be reinitialized later wihout
-		 * errors by somebody else...
-		 */
-		nlm_host_rele_rpc(rpcp);
-		return (rc);
+	/*
+	 * Check if binding is not "fresh".
+	 * If so, renew it.
+	 */
+	if (rpcp->nr_handle == NULL ||
+	    rpcp->nr_sn != hostp->nh_rpcb_sn) {
+		rc = refresh_nlm_rpc(hostp, rpcp);
+		if (rc != 0) {
+			/*
+			 * Just put handle back to the cache in hope
+			 * that it will be reinitialized later wihout
+			 * errors by somebody else...
+			 */
+			nlm_host_rele_rpc(rpcp);
+			mutex_exit(&hostp->nh_lock);
+			return (rc);
+		}
 	}
 
-out:
+	mutex_exit(&hostp->nh_lock);
 	DTRACE_PROBE2(end, struct nlm_host *, hostp,
 	    nlm_rpc_t *, rpcp);
 

@@ -746,6 +746,7 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	host->nh_state = 0;
 	host->nh_monstate = NLM_UNMONITORED;
 	host->nh_rpcb_state = NRPCB_NEED_UPDATE;
+	host->nh_rpcb_sn = 1;
 
 	TAILQ_INIT(&host->nh_vnodes);
 	TAILQ_INIT(&host->nh_pending);

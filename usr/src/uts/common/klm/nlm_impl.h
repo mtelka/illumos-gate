@@ -221,7 +221,7 @@ typedef struct nlm_rpc {
 	CLIENT		*nr_handle;
 	rpcvers_t	nr_vers;
 	clock_t     nr_ttl_timeout;
-	clock_t     nr_refresh_time;
+	uint16_t    nr_sn;
 	struct nlm_host *nr_owner;
 	TAILQ_ENTRY(nlm_rpc) nr_link;
 } nlm_rpc_t;
@@ -244,9 +244,9 @@ struct nlm_host {
 	int32_t		nh_sysid;	/* (c) our allocaed system ID */
 	int		nh_state;	/* (s) last seen NSM state of host */
 	kcondvar_t nh_rpcb_cv;
+	uint16_t nh_rpcb_sn;
 	enum nlm_rpcb_state nh_rpcb_state;
 	enum nlm_host_state nh_monstate; /* (l) local NSM monitoring state */
-	time_t      nh_rpcb_update_time;
 	time_t		nh_idle_timeout; /* (s) Time at which host is idle */
 	struct nlm_rpch_list nh_rpchc; /* RPC handles cache */
 	struct nlm_vnode_list nh_vnodes;	/* (l) active vnodes */
