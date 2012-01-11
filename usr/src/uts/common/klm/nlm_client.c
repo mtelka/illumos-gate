@@ -59,18 +59,6 @@
 
 #include "nlm_impl.h"
 
-/*
- * Max. number of retries NLM client tries to
- * resend request to the NLM server if previous
- * request failed.
- * Used in functions:
- *  nlm_call_lock()
- *  nlm_call_unlock()
- *  nlm_call_test()
- *  nlm_call_share()
- */
-#define NLM_CLNT_MAX_RETRIES 3
-
 /* Extra flags for nlm_call_lock() - xflags */
 #define	NLM_X_RECLAIM	1
 #define	NLM_X_BLOCKING	2
@@ -78,6 +66,8 @@
 static volatile uint32_t nlm_xid = 1;
 
 static int nlm_map_status(nlm4_stats stat);
+static void nlm_wait_grace(void);
+static int nlm_map_clnt_stat(enum clnt_stat stat);
 
 static int nlm_frlock_getlk(struct nlm_host *hostp, vnode_t *vp,
     struct flock64 *flkp, int flags, u_offset_t offset,
@@ -665,16 +655,21 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	struct nlm_globals *g;
 	rnode_t *rnp = VTOR(vp);
 	nlm_slock_clnt_t *sleeping_lock = NULL;
-	int error, retries;
+	uint32_t xid;
+	int error;
 
 	bzero(&args, sizeof (args));
 	g = zone_getspecific(nlm_zone_key, curzone);
-
 	nlm_init_lock(&args.alock, flp, fhp, &oh);
+
 	args.exclusive = (flp->l_type == F_WRLCK);
 	args.reclaim = xflags & NLM_X_RECLAIM;
 	args.state = g->nsm_state;
+	args.cookie.n_len = sizeof (xid);
+	args.cookie.n_bytes = (char *)&xid;
+
 	oh.oh_sysid = nlm_host_get_sysid(hostp);
+	xid = atomic_inc_32_nv(&nlm_xid);
 
 	if (xflags & NLM_X_BLOCKING) {
 		args.block = TRUE;
@@ -682,10 +677,9 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		    &args.alock, vp);
 	}
 
-	for (retries = 0; retries < NLM_CLNT_MAX_RETRIES; retries++) {
+	for (;;) {
 		nlm_rpc_t *rpcp;
 		enum clnt_stat stat;
-		uint32_t xid;
 
 		error = nlm_host_get_rpc(hostp, vers, &rpcp);
 		if (error != 0) {
@@ -693,48 +687,46 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 			goto out;
 		}
 
-		xid = atomic_inc_32_nv(&nlm_xid);
-		DTRACE_PROBE3(lock__rloop_start, nlm_rpc_t *, rpcp,
-		    int, retries, uint32_t, xid);
-
-		args.cookie.n_len = sizeof (xid);
-		args.cookie.n_bytes = (char *)&xid;
-
 		bzero(&res, sizeof (res));
 		stat = nlm_lock_rpc(&args, &res, rpcp->nr_handle, vers);
 		nlm_host_rele_rpc(hostp, rpcp);
 
-		if (stat != RPC_SUCCESS) {
-			error = EINVAL;
-			continue;
+		error = nlm_map_clnt_stat(stat);
+		if (error != 0) {
+			if (error == EAGAIN)
+				continue;
+
+			goto out;
 		}
 
-		DTRACE_PROBE1(lock__rloop_end, enum nlm4_stats, res.stat.stat);
+		DTRACE_PROBE1(lock__res, enum nlm4_stats, res.stat.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
 		if (res.stat.stat == nlm4_denied_grace_period) {
-			/*
-			 * The server has recently rebooted and is
-			 * giving old clients a change to reclaim
-			 * their locks. Wait for a few seconds and try
-			 * again.
-			 */
-			error = delay_sig(SEC_TO_TICK(5));
-			if (error)
+			if (args.reclaim) {
+				error = ENOLCK;
 				goto out;
+			}
 
-			error = EAGAIN;
+			nlm_wait_grace();
 			continue;
 		}
 
 		break;
 	}
 
-	if (retries >= NLM_CLNT_MAX_RETRIES) {
-		ASSERT(error != 0);
-		goto out;
-	}
+	switch (res.stat.stat) {
+	case nlm4_granted:
+	case nlm4_blocked:
+		error = 0;
+		break;
 
-	error = nlm_map_status(res.stat.stat);
+	case nlm4_denied:
+		error = ENOLCK;
+		break;
+
+	default:
+		error = nlm_map_status(res.stat.stat);
+	}
 
 	/*
 	 * If we deal with either non-blocking lock or
@@ -742,7 +734,9 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	 * the server side (by some reason), our work
 	 * is finished.
 	 */
-	if (sleeping_lock == NULL || res.stat.stat != nlm4_blocked)
+	if (sleeping_lock == NULL ||
+	    res.stat.stat != nlm4_blocked ||
+		error != 0)
 		goto out;
 
 	/*
@@ -808,12 +802,10 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 	struct nlm_host *hostp, int vers)
 {
 	nlm4_cancargs cargs;
-	struct nlm4_res res;
 	uint32_t xid;
-	int error, retries;
+	int error;
 
 	bzero(&cargs, sizeof (cargs));
-	bzero(&res, sizeof (res));
 
 	xid = atomic_inc_32_nv(&nlm_xid);
 	/* XXX: Use largs->cookie here? (same xid) */
@@ -823,61 +815,57 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 	cargs.exclusive	= largs->exclusive;
 	cargs.alock	= largs->alock;
 
-	for (retries = 0; retries < NLM_CLNT_MAX_RETRIES; retries++) {
+	for (;;) {
 		nlm_rpc_t *rpcp;
 		enum clnt_stat stat;
+		struct nlm4_res res;
 
 		error = nlm_host_get_rpc(hostp, vers, &rpcp);
 		if (error != 0)
 			return (ENOLCK);
 
-		DTRACE_PROBE2(cancel__rloop_start, nlm_rpc_t *, rpcp,
-		    int, retries);
-
+		bzero(&res, sizeof (res));
 		stat = nlm_cancel_rpc(&cargs, &res, rpcp->nr_handle, vers);
 		nlm_host_rele_rpc(hostp, rpcp);
 
 		DTRACE_PROBE1(cancel__rloop_end, enum clnt_stat, stat);
-		if (stat != RPC_SUCCESS) {
-			delay(SEC_TO_TICK(10));
-			error = EAGAIN;
-			continue;
+		error = nlm_map_clnt_stat(stat);
+		if (error != 0) {
+			if (error == EAGAIN)
+				continue;
+
+			return (error);
+		}
+
+		DTRACE_PROBE1(cancel__res, enum nlm4_stats, res.stat.stat);
+		switch (res.stat.stat) {
+			/*
+			 * There was nothing to cancel. We are going to go ahead
+			 * and assume we got the lock.
+			 */
+		case nlm_denied:
+			/*
+			 * The server has recently rebooted.  Treat this as a
+			 * successful cancellation.
+			 */
+		case nlm4_denied_grace_period:
+			/*
+			 * We managed to cancel.
+			 */
+		case nlm4_granted:
+			error = 0;
+			break;
+
+		default:
+			/*
+			 * Broken server implementation.  Can't really do
+			 * anything here.
+			 */
+			error = EIO;
+			break;
 		}
 
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
-		break;
-	}
-
-	if (retries >= NLM_CLNT_MAX_RETRIES) {
-		ASSERT(error != 0);
-		return (error);
-	}
-
-	DTRACE_PROBE1(cancel__done, enum nlm4_stats, res.stat.stat);
-	switch (res.stat.stat) {
-	/*
-	 * There was nothing to cancel. We are going to go ahead
-	 * and assume we got the lock.
-	 */
-	case nlm_denied:
-	 /*
-	  * The server has recently rebooted.  Treat this as a
-	  * successful cancellation.
-	  */
-	case nlm4_denied_grace_period:
-	 /*
-	  * We managed to cancel.
-	  */
-	case nlm4_granted:
-		error = 0;
-		break;
-
-	default:
-		/*
-		 * Broken server implementation.  Can't really do
-		 * anything here.
-		 */
-		error = EIO;
 		break;
 	}
 
@@ -893,62 +881,47 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
 	struct nlm_host *hostp, struct netobj *fhp, int vers)
 {
 	struct nlm4_unlockargs args;
-	struct nlm4_res res;
 	struct nlm_owner_handle oh;
-	int error, retries;
+	struct nlm4_res res;
+	uint32_t xid;
+	int error;
 
 	bzero(&args, sizeof (args));
 	nlm_init_lock(&args.alock, flp, fhp, &oh);
-	oh.oh_sysid = nlm_host_get_sysid(hostp);
 
-	for (retries = 0; retries < NLM_CLNT_MAX_RETRIES; retries++) {
+	oh.oh_sysid = nlm_host_get_sysid(hostp);
+	xid = atomic_inc_32_nv(&nlm_xid);
+	args.cookie.n_len = sizeof (xid);
+	args.cookie.n_bytes = (char *)&xid;
+
+	for (;;) {
 		nlm_rpc_t *rpcp;
-		uint32_t xid;
 		enum clnt_stat stat;
 
 		error = nlm_host_get_rpc(hostp, vers, &rpcp);
 		if (error != 0)
 			return (ENOLCK);
 
-		xid = atomic_inc_32_nv(&nlm_xid);
-		DTRACE_PROBE3(unlock__rloop_start, nlm_rpc_t *, rpcp,
-		    int, retries, uint32_t, xid);
-
-		args.cookie.n_len = sizeof (xid);
-		args.cookie.n_bytes = (char *)&xid;
-
 		bzero(&res, sizeof (res));
 		stat = nlm_unlock_rpc(&args, &res, rpcp->nr_handle, vers);
 		nlm_host_rele_rpc(hostp, rpcp);
 
-		if (stat != RPC_SUCCESS) {
-			error = EINVAL;
-			continue;
+		error = nlm_map_clnt_stat(stat);
+		if (error != 0) {
+			if (error == EAGAIN)
+				continue;
+
+			return (error);
 		}
 
-		DTRACE_PROBE1(unlock__rloop_end, enum nlm4_stats, res.stat.stat);
+		DTRACE_PROBE1(unlock__res, enum nlm4_stats, res.stat.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
 		if (res.stat.stat == nlm4_denied_grace_period) {
-			/*
-			 * The server has recently rebooted and is
-			 * giving old clients a change to reclaim
-			 * their locks. Wait for a few seconds and try
-			 * again.
-			 */
-			error = delay_sig(SEC_TO_TICK(5));
-			if (error)
-				return (error);
-
-			error = EAGAIN;
+			nlm_wait_grace();
 			continue;
 		}
 
 		break;
-	}
-
-	if (retries >= NLM_CLNT_MAX_RETRIES) {
-		ASSERT(error != 0);
-		return (error);
 	}
 
 	/* special cases */
@@ -976,61 +949,44 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 	struct nlm4_testres res;
 	struct nlm4_holder *h;
 	struct nlm_owner_handle oh;
-	int error, retries;
+	uint32_t xid;
+	int error;
 
 	bzero(&args, sizeof (args));
 	nlm_init_lock(&args.alock, flp, fhp, &oh);
+
 	args.exclusive = (flp->l_type == F_WRLCK);
 	oh.oh_sysid = nlm_host_get_sysid(hostp);
+	xid = atomic_inc_32_nv(&nlm_xid);
+	args.cookie.n_len = sizeof (xid);
+	args.cookie.n_bytes = (char *)&xid;
 
-	for (retries = 0; retries < NLM_CLNT_MAX_RETRIES; retries++) {
+	for (;;) {
 		nlm_rpc_t *rpcp;
-		uint32_t xid;
 		enum clnt_stat stat;
 
 		error = nlm_host_get_rpc(hostp, vers, &rpcp);
 		if (error != 0)
 			return (ENOLCK);
 
-		xid = atomic_inc_32_nv(&nlm_xid);
-		DTRACE_PROBE3(test__rloop_start, nlm_rpc_t *, rpcp,
-		    int, retries, uint32_t, xid);
-
-		args.cookie.n_len = sizeof (xid);
-		args.cookie.n_bytes = (char *)&xid;
-
 		bzero(&res, sizeof (res));
 		stat = nlm_test_rpc(&args, &res, rpcp->nr_handle, vers);
 		nlm_host_rele_rpc(hostp, rpcp);
 
-		if (stat != RPC_SUCCESS) {
-			error = EINVAL;
-			continue;
+		error = nlm_map_clnt_stat(stat);
+		if (error != 0) {
+			if (error == EAGAIN)
+				continue;
+
+			return (error);
 		}
 
-		DTRACE_PROBE1(test__rloop_end, enum nlm4_stats, res.stat.stat);
+		DTRACE_PROBE1(test__res, enum nlm4_stats, res.stat.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_testres, (void *)&res);
-		if (res.stat.stat == nlm4_denied_grace_period) {
-			/*
-			 * The server has recently rebooted and is
-			 * giving old clients a change to reclaim
-			 * their locks. Wait for a few seconds and try
-			 * again.
-			 */
-			error = delay_sig(SEC_TO_TICK(5));
-			if (error != 0)
-				return (error);
-
-			error = EAGAIN;
-			continue;
-		}
+		if (res.stat.stat == nlm4_denied_grace_period)
+			nlm_wait_grace();
 
 		break;
-	}
-
-	if (retries >= NLM_CLNT_MAX_RETRIES) {
-		ASSERT(error != 0);
-		return (error);
 	}
 
 	switch (res.stat.stat) {
@@ -1224,17 +1180,21 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 	struct nlm4_shareres res;
 	struct nlm_owner_handle oh;
 	struct nlm_globals *g;
-	int error, retries;
+	uint32_t xid;
+	int error;
 
 	bzero(&args, sizeof (args));
 	g = zone_getspecific(nlm_zone_key, curzone);
-
 	nlm_init_share(&args.share, shr, fh, &oh);
+
 	args.reclaim = reclaim;
 	oh.oh_sysid = nlm_host_get_sysid(host);
+	xid = atomic_inc_32_nv(&nlm_xid);
+	args.cookie.n_len = sizeof (xid);
+	args.cookie.n_bytes = (char *)&xid;
 
-	for (retries = 0; retries < NLM_CLNT_MAX_RETRIES; retries++) {
-		uint32_t xid;
+
+	for (;;) {
 		nlm_rpc_t *rpcp;
 		enum clnt_stat stat;
 
@@ -1242,45 +1202,28 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 		if (error != 0)
 			return (ENOLCK);
 
-		xid = atomic_inc_32_nv(&nlm_xid);
-		DTRACE_PROBE3(share__rloop_start, nlm_rpc_t *, rpcp,
-		    int, retries, uint32_t, xid);
-
-		args.cookie.n_len = sizeof (xid);
-		args.cookie.n_bytes = (char *)&xid;
-
 		bzero(&res, sizeof (res));
 		stat = nlm_share_rpc(&args, &res, rpcp->nr_handle, vers);
 		nlm_host_rele_rpc(host, rpcp);
 
-		if (stat != RPC_SUCCESS) {
-			error = EINVAL;
-			continue;
+		error = nlm_map_clnt_stat(stat);
+		if (error != 0) {
+			if (error == EAGAIN)
+				continue;
+
+			return (error);
 		}
 
-		DTRACE_PROBE1(share__rloop_end, enum nlm4_stat, res.stat);
+		DTRACE_PROBE1(share__res, enum nlm4_stat, res.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_shareres, (void *)&res);
 		if (res.stat == nlm4_denied_grace_period) {
-			/*
-			 * The server has recently rebooted and is
-			 * giving old clients a change to reclaim
-			 * their shares. Wait for a few seconds and try
-			 * again.
-			 */
-			error = delay_sig(SEC_TO_TICK(5));
-			if (error != 0)
-				return (error);
+			if (args.reclaim)
+				return (ENOLCK);
 
-			error = EAGAIN;
-			continue;
+			nlm_wait_grace();
 		}
 
 		break;
-	}
-
-	if (retries >= NLM_CLNT_MAX_RETRIES) {
-		ASSERT(error != 0);
-		return (error);
 	}
 
 	switch (res.stat) {
@@ -1317,14 +1260,18 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 	struct nlm4_shareargs args;
 	struct nlm4_shareres res;
 	struct nlm_owner_handle oh;
-	int error, retries;
+	uint32_t xid;
+	int error;
 
 	bzero(&args, sizeof (args));
 	nlm_init_share(&args.share, shr, fh, &oh);
-	oh.oh_sysid = nlm_host_get_sysid(host);
 
-	for (retries = 0; retries < NLM_CLNT_MAX_RETRIES; retries++) {
-		uint32_t xid;
+	oh.oh_sysid = nlm_host_get_sysid(host);
+	xid = atomic_inc_32_nv(&nlm_xid);
+	args.cookie.n_len = sizeof (xid);
+	args.cookie.n_bytes = (char *)&xid;
+
+	for (;;) {
 		nlm_rpc_t *rpcp;
 		enum clnt_stat stat;
 
@@ -1332,47 +1279,24 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 		if (error != 0)
 			return (ENOLCK);
 
-		xid = atomic_inc_32_nv(&nlm_xid);
-		DTRACE_PROBE3(unshare__rloop_start, nlm_rpc_t *, rpcp,
-		    int, retries, uint32_t, xid);
-
-		args.cookie.n_len = sizeof (xid);
-		args.cookie.n_bytes = (char *)&xid;
-
 		bzero(&res, sizeof (res));
 		stat = nlm_unshare_rpc(&args, &res, rpcp->nr_handle, vers);
 		nlm_host_rele_rpc(host, rpcp);
 
-		if (stat != RPC_SUCCESS) {
-			error = EINVAL;
-			continue;
+		error = nlm_map_clnt_stat(stat);
+		if (error != 0) {
+			if (error == EAGAIN)
+				continue;
+
+			return (error);
 		}
 
-		DTRACE_PROBE1(unshare__rloop_end, enum nlm4_stat, res.stat);
+		DTRACE_PROBE1(unshare__res, enum nlm4_stat, res.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
-
-		if (res.stat == nlm4_denied_grace_period) {
-			/*
-			 * The server has recently rebooted and is
-			 * giving old clients a change to reclaim
-			 * their shares. Wait for a few seconds and try
-			 * again.
-			 */
-			/* FIXME[DK]: may be define waiting period as a constant? */
-			error = delay_sig(SEC_TO_TICK(5));
-			if (error != 0)
-				return (error);
-
-			error = EAGAIN;
-			continue;
-		}
+		if (res.stat == nlm4_denied_grace_period)
+			nlm_wait_grace();
 
 		break;
-	}
-
-	if (retries >= NLM_CLNT_MAX_RETRIES) {
-		ASSERT(error != 0);
-		return (error);
 	}
 
 	switch (res.stat) {
@@ -1439,6 +1363,36 @@ nlm_init_share(struct nlm4_share *args,
 	case F_RWACC:
 		args->access = fsa_RW;
 		break;
+	}
+}
+
+/*
+ * Called when remote NLM server is
+ * in grace period. We need to block
+ * for some time.
+ */
+static void
+nlm_wait_grace(void)
+{
+	(void) delay_sig(SEC_TO_TICK(5));
+}
+
+static int
+nlm_map_clnt_stat(enum clnt_stat stat)
+{
+	switch (stat) {
+	case RPC_SUCCESS:
+		return (0);
+
+	case RPC_TIMEDOUT:
+	case RPC_PROGUNAVAIL:
+		return (EAGAIN);
+
+	case RPC_INTR:
+		return (EINTR);
+
+	default:
+		return (EINVAL);
 	}
 }
 
