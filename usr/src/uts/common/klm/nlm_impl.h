@@ -186,7 +186,7 @@ enum {
  */
 struct nlm_vnode {
 	vnode_t    *nv_vp;
-	int         nv_refs;
+	uint_t      nv_refs;
 	uint8_t     nv_flags;
 	avl_node_t  nv_tree;
 };
@@ -255,9 +255,31 @@ enum nlm_host_state {
 	NLM_RECOVERING
 };
 
+/*
+ * NLM RPC handle object.
+ *
+ * In kRPC subsystem it's unsafe to use one RPC handle by
+ * several threads simultaneously. It was designed so that
+ * each thread has to create an RPC handle that it'll use.
+ * RPC handle creation can be quite expensive operation, especially
+ * with session oriented protocols (such as TCP) that need to
+ * establish session at first. NLM RPC handle object is a sort of
+ * wrapper on kRPC handle object that can be cached and used in
+ * future. We store all created RPC handles for given host in a
+ * host's RPC handles cache, so that to make new requests threads
+ * can simply take ready objects from the cache. That improves
+ * NLM performance.
+ *
+ * nlm_rpc_t:
+ *   nr_handle: a kRPC handle itself.
+ *   nr_vers: a version of NLM protocol kRPC handle was
+ *            created for.
+ *   nr_link: a list node to store NLM RPC handles in the host
+ *            RPC handles cache.
+ */
 typedef struct nlm_rpc {
-	CLIENT		*nr_handle;
-	rpcvers_t	nr_vers;
+	CLIENT	  *nr_handle;
+	rpcvers_t  nr_vers;
 	TAILQ_ENTRY(nlm_rpc) nr_link;
 } nlm_rpc_t;
 TAILQ_HEAD(nlm_rpch_list, nlm_rpc);
@@ -288,25 +310,59 @@ typedef union nlm_addr {
 	struct sockaddr sa;
 } nlm_addr_t;
 
+/*
+ * NLM host object is the most major structure in NLM.
+ * It identifies remote client or remote server or both.
+ * NLM host object keep a track of all vnodes client/server
+ * locked and all sleeping locks it has. All lock/unlock
+ * operations are done using host object.
+ *
+ * nlm_host:
+ *   nh_lock: a mutex protecting host object fields
+ *   nh_refs: reference counter. Identifies how many threads
+ *            uses this host object.
+ *   nh_link: a list node for keeping host in zone-global list.
+ *   nh_tree: an AVL tree node for keeping host in zone-global tree.
+ *            Host can be looked up in the tree by <netid, address>
+ *            pair.
+ *   nh_name: host name.
+ *   nh_netid: netid string identifying type of transport host uses.
+ *   nh_knc: host's knetconfig (used by kRPC subsystem).
+ *   nh_addr: host's address (either IPv4 or IPv6).
+ *   nh_sysid: unique sysid associated with this host.
+ *   nh_state: last seen host's state reported by NSM.
+ *   nh_rpcb_cv: condition variable that is used to make sure
+ *               that only one thread renews host's RPC binding.
+ *   nh_rpcb_ustat: error code returned by RPC binding update operation.
+ *   nh_rpcb_state: host's RPC binding state (see enum nlm_rpcb_state
+ *                  for more details).
+ *   nh_monstate: host NSM state (see enum nlm_host_state for more info).
+ *   nh_idle_timeout: host idle timeout. When expired host is freed.
+ *   nh_rpchc: host's RPC handles cache.
+ *   nh_vnodes: an AVL tree containing a tack of all vnodes given
+ *              host has any locks on.
+ *   nh_srv_slocks: a list of all server side sleeping locks made
+ *                  by given host object.
+ */
 struct nlm_host {
-	kmutex_t	nh_lock;
-	volatile uint_t	nh_refs;	/* (a) reference count */
-	TAILQ_ENTRY(nlm_host) nh_link; /* (z) per-zone list of hosts */
-	avl_node_t  nh_tree;
-	char		*nh_name;	/* (c) printable name of host */
-	char		*nh_netid;	/* TLI binding name */
-	struct knetconfig nh_knc;	/* (c) knetconfig for nh_addr */
-	nlm_addr_t	nh_addr;	/* (c) remote address of host */
-	int32_t		nh_sysid;	/* (c) our allocaed system ID */
-	int		nh_state;	/* (s) last seen NSM state of host */
-	kcondvar_t nh_rpcb_cv;
-	enum clnt_stat nh_rpcb_ustat;
-	enum nlm_rpcb_state nh_rpcb_state;
-	enum nlm_host_state nh_monstate; /* (l) local NSM monitoring state */
-	time_t		nh_idle_timeout; /* (s) Time at which host is idle */
-	struct nlm_rpch_list nh_rpchc; /* RPC handles cache */
-	avl_tree_t nh_vnodes;
-	struct nlm_slock_srv_list nh_srv_slocks; /* (l) server-side waits */
+	kmutex_t                   nh_lock;
+	volatile uint_t            nh_refs;
+	TAILQ_ENTRY(nlm_host) nh_link;
+	avl_node_t                 nh_tree;
+	char                      *nh_name;
+	char                      *nh_netid;
+	struct knetconfig          nh_knc;
+	nlm_addr_t                 nh_addr;
+	int32_t                    nh_sysid;
+	int                        nh_state;
+	kcondvar_t                 nh_rpcb_cv;
+	enum clnt_stat             nh_rpcb_ustat;
+	enum nlm_rpcb_state        nh_rpcb_state;
+	enum nlm_host_state        nh_monstate;
+	time_t                     nh_idle_timeout;
+	struct nlm_rpch_list       nh_rpchc;
+	avl_tree_t                 nh_vnodes;
+	struct nlm_slock_srv_list  nh_srv_slocks;
 };
 TAILQ_HEAD(nlm_host_list, nlm_host);
 
