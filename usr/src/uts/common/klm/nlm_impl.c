@@ -1143,14 +1143,22 @@ nlm_host_cancel_slocks(struct nlm_globals *g, struct nlm_host *hostp)
 static void
 nlm_host_gc_vholds(struct nlm_host *hostp)
 {
-	struct nlm_vhold *nvp, *nvp_tmp;
+	struct nlm_vhold *nvp;
 
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
-	TAILQ_FOREACH_SAFE(nvp, nvp_tmp, &hostp->nh_vholds_list, nv_link) {
-		if (nlm_vhold_busy(hostp, nvp))
-			continue;
 
+	nvp = TAILQ_FIRST(&hostp->nh_vholds_list);
+	while (nvp != NULL) {
+		struct nlm_vhold *nvp_tmp;
+
+		if (nlm_vhold_busy(hostp, nvp)) {
+			nvp = TAILQ_NEXT(nvp, nv_link);
+			continue;
+		}
+
+		nvp_tmp = TAILQ_NEXT(nvp, nv_link);
 		nlm_vhold_destroy(hostp, nvp);
+		nvp = nvp_tmp;
 	}
 }
 

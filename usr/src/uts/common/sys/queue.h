@@ -30,11 +30,6 @@
  *
  *	@(#)queue.h	8.5 (Berkeley) 8/20/94
  */
-
-/*
- * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
- */
-
 /*
  * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
@@ -549,11 +544,6 @@ struct {								\
 		(var);							\
 		(var) = 						\
 		    (*(((struct headname *)((var)->field.tqe_prev))->tqh_last)))
-
-#define TAILQ_FOREACH_SAFE(var, tvar, head, field)	  \
-	for ((var) = ((head)->tqh_first); \
-	     (var) && (((tvar) = (var)->field.tqe_next) || 1); \
-	     (var) = (tvar))
 
 /*
  * Tail queue access methods.
