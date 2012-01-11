@@ -911,53 +911,44 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
  * Was: nlm_clearlock
  */
 static int
-nlm_call_unlock(struct vnode *vp, struct flock64 *fl,
-	struct nlm_host *host, struct netobj *fh, int vers)
+nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
+	struct nlm_host *hostp, struct netobj *fhp, int vers)
 {
 	struct nlm4_unlockargs args;
 	struct nlm4_res res;
 	struct nlm_owner_handle oh;
-	uint32_t xid;
-	nlm_rpc_t *rpc;
-	mntinfo_t *mi = VTOMI(vp);
-	enum clnt_stat stat;
-	int error;
-
-	int retries = 3;	/* XXX */
+	int error, retries;
 
 	bzero(&args, sizeof (args));
-	nlm_init_lock(&args.alock, fl, fh, &oh);
-	oh.oh_sysid = nlm_host_get_sysid(host);
+	nlm_init_lock(&args.alock, flp, fhp, &oh);
+	oh.oh_sysid = nlm_host_get_sysid(hostp);
 
-	for (;;) {
-		error = nlm_host_get_rpc(host, vers, &rpc);
+	for (retries = 0; retries < NLM_CLNT_MAX_RETRIES; retries++) {
+		nlm_rpc_t *rpcp;
+		uint32_t xid;
+		enum clnt_stat stat;
+
+		error = nlm_host_get_rpc(hostp, vers, &rpcp);
 		if (error != 0)
-			return (ENOLCK); /* XXX retry? */
+			return (ENOLCK);
 
 		xid = atomic_inc_32_nv(&nlm_xid);
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_unlock_rpc(&args, &res, rpc->nr_handle, vers);
-		nlm_host_rele_rpc(host, rpc);
+		bzero(&res, sizeof (res));
+		stat = nlm_unlock_rpc(&args, &res, rpcp->nr_handle, vers);
+		nlm_host_rele_rpc(hostp, rpcp);
 
 		if (stat != RPC_SUCCESS) {
 			if (stat == RPC_PROCUNAVAIL)
-				nlm_host_invalidate_binding(host);
+				nlm_host_invalidate_binding(hostp);
 
-			if (retries) {
-				retries--;
-				continue;
-			}
-
-			return (EINVAL);
+			error = EINVAL;
+			continue;
 		}
 
-		/*
-		 * Free res.cookie.
-		 */
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
-
 		if (res.stat.stat == nlm4_denied_grace_period) {
 			/*
 			 * The server has recently rebooted and is
@@ -968,9 +959,17 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *fl,
 			error = delay_sig(SEC_TO_TICK(5));
 			if (error)
 				return (error);
+
+			error = EAGAIN;
 			continue;
 		}
+
 		break;
+	}
+
+	if (retries >= NLM_CLNT_MAX_RETRIES) {
+		ASSERT(error != 0);
+		return (error);
 	}
 
 	/* special cases */
