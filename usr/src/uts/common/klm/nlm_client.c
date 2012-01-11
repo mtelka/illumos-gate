@@ -992,57 +992,47 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *fl,
  * Was: nlm_getlock()
  */
 static int
-nlm_call_test(struct vnode *vp, struct flock64 *fl,
-	struct nlm_host *host, struct netobj *fh, int vers)
+nlm_call_test(struct vnode *vp, struct flock64 *flp,
+	struct nlm_host *hostp, struct netobj *fhp, int vers)
 {
 	struct nlm4_testargs args;
 	struct nlm4_testres res;
 	struct nlm4_holder *h;
 	struct nlm_owner_handle oh;
-	uint32_t xid;
-	nlm_rpc_t *rpc;
-	mntinfo_t *mi = VTOMI(vp);
-	enum clnt_stat stat;
-	int exclusive;
-	int error;
-
-	int retries = 3;	/* XXX */
+	int error, retries;
 
 	bzero(&args, sizeof (args));
 	bzero(&res, sizeof (res));
 
-	exclusive = (fl->l_type == F_WRLCK);
+	nlm_init_lock(&args.alock, flp, fhp, &oh);
+	args.exclusive = (flp->l_type == F_WRLCK);
+	oh.oh_sysid = nlm_host_get_sysid(hostp);
 
-	nlm_init_lock(&args.alock, fl, fh, &oh);
-	args.exclusive = exclusive;
+	for (retries = 0; retries < NLM_CLNT_MAX_RETRIES; retries++) {
+		nlm_rpc_t *rpcp;
+		uint32_t xid;
+		enum clnt_stat stat;
 
-	/* Update OH */
-	oh.oh_sysid = nlm_host_get_sysid(host);
-
-	for (;;) {
-		error = nlm_host_get_rpc(host, vers, &rpc);
+		error = nlm_host_get_rpc(hostp, vers, &rpcp);
 		if (error != 0)
-			return (ENOLCK); /* XXX retry? */
+			return (ENOLCK);
 
 		xid = atomic_inc_32_nv(&nlm_xid);
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_test_rpc(&args, &res, rpc->nr_handle, vers);
-		nlm_host_rele_rpc(host, rpc);
+		stat = nlm_test_rpc(&args, &res, rpcp->nr_handle, vers);
+		nlm_host_rele_rpc(hostp, rpcp);
 
 		if (stat != RPC_SUCCESS) {
 			if (stat == RPC_PROCUNAVAIL)
-				nlm_host_invalidate_binding(host);
+				nlm_host_invalidate_binding(hostp);
 
-			if (retries) {
-				retries--;
-				continue;
-			}
-
-			return (EINVAL);
+			error = EINVAL;
+			continue;
 		}
 
+		xdr_free((xdrproc_t)xdr_nlm4_testres, (void *)&res);
 		if (res.stat.stat == nlm4_denied_grace_period) {
 			/*
 			 * The server has recently rebooted and is
@@ -1050,39 +1040,44 @@ nlm_call_test(struct vnode *vp, struct flock64 *fl,
 			 * their locks. Wait for a few seconds and try
 			 * again.
 			 */
-			xdr_free((xdrproc_t)xdr_nlm4_testres, (void *)&res);
 			error = delay_sig(SEC_TO_TICK(5));
-			if (error)
+			if (error != 0)
 				return (error);
+
+			error = EAGAIN;
 			continue;
 		}
 
-		switch (res.stat.stat) {
-		case nlm4_granted:
-			fl->l_type = F_UNLCK;
-			error = 0;
-			break;
+		break;
+	}
 
-		case nlm4_denied:
-			h = &res.stat.nlm4_testrply_u.holder;
-			fl->l_start = h->l_offset;
-			fl->l_len = h->l_len;
-			fl->l_pid = h->svid;
-			fl->l_type = (h->exclusive) ? F_WRLCK : F_RDLCK;
-			fl->l_whence = SEEK_SET;
-			fl->l_sysid = 0;
-			error = 0;
-			break;
+	if (retries >= NLM_CLNT_MAX_RETRIES) {
+		ASSERT(error != 0);
+		return (error);
+	}
 
-		default:
-			error = nlm_map_status(res.stat.stat);
-			break;
-		}
-
-		xdr_free((xdrproc_t)xdr_nlm4_testres, (void *)&res);
+	switch (res.stat.stat) {
+	case nlm4_granted:
+		flp->l_type = F_UNLCK;
+		error = 0;
 		break;
 
+	case nlm4_denied:
+		h = &res.stat.nlm4_testrply_u.holder;
+		flp->l_start = h->l_offset;
+		flp->l_len = h->l_len;
+		flp->l_pid = h->svid;
+		flp->l_type = (h->exclusive) ? F_WRLCK : F_RDLCK;
+		flp->l_whence = SEEK_SET;
+		flp->l_sysid = 0;
+		error = 0;
+		break;
+
+	default:
+		error = nlm_map_status(res.stat.stat);
+		break;
 	}
+
 	return (error);
 }
 
