@@ -46,7 +46,7 @@
 #include <sys/syscall.h>
 #include <sys/syslog.h>
 #include <sys/systm.h>
-#include <sys/taskq.h>
+#include <sys/class.h>
 #include <sys/unistd.h>
 #include <sys/vnode.h>
 #include <sys/vfs.h>
@@ -140,12 +140,15 @@ static void nlm_svc_release_nsm(struct nlm_nsm *);
  */
 static int nlm_vhold_ctor(void *, void *, int);
 static void nlm_vhold_dtor(void *, void *);
-static struct nlm_vhold *nlm_vhold_find_locked(struct nlm_host *, vnode_t *);
+static struct nlm_vhold *nlm_vhold_find_locked(struct nlm_host *hostp,
+    vnode_t *vp);
+static void nlm_vhold_destroy(struct nlm_host *hostp,
+    struct nlm_vhold *nvp);
+static bool_t nlm_vhold_busy(struct nlm_host *hostp, struct nlm_vhold *nvp);
 
 /*
  * NLM host functions
  */
-static void nlm_free_idle_hosts(struct nlm_globals *g);
 static void nlm_copy_netbuf(struct netbuf *dst, struct netbuf *src);
 static int nlm_host_ctor(void *datap, void *cdrarg, int kmflags);
 static void nlm_host_dtor(void *datap, void *cdrarg);
@@ -157,7 +160,11 @@ static struct nlm_host *nlm_create_host(struct nlm_globals *g,
 static int nlm_netbuf_addrs_cmp(struct netbuf *nb1, struct netbuf *nb2);
 static struct nlm_host *nlm_host_find_locked(struct nlm_globals *g,
     const char *netid, struct netbuf *naddr, avl_index_t *wherep);
-static bool_t nlm_host_has_locks_on_vnode(struct nlm_host *hostp, vnode_t *vp);
+static void nlm_hosts_gc(struct nlm_globals *g);
+static void nlm_host_unregister(struct nlm_globals *g, struct nlm_host *hostp);
+static void nlm_host_gc_vholds(struct nlm_host *hostp);
+static bool_t nlm_host_has_locks(struct nlm_host *hostp);
+
 
 /*
  * NLM client/server sleeping locks functions
@@ -238,9 +245,136 @@ nlm_reclaim(void *cdrarg)
 
 	rw_enter(&lm_lck, RW_READER);
 	TAILQ_FOREACH(g, &nlm_zones_list, nlm_link)
-		nlm_free_idle_hosts(g);
+		cv_broadcast(&g->nlm_gc_sched_cv);
 
 	rw_exit(&lm_lck);
+}
+
+/*
+ * NLM garbage collector thread (GC).
+ *
+ * NLM GC periodically checks whether there're any host objects
+ * that can be cleaned up. It also releases stale vnodes that
+ * live on the server side (under protection of vhold objects).
+ *
+ * NLM host objects are cleaned up from GC thread because
+ * operations helping us to determine whether given host has
+ * any locks can be quite expensive and it's not good to call
+ * them every time the very last reference to the host is dropped.
+ * Thus we use "lazy" approach for hosts cleanup.
+ *
+ * The work of GC is to release stale vnodes on the server side
+ * and destroy hosts that haven't any locks and any activity for
+ * some time (i.e. idle hosts).
+ */
+static void
+nlm_gc(struct nlm_globals *g)
+{
+	struct nlm_host *hostp;
+	clock_t now, idle_period;
+
+	idle_period = SEC_TO_TICK(NLM_IDLE_TIMEOUT);
+	mutex_enter(&g->lock);
+	for (;;) {
+		/*
+		 * GC thread can be explicitly scheduled from
+		 * memory reclamation function.
+		 */
+		cv_timedwait(&g->nlm_gc_sched_cv, &g->lock,
+		    ddi_get_lbolt() + idle_period);
+
+		/*
+		 * NLM is shutting down, time to die.
+		 */
+		if (g->run_status == NLM_ST_STOPPING)
+			break;
+
+		now = ddi_get_lbolt();
+		DTRACE_PROBE2(gc__start, struct nlm_globals *, g,
+		    clock_t, now);
+
+		/*
+		 * Handle all hosts that are unused at the moment
+		 * until we meet one with idle timeout in future.
+		 */
+		while ((hostp = TAILQ_FIRST(&g->nlm_idle_hosts)) != NULL) {
+			bool_t has_locks = FALSE;
+
+			if (hostp->nh_idle_timeout > now)
+				break;
+
+			/*
+			 * NOTE: it's important to drop nlm_globals lock
+			 * before acquiring host lock, because order does
+			 * matter. nlm_globals lock _always must be
+			 * acquired before host lock and released after it.
+			 */
+			mutex_exit(&g->lock);
+			mutex_enter(&hostp->nh_lock);
+
+			/*
+			 * nlm_globals lock was dropped earlier because
+			 * garbage collecting of vholds and checking whether
+			 * host has any locks/shares are expensive operations.
+			 */
+			nlm_host_gc_vholds(hostp);
+			has_locks = nlm_host_has_locks(hostp);
+
+			mutex_exit(&hostp->nh_lock);
+			mutex_enter(&g->lock);
+
+			/*
+			 * While we were doing expensive operations outside of
+			 * nlm_globals critical section, somebody could
+			 * take the host, add lock/share to one of its vnodes
+			 * and release the host back. If so, host's idle  timeout
+			 * is renewed and our information about locks on the
+			 * given host is outdated.
+			 */
+			if (hostp->nh_idle_timeout > now)
+				continue;
+
+			/*
+			 * Either host has locks or somebody has began to
+			 * use it while we were outside the nlm_globals critical
+			 * section. In both cases we have to renew host's timeout
+			 * and put it to the end of LRU list.
+			 */
+			if (has_locks || hostp->nh_refs > 0) {
+				TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
+				hostp->nh_idle_timeout = now + idle_period;
+				TAILQ_INSERT_TAIL(&g->nlm_idle_hosts, hostp, nh_link);
+				continue;
+			}
+
+			/*
+			 * We're here if all the following conditions hold:
+			 * 1) Host hasn't any locks or share reservations
+			 * 2) Host is unused
+			 * 3) Host wasn't touched by anyone at least for
+			 *    NLM_IDLE_TIMEOUT seconds.
+			 *
+			 * So, now we can destroy it.
+			 */
+			nlm_host_unregister(g, hostp);
+			mutex_exit(&g->lock);
+
+			nlm_host_unmonitor(g, hostp);
+			nlm_host_destroy(hostp);
+			mutex_enter(&g->lock);
+		}
+
+		DTRACE_PROBE(gc__end);
+	}
+
+	DTRACE_PROBE1(gc__exit, struct nlm_globals *, g);
+
+	/* Let others know that GC has died */
+	g->nlm_gc_thread = NULL;
+	mutex_exit(&g->lock);
+
+	cv_broadcast(&g->nlm_gc_finish_cv);
+	zthread_exit();
 }
 
 /*********************************************************************
@@ -491,21 +625,49 @@ nlm_vhold_release(struct nlm_host *hostp, struct nlm_vhold *nvp)
 	mutex_exit(&hostp->nh_lock);
 }
 
-bool_t
-nlm_vhold_stale(struct nlm_vhold *nvp)
+static void
+nlm_vhold_destroy(struct nlm_host *hostp, struct nlm_vhold *nvp)
 {
-	bool_t stale = FALSE;
+	ASSERT(MUTEX_HELD(&hostp->nh_lock));
+	ASSERT(nvp->nv_refcnt == 0);
+
+	VERIFY(mod_hash_remove(hostp->nh_vholds_by_vp,
+	        (mod_hash_key_t)nvp->nv_vp,
+	        (mod_hash_val_t)&nvp) == 0);
+
+	TAILQ_REMOVE(&hostp->nh_vholds_list, nvp, nv_link);
+	VN_RELE(nvp->nv_vp);
+	nvp->nv_vp = NULL;
+
+	kmem_cache_free(nlm_vhold_cache, nvp);
+}
+
+/*
+ * Return TRUE if the given vhold is busy.
+ * Vhold object is considered to be "busy" when
+ * all the following conditions hold:
+ * 1) No one uses it at the moment;
+ * 2) It hasn't any locks;
+ * 3) It hasn't any share reservations;
+ */
+static bool_t
+nlm_vhold_busy(struct nlm_host *hostp, struct nlm_vhold *nvp)
+{
 	vnode_t *vp;
+	int32_t sysid;
 
-	ASSERT(nvp->nv_refcnt > 0);
-	nvp->nv_vp = nvp->nv_vp;
+	ASSERT(MUTEX_HELD(&hostp->nh_lock));
 
-	mutex_enter(&vp->v_lock);
-	if (vp->v_count == 0)
-		stale = TRUE;
+	if (nvp->nv_refcnt > 0)
+		return (TRUE);
 
-	mutex_exit(&vp->v_lock);
-	return (stale);
+	vp = nvp->nv_vp;
+	sysid = hostp->nh_sysid;
+	if (flk_has_remote_locks_for_sysid(vp, sysid) ||
+	    shr_has_remote_shares(vp, sysid))
+		return (TRUE);
+
+	return (FALSE);
 }
 
 static int
@@ -635,6 +797,19 @@ nlm_host_dtor(void *datap, void *cdrarg)
 	ASSERT(hostp->nh_refs == 0);
 }
 
+static void
+nlm_host_unregister(struct nlm_globals *g, struct nlm_host *hostp)
+{
+	ASSERT(MUTEX_HELD(&g->lock));
+	ASSERT(hostp->nh_refs == 0);
+
+	avl_remove(&g->nlm_hosts_tree, hostp);
+	VERIFY(mod_hash_remove(g->nlm_hosts_hash,
+	        (mod_hash_key_t)(uintptr_t)hostp->nh_sysid,
+	        (mod_hash_val_t)&hostp) == 0);
+	TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
+}
+
 /*
  * Free resources used by a host. This is called after the reference
  * count has reached zero so it doesn't need to worry about locks.
@@ -660,21 +835,6 @@ nlm_host_destroy(struct nlm_host *hostp)
 	cv_destroy(&hostp->nh_rpcb_cv);
 
 	kmem_cache_free(nlm_hosts_cache, hostp);
-}
-
-/*
- * The function returns TRUE if the host "hostp" has
- * any locks or shared reservations on the vnode "vp".
- */
-static bool_t
-nlm_host_has_locks_on_vnode(struct nlm_host *hostp, vnode_t *vp)
-{
-	int32_t sysid = nlm_host_get_sysid(hostp);
-
-	return (flk_has_remote_locks_for_sysid(vp, sysid)
-	    || flk_has_remote_locks_for_sysid(vp, sysid | NLM_SYSID_CLIENT)
-	    || shr_has_remote_shares(vp, sysid)
-	    || shr_has_remote_shares(vp, sysid | NLM_SYSID_CLIENT));
 }
 
 void
@@ -800,57 +960,79 @@ nlm_create_host(struct nlm_globals *g, char *name,
 }
 
 /*
- * Iterate throught NLM idle hosts list,
- * unmonitor and free hosts with expired
- * idle timeout.
+ * Garbage collect stale vhold objects.
+ *
+ * In other words check whether vnodes that are
+ * held by vnold objects still have any locks
+ * or shares or still in use. If they aren't,
+ * just destroy them.
  */
 static void
-nlm_free_idle_hosts(struct nlm_globals *g)
+nlm_host_gc_vholds(struct nlm_host *hostp)
 {
-	struct nlm_host_list hlist_tmp;
-	struct nlm_host *hostp, *hostp_next;
-	clock_t time_uptime;
+	struct nlm_vhold *nvp, *nvp_tmp;
+
+	ASSERT(MUTEX_HELD(&hostp->nh_lock));
+	TAILQ_FOREACH_SAFE(nvp, nvp_tmp, &hostp->nh_vholds_list, nv_link) {
+		if (nlm_vhold_busy(hostp, nvp))
+			continue;
+
+		nlm_vhold_destroy(hostp, nvp);
+	}
+}
+
+/*
+ * Determine whether the given host owns any
+ * locks or share reservations.
+ */
+static bool_t
+nlm_host_has_locks(struct nlm_host *hostp)
+{
+	int32_t clnt_sysid;
+
+	ASSERT(MUTEX_HELD(&hostp->nh_lock));
 
 	/*
-	 * hlist_tmp is a temporary list where we'll
-	 * collect all hosts that need to be unmonitored
-	 * and freed. The reason why we do this is that
-	 * host unmonitoring and freeing are not cheap operations
-	 * and we don't want to do them with g->lock acquired.
+	 * Check the server side at first.
+	 * It's cheap and simple: if server has
+	 * any locks/shares there must be vhold
+	 * object storing the affected vnode.
+	 *
+	 * NOTE: We don't need to check sleeping
+	 * locks on the server side, because if
+	 * server side sleeping lock is alive,
+	 * there must be a vhold object corresponding
+	 * to target vnode.
 	 */
-	TAILQ_INIT(&hlist_tmp);
-	time_uptime = ddi_get_lbolt();
+	if (!TAILQ_EMPTY(&hostp->nh_vholds_list))
+		return (TRUE);
 
-	mutex_enter(&g->lock);
-	TAILQ_FOREACH_SAFE(hostp, hostp_next, &g->nlm_idle_hosts, nh_link) {
-		/*
-		 * nlm_idle_hosts is LRU ordered.
-		 */
-		if (time_uptime < hostp->nh_idle_timeout)
-			break;
+	/*
+	 * Then check whether cliet side made any locks.
+	 *
+	 * XXX: It's not the way I'd like to do the check,
+	 * because flk_sysid_has_locks() can be very
+	 * expensive by design. Unfortunatelly it iterates
+	 * throght all locks on the system, doesn't matter
+	 * were they made on remote system via NLM or
+	 * on local system via reclock. To understand the
+	 * problem, consider that there're dozens of thousands
+	 * of locks that are made on some ZFS dataset. And there's
+	 * another dataset shared by NFS where NLM client had locks
+	 * some time ago, but doesn't have them now.
+	 * In this case flk_sysid_has_locks() will iterate
+	 * thrught dozens of thousands locks until it returns us
+ 	 * FALSE.
+	 * Oh, I hope that in shiny future somebody will make
+	 * local lock manager (os/flock.c) better, so that
+	 * it'd be more friedly to remote locks and
+	 * flk_sysid_has_locks() wouldn't be so expensive.
+	 */
+	if (flk_sysid_has_locks(hostp->nh_sysid |
+	        NLM_SYSID_CLIENT, FLK_QUERY_ACTIVE))
+		return (TRUE);
 
-		/*
-		 * Remove host from all places it can be looked up:
-		 * - NLM hosts AVL tree (looked up via
-		 *   nlm_host_find/nlm_host_findcreate)
-		 * - NLM hosts hash table (looked up via
-		 *   nlm_host_find_by_sysid)
-		 */
-		TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
-		avl_remove(&g->nlm_hosts_tree, hostp);
-		VERIFY(mod_hash_remove(g->nlm_hosts_hash,
-		        (mod_hash_key_t)(uintptr_t)hostp->nh_sysid,
-		        (mod_hash_val_t)&hostp) == 0);
-
-		TAILQ_INSERT_TAIL(&hlist_tmp, hostp, nh_link);
-	}
-
-	mutex_exit(&g->lock);
-	TAILQ_FOREACH_SAFE(hostp, hostp_next, &hlist_tmp, nh_link) {
-		TAILQ_REMOVE(&hlist_tmp, hostp, nh_link);
-		nlm_host_unmonitor(g, hostp);
-		nlm_host_destroy(hostp);
-	}
+	return (FALSE);
 }
 
 /*
@@ -1562,6 +1744,16 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 	int err;
 
 	VERIFY(g->run_status == NLM_ST_STARTING);
+	VERIFY(g->nlm_gc_thread == NULL);
+	VERIFY(g->nlm_nsm == NULL);
+
+	/*
+	 * Create an NLM garbage collector thread that will
+	 * clean up stale vholds and hosts objects.
+	 */
+	g->nlm_gc_thread = zthread_create(NULL, 0, nlm_gc,
+	    g, 0, minclsyspri);
+
 	err = nlm_svc_create_nsm(knc, &nsm);
 	if (err != 0) {
 		NLM_WARN("NLM: Failed to contact to local NSM: errno=%d\n", err);

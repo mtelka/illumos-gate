@@ -104,6 +104,9 @@ lm_zone_init(zoneid_t zoneid)
 	TAILQ_INIT(&g->nlm_clnt_slocks);
 
 	mutex_init(&g->lock, NULL, MUTEX_DEFAULT, NULL);
+	cv_init(&g->nlm_gc_sched_cv, NULL, CV_DEFAULT, NULL);
+	cv_init(&g->nlm_gc_finish_cv, NULL, CV_DEFAULT, NULL);
+
 	g->lockd_pid = 0;
 	g->run_status = NLM_ST_DOWN;
 
@@ -119,7 +122,11 @@ lm_zone_fini(zoneid_t zoneid, void *data)
 	ASSERT(avl_is_empty(&g->nlm_hosts_tree));
 	avl_destroy(&g->nlm_hosts_tree);
 	mod_hash_destroy_idhash(g->nlm_hosts_hash);
+
+	ASSERT(g->nlm_gc_thread == NULL);
 	mutex_destroy(&g->lock);
+	cv_destroy(&g->nlm_gc_sched_cv);
+	cv_destroy(&g->nlm_gc_finish_cv);
 
 	nlm_globals_unregister(g);
 	kmem_free(g, sizeof (*g));

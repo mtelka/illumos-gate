@@ -378,23 +378,23 @@ struct nlm_nsm {
 };
 
 struct nlm_globals {
-	kmutex_t lock;
-	clock_t grace_threshold;
-	pid_t lockd_pid;
-	int nsm_state;
-	nlm_run_status_t run_status;
-	nlm_loglevel_t loglevel; /* Debug loglevel */
-	kcondvar_t status_cv;
-	struct nlm_nsm *nlm_nsm; /* An RPC client handle that can be used to communicate
-		                        with the local NSM. */
-	avl_tree_t nlm_hosts_tree;
-	mod_hash_t *nlm_hosts_hash;
-	struct nlm_host_list nlm_idle_hosts;
-	struct nlm_slock_clnt_list nlm_clnt_slocks;
-	/* options from lockd */
-	int cn_idle_tmo;
-	int grace_period;
-	int retrans_tmo;
+	kmutex_t                    lock;
+	clock_t                     grace_threshold;
+	pid_t                       lockd_pid;
+	int                         nsm_state;
+	nlm_run_status_t            run_status;
+	nlm_loglevel_t              loglevel;
+	kthread_t                  *nlm_gc_thread;
+	kcondvar_t                  nlm_gc_sched_cv;
+	kcondvar_t                  nlm_gc_finish_cv;
+	struct nlm_nsm             *nlm_nsm;
+	avl_tree_t                  nlm_hosts_tree;
+	mod_hash_t                 *nlm_hosts_hash;
+	struct nlm_host_list        nlm_idle_hosts;
+	struct nlm_slock_clnt_list  nlm_clnt_slocks;
+	int                         cn_idle_tmo;
+	int                         grace_period;
+	int                         retrans_tmo;
 	TAILQ_ENTRY(nlm_globals) nlm_link;
 };
 TAILQ_HEAD(nlm_globals_list, nlm_globals);
