@@ -113,9 +113,9 @@ update_host_rpcbinding(struct nlm_host *hostp, int vers)
 
 /*
  * Refresh RPC handle taken from host handles cache.
- * The function is called when either nr_handle of
- * nlm_rpc_t is NULL or rpcp->nr_sn is not equal to
- * host's nh_rpcb_sn.
+ * This function is called when an RPC handle is either
+ * uninitialized or was initialized using a binding that's
+ * no longer current.
  */
 static int
 refresh_nlm_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
@@ -155,12 +155,11 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 	mutex_enter(&hostp->nh_lock);
 
 	/*
-	 * Check if RPC binding is not fresh.
-	 * If so, wait until RPC binding update operation is finished or
-	 * update it if there is no thread that already doing update.
-	 * NOTE: we can't use host->nh_addr unitl binding is fresh, because
-	 * it may raise an error in code that uses RPC handle returned
-	 * by nlm_host_get_rpc().
+	 * If this handle is either uninitialized, or was
+	 * initialized using binding that's now stale
+	 * do the init or re-init.
+	 * See comments to enum nlm_rpcb_state for more
+	 * details.
 	 */
 	while (hostp->nh_rpcb_state != NRPCB_UPDATED) {
 		if (hostp->nh_rpcb_state == NRPCB_UPDATE_INPROGRESS) {
@@ -174,7 +173,8 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 		/*
 		 * Check if RPC binding was marked for update.
 		 * If so, start RPC binding update operation.
-		 * NOTE: the operation can be by only one thread at time.
+		 * NOTE: the operation can be executed by only
+		 * one thread at time.
 		 */
 		if (hostp->nh_rpcb_state == NRPCB_NEED_UPDATE)
 			update_host_rpcbinding(hostp, vers);

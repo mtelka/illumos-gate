@@ -225,6 +225,20 @@ typedef struct nlm_rpc {
 } nlm_rpc_t;
 TAILQ_HEAD(nlm_rpch_list, nlm_rpc);
 
+/*
+ * Describes the state of NLM host's RPC binding.
+ * RPC binding can be in one of three states:
+ * 1) NRPCB_NEED_UPDATE:
+ *    Binding is either not initialized or stale.
+ * 2) NRPCB_UPDATE_INPROGRESS:
+ *    When some thread updates host's RPC binding,
+ *    it sets binding's state to NRPCB_UPDATE_INPROGRESS
+ *    which denotes that other threads must wait until
+ *    update process is finished.
+ * 3) NRPCB_UPDATED:
+ *    Denotes that host's RPC binding is both initialized
+ *    and fresh.
+ */
 enum nlm_rpcb_state {
 	NRPCB_NEED_UPDATE = 0,
 	NRPCB_UPDATE_INPROGRESS,
