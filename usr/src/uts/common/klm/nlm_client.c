@@ -420,25 +420,17 @@ nlm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
 	struct vattr va;
 	int err;
 
-	if ((rp->r_mapcnt > 0) && (fl->l_start != 0 || fl->l_len != 0)) {
-		NLM_DEBUG(NLM_LL1, "Lock l_start=%"PRId64", "
-		    "l_len=%"PRId64" is not a safe lock on "
-		    "memory mapped file\n", fl->l_start, fl->l_len);
+	if ((rp->r_mapcnt > 0) && (fl->l_start != 0 || fl->l_len != 0))
 		return (0);
-	}
 
 	va.va_mask = AT_MODE;
 	err = nfs3getattr(vp, &va, cr);
-	if (err) {
-		NLM_DEBUG(NLM_LL1, "Failed to get AT_MODE NFS3 file "
-		    "attribte. [ERR=%d]\n", err);
+	if (err)
 		return (0);
-	}
+
 	/* NLM4 doesn't allow mandatory file locking */
-	if (MANDLOCK(vp, va.va_mode)) {
-		NLM_DEBUG(NLM_LL1, "NLM4 doesn't allow mandatory locks!\n");
+	if (MANDLOCK(vp, va.va_mode))
 		return (0);
-	}
 
 	return (1);
 }
