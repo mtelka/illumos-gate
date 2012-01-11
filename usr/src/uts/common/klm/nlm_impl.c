@@ -27,7 +27,7 @@
  */
 
 /*
- * NFS Lock Manager, start/stop, support functions, etc.
+ * NFS LockManager, start/stop, support functions, etc.
  * Most of the interesting code is here.
  *
  * Source code derived from FreeBSD nlm_prot_impl.c
@@ -58,10 +58,8 @@
 #include <rpc/xdr.h>
 #include <rpc/pmap_prot.h>
 #include <rpc/pmap_clnt.h>
-/* #include <rpc/rpcb_clnt.h> ? */
 #include <rpc/rpcb_prot.h>
 
-/* #include <rpcsvc/nfs_proto.h> */
 #include <rpcsvc/nlm_prot.h>
 #include <rpcsvc/sm_inter.h>
 
@@ -114,12 +112,6 @@ clock_t nlm_grace_threshold;
 static struct nlm_globals_list nlm_zones_list;
 
 /*
- * A zero timeval for sending async RPC messages.
- */
-struct timeval nlm_zero_tv = { 0, 0 };
-
-
-/*
  * A sysid unique identifier allocated for each new host.
  * NOTE: nlm_next_sysid is shared between all zones, it _must_
  * be accessed very careful. Preferable way is to use atomic
@@ -148,6 +140,7 @@ static void nlm_svc_release_nsm(struct nlm_nsm *);
  */
 static int nlm_vhold_ctor(void *, void *, int);
 static void nlm_vhold_dtor(void *, void *);
+static struct nlm_vhold *nlm_vhold_find_locked(struct nlm_host *, vnode_t *);
 
 /*
  * NLM host functions
@@ -408,7 +401,95 @@ nlm_svc_release_nsm(struct nlm_nsm *nsm)
 
 /*********************************************************************
  * NLM vhold functions
+ *********************************************************************
+ *
+ * See comment to definition of nlm_vhold structure.
+ *
+ * NLM vhold object is a container of vnode on NLM side.
+ * Vholds are used for two purposes:
+ * 1) Hold vnode (with VN_HOLD) while it has any locks;
+ * 2) Keep a track of all vnodes remote host touched
+ *    with lock/share operations on NLM server, so that NLM
+ *    can know what vnodes are potentially locked;
+ *
+ * Vholds are used on side only. For server side it's really
+ * important to keep vnodes held while they potentially have
+ * any locks/shares. In contrast, it's not important for clinet
+ * side at all. When particular vnode comes to the NLM client side
+ * code, it's already held (VN_HOLD) by the process calling
+ * lock/share function (it's referenced because client calls open()
+ * before making locks or shares).
+ *
+ * Vhold objects are cleaned up by GC thread when parent host
+ * becomes idle and its idle timeout is expired.
  */
+
+/*
+ * Get NLM vhold object corresponding to vnode "vp".
+ * If no such object was found, create a new one.
+ *
+ * The purpose of this function is to associate vhold
+ * object with given vnode, so that:
+ * 1) vnode is hold (VN_HOLD) while vhold object is alive.
+ * 2) host has a track of all vnodes it touched by lock
+ *    or share operations. These vnodes are accessible
+ *    via collection of vhold objects.
+ */
+struct nlm_vhold *
+nlm_vhold_get(struct nlm_host *hostp, vnode_t *vp)
+{
+	struct nlm_vhold *nvp, *new_nvp = NULL;
+
+	mutex_enter(&hostp->nh_lock);
+	nvp = nlm_vhold_find_locked(hostp, vp);
+	if (nvp != NULL)
+		goto out;
+
+	/* nlm_vhold wasn't found, then create a new one */
+	mutex_exit(&hostp->nh_lock);
+	new_nvp = kmem_cache_alloc(nlm_vhold_cache, KM_SLEEP);
+
+	/*
+	 * Check if another thread has already
+	 * created the same nlm_vhold.
+	 */
+	mutex_enter(&hostp->nh_lock);
+	nvp = nlm_vhold_find_locked(hostp, vp);
+	if (nvp == NULL) {
+		nvp = new_nvp;
+		new_nvp = NULL;
+
+		nvp->nv_vp = vp;
+		nvp->nv_refcnt = 1;
+		VN_HOLD(nvp->nv_vp);
+
+		VERIFY(mod_hash_insert(hostp->nh_vholds_by_vp,
+		        (mod_hash_key_t)vp, (mod_hash_val_t)nvp) == 0);
+		TAILQ_INSERT_TAIL(&hostp->nh_vholds_list, nvp, nv_link);
+	}
+
+out:
+	mutex_exit(&hostp->nh_lock);
+	if (new_nvp != NULL)
+		kmem_cache_free(nlm_vhold_cache, new_nvp);
+
+	return (nvp);
+}
+
+/*
+ * Drop a reference to vhold object nvp.
+ */
+void
+nlm_vhold_release(struct nlm_host *hostp, struct nlm_vhold *nvp)
+{
+	if (nvp == NULL)
+		return;
+
+	mutex_enter(&hostp->nh_lock);
+	ASSERT(nvp->nv_refcnt > 0);
+	nvp->nv_refcnt--;
+	mutex_exit(&hostp->nh_lock);
+}
 
 static int
 nlm_vhold_ctor(void *datap, void *cdrarg, int kmflags)
@@ -423,234 +504,23 @@ static void
 nlm_vhold_dtor(void *datap, void *cdrarg)
 {
 	struct nlm_vhold *nvp = (struct nlm_vhold *)datap;
-
-	ASSERT(nvp->nv_refs == 0);
 	ASSERT(nvp->nv_vp == NULL);
 }
 
-/*
- * Gets vnode from client netobject
- * NOTE: Holds vnode.
- */
-static vnode_t *
-nlm_fh_to_vnode(struct netobj *fh)
-{
-	fhandle_t *fhp;
-
-	/*
-	 * Get a vnode pointer for the given NFS file handle.
-	 * Note that it could be an NFSv2 for NFSv3 handle,
-	 * which means the size might vary.  (don't copy)
-	 */
-	if (fh->n_len < sizeof (*fhp))
-		return (NULL);
-
-	/* We know this is aligned (kmem_alloc) */
-	fhp = (fhandle_t *)fh->n_bytes;
-	return (lm_fhtovp(fhp));
-}
-
-/*
- * Finds nlm_vhold by given pointer to vnode_t.
- * On success returns a pointer to nlm_vhold that was found,
- * on error returns NULL.
- *
- * NOTE: hostp->nh_lock must be locked.
- */
 static struct nlm_vhold *
 nlm_vhold_find_locked(struct nlm_host *hostp, vnode_t *vp)
 {
 	struct nlm_vhold *nvp = NULL;
 
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
-	(void )mod_hash_find(hostp->nh_vholds_by_vp, (mod_hash_key_t)vp,
+	(void) mod_hash_find(hostp->nh_vholds_by_vp,
+	    (mod_hash_key_t)vp,
 	    (mod_hash_val_t)&nvp);
 
-	if (nvp != NULL) {
-		nvp->nv_refs++;
-		nvp->nv_flags &= ~NLM_NH_JUSTBORN;
-	}
-
-	return (nvp);
-}
-
-/*
- * Find nlm_vhold by given pointer to vnode.
- */
-struct nlm_vhold *
-nlm_vhold_find(struct nlm_host *hostp, vnode_t *vp)
-{
-	struct nlm_vhold *nvp;
-
-	mutex_enter(&hostp->nh_lock);
-	nvp = nlm_vhold_find_locked(hostp, vp);
-	mutex_exit(&hostp->nh_lock);
-
-	return (nvp);
-}
-
-/*
- * Find or create an nlm_vhold.
- * See comments at struct nlm_vhold def.
- */
-struct nlm_vhold *
-nlm_vhold_findcreate(struct nlm_host *hostp, vnode_t *vp)
-{
-	struct nlm_vhold *nvp, *new_nvp = NULL;
-
-	mutex_enter(&hostp->nh_lock);
-	nvp = nlm_vhold_find_locked(hostp, vp);
-	mutex_exit(&hostp->nh_lock);
 	if (nvp != NULL)
-		goto out;
-
-	/* nlm_vhold wasn't found, then create a new one */
-	new_nvp = kmem_cache_alloc(nlm_vhold_cache, KM_SLEEP);
-	mutex_enter(&hostp->nh_lock);
-
-	/*
-	 * Check if another thread already has created
-	 * the same nlm_vhold.
-	 */
-	nvp = nlm_vhold_find_locked(hostp, vp);
-	if (nvp == NULL) {
-		nvp = new_nvp;
-		new_nvp = NULL;
-
-		nvp->nv_vp = vp;
-		nvp->nv_refs = 1;
-		nvp->nv_flags = NLM_NH_JUSTBORN;
-		VN_HOLD(nvp->nv_vp);
-
-		VERIFY(mod_hash_insert(hostp->nh_vholds_by_vp,
-		        (mod_hash_key_t)vp, (mod_hash_val_t)nvp) == 0);
-		TAILQ_INSERT_TAIL(&hostp->nh_vholds_list, nvp, nv_link);
-	}
-
-	mutex_exit(&hostp->nh_lock);
-	if (new_nvp != NULL)
-		kmem_cache_free(nlm_vhold_cache, new_nvp);
-
-out:
-	return (nvp);
-}
-
-/*
- * Find nlm_vhold by given filehandle.
- * See also: nlm_vhold_find().
- */
-struct nlm_vhold *
-nlm_vhold_find_fh(struct nlm_host *hostp, struct netobj *fh)
-{
-	struct nlm_vhold *nvp;
-	vnode_t *vp;
-
-	vp = nlm_fh_to_vnode(fh);
-	if (vp == NULL)
-		return (NULL);
-
-	nvp = nlm_vhold_find(hostp, vp);
-	VN_RELE(vp);
-	return (nvp);
-}
-
-/*
- * Find or create nlm_vhold by given filehandle.
- * See also: nlm_vhold_findcreate().
- */
-struct nlm_vhold *
-nlm_vhold_findcreate_fh(struct nlm_host *hostp, struct netobj *fh)
-{
-	vnode_t *vp;
-	struct nlm_vhold *nvp;
-
-	vp = nlm_fh_to_vnode(fh);
-	if (vp == NULL)
-		return (NULL);
-
-	nvp = nlm_vhold_findcreate(hostp, vp);
-	VN_RELE(vp);
+		nvp->nv_refcnt++;
 
 	return (nvp);
-}
-
-/*
- * Release nlm_vhold.
- * If check_locks argument is TRUE and if no one
- * uses given nlm_vhold (i.e. if its reference counter
- * is 0), nlm_vhold_release() asks local os/flock manager
- * whether given host has any locks (and share reservations)
- * on given  If there no any active locks, nlm_vhold is
- * freed and vnode it holds is released.
- */
-void
-nlm_vhold_release(struct nlm_host *hostp,
-    struct nlm_vhold *nvp, bool_t check_locks)
-{
-	if (nvp == NULL)
-		return;
-
-	mutex_enter(&hostp->nh_lock);
-	VERIFY(nvp->nv_refs > 0);
-
-	nvp->nv_refs--;
-	if (check_locks)
-		nvp->nv_flags |= NLM_NH_CHECKLOCKS;
-
-	if (nvp->nv_refs > 0 ||
-	    !(nvp->nv_flags & (NLM_NH_JUSTBORN | NLM_NH_CHECKLOCKS))) {
-		/*
-		 * Either some one uses given nlm_vhold or we wasn't
-		 * asked to check local locks on it. Just return,
-		 * our work is node.
-		 */
-
-		mutex_exit(&hostp->nh_lock);
-		return;
-	}
-
-	DTRACE_PROBE2(nvp__free, struct nlm_host *, hostp,
-	    struct nlm_vhold *, nvp);
-
-	/*
-	 * No one uses the nlm_vhold and we was asked
-	 * to check local locks on it or nlm_vhold was just born.
-	 *
-	 * NOTE: It's important to check locks on nlm_vholds that
-	 * are just born (i.e. have been used only once), because
-	 * toplevel code that allocates given nlm_vhold to add a
-	 * new lock on it, can fail to add the lock. In this case
-	 * it happily releases the nlm_vhold with check_locks = FALSE.
-	 * We don't want to have any stale nlm_vholds, thus we need to
-	 * check whether "just born" nlm_vhold really has any locks.
-	 * This is done only once.
-	 */
-	nvp->nv_flags &= ~NLM_NH_CHECKLOCKS;
-	if (nlm_host_has_locks_on_vnode(hostp, nvp->nv_vp)) {
-		/*
-		 * Given host has locks or share reservations
-		 * on the vnode, so don't release it
-		 */
-
-		mutex_exit(&hostp->nh_lock);
-		return;
-	}
-
-	/*
-	 * There're no any locks given host has on a vnode.
-	 * Now we free to delete nlm_vhold and drop a vnode
-	 * it holds.
-	 */
-	VERIFY(mod_hash_remove(hostp->nh_vholds_by_vp,
-	        (mod_hash_key_t)nvp->nv_vp,
-	        (mod_hash_val_t)&nvp) == 0);
-
-	TAILQ_REMOVE(&hostp->nh_vholds_list, nvp, nv_link);
-	mutex_exit(&hostp->nh_lock);
-
-	VN_RELE(nvp->nv_vp);
-	nvp->nv_vp = NULL;
-	kmem_cache_free(nlm_vhold_cache, nvp);
 }
 
 /*

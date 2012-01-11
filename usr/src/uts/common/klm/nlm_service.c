@@ -73,7 +73,7 @@
 static void nlm_block(
 	nlm4_lockargs *lockargs,
 	struct nlm_host *host,
-	struct nlm_vhold *nv,
+	vnode_t *vp,
 	struct flock64 *fl,
 	nlm_testargs_cb grant_cb,
 	rpcvers_t vers);
@@ -88,6 +88,91 @@ nlm_init_flock(struct flock64 *fl, struct nlm4_lock *nl, int sysid)
 	fl->l_len = nl->l_len;
 	fl->l_sysid = sysid;
 	fl->l_pid = nl->svid;
+}
+
+/*
+ * Gets vnode from client's filehandle
+ * NOTE: Holds vnode, it _must_ be explicitly
+ * released by VN_RELE().
+ */
+static vnode_t *
+nlm_do_fh_to_vp(struct netobj *fh)
+{
+	fhandle_t *fhp;
+
+	/*
+	 * Get a vnode pointer for the given NFS file handle.
+	 * Note that it could be an NFSv2 for NFSv3 handle,
+	 * which means the size might vary.  (don't copy)
+	 */
+	if (fh->n_len < sizeof (*fhp))
+		return (NULL);
+
+	/* We know this is aligned (kmem_alloc) */
+	fhp = (fhandle_t *)fh->n_bytes;
+	return (lm_fhtovp(fhp));
+}
+
+/*
+ * Like nlm_do_fh_to_vp(), but checks some access rights
+ * on vnode before returning it.
+ * NOTE: vnode _must_ be explicitly released by VN_RELE().
+ */
+static vnode_t *
+nlm_fh_to_vp(struct netobj *fh)
+{
+	vnode_t *vp;
+
+	vp = nlm_do_fh_to_vp(fh);
+	if (vp == NULL)
+		return (vp);
+
+	/*
+	 * Do not allow to add locks/shares to read only
+	 * file system.
+	 */
+	if (vp->v_vfsp->vfs_flag & VFS_RDONLY)
+		goto error;
+
+	/*
+	 * TODO[DK]: check whether given thread can add locks
+	 * to given vnode.
+	 */
+
+	return (vp);
+
+error:
+	VN_RELE(vp);
+	return (NULL);
+}
+
+/*
+ * Get vhold from client's filehandle, but in contrast to
+ * The function tries to check some access rights as well.
+ *
+ * NOTE: vhold object _must_ be explicitly released by
+ * nlm_vhold_release().
+ */
+static struct nlm_vhold *
+nlm_fh_to_vhold(struct nlm_host *hostp, struct netobj *fh)
+{
+	vnode_t *vp;
+	struct nlm_vhold *nvp;
+
+	vp = nlm_fh_to_vp(fh);
+	if (vp == NULL)
+		return (NULL);
+
+
+	nvp = nlm_vhold_get(hostp, vp);
+
+	/*
+	 * Both nlm_fh_to_vp() and nlm_vhold_get()
+	 * do VN_HOLD(), so we need to drop one
+	 * reference on vnode.
+	 */
+	VN_RELE(vp);
+	return (nvp);
 }
 
 /* ******************************************************************* */
@@ -162,11 +247,11 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
-	struct nlm_vhold *nv = NULL;
+	vnode_t *vp = NULL;
 	struct netbuf *addr;
 	char *netid;
 	char *name;
-	int error, sysid;
+	int error;
 	struct flock64 fl;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
@@ -181,12 +266,14 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 		resp->stat.stat = nlm4_denied_nolocks;
 		return;
 	}
-	sysid = host->nh_sysid;
 
-	NLM_DEBUG(NLM_LL3, "nlm_do_test(): name = %s sysid = %d\n", name, sysid);
-
-	nv = nlm_vhold_findcreate_fh(host, &argp->alock.fh);
-	if (nv == NULL) {
+	/*
+	 * Do not check access rights to vnode when
+	 * deal with NLM_TEST. It's simply a read
+	 * access to filesystem.
+	 */
+	vp = nlm_do_fh_to_vp(&argp->alock.fh);
+	if (vp == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto out;
 	}
@@ -196,11 +283,11 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 		goto out;
 	}
 
-	nlm_init_flock(&fl, &argp->alock, sysid);
+	nlm_init_flock(&fl, &argp->alock, host->nh_sysid);
 	fl.l_type = (argp->exclusive) ? F_WRLCK : F_RDLCK;
 
 	/* BSD: VOP_ADVLOCK(nv->nv_vp, NULL, F_GETLK, &fl, F_REMOTE); */
-	error = VOP_FRLOCK(nv->nv_vp, F_GETLK, &fl,
+	error = VOP_FRLOCK(vp, F_GETLK, &fl,
 	    F_REMOTELOCK | FREAD | FWRITE,
 	    (u_offset_t)0, NULL, CRED(), NULL);
 	if (error) {
@@ -250,7 +337,9 @@ out:
 		}
 	}
 
-	nlm_vhold_release(host, nv, FALSE);
+	if (vp != NULL)
+		VN_RELE(vp);
+
 	nlm_host_release(g, host);
 }
 
@@ -278,8 +367,8 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	struct nlm_globals *g;
 	struct flock64 fl;
 	struct nlm_host *host;
-	struct nlm_vhold *nv = NULL;
 	struct netbuf *addr;
+	struct nlm_vhold *nvp;
 	char *netid;
 	char *name;
 	int error, flags;
@@ -305,18 +394,22 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_lockargs *, argp);
 
-	nv = nlm_vhold_findcreate_fh(host, &argp->alock.fh);
-	if (nv == NULL) {
-		resp->stat.stat = nlm4_stale_fh;
-		goto doreply;
-	}
-
 	/*
 	 * During the "grace period", only allow reclaim.
 	 */
 	if (argp->reclaim == 0 &&
 	    ddi_get_lbolt() < nlm_grace_threshold) {
 		status = nlm4_denied_grace_period;
+		goto doreply;
+	}
+
+	/*
+	 * Get holded vnode when on lock operation.
+	 * Only lock() and share() need vhold objects.
+	 */
+	nvp = nlm_fh_to_vhold(host, &argp->alock.fh);
+	if (nvp == NULL) {
+		resp->stat.stat = nlm4_stale_fh;
 		goto doreply;
 	}
 
@@ -333,7 +426,7 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	fl.l_type = (argp->exclusive) ? F_WRLCK : F_RDLCK;
 
 	flags = F_REMOTELOCK | FREAD | FWRITE;
-	error = VOP_FRLOCK(nv->nv_vp, F_SETLK, &fl, flags,
+	error = VOP_FRLOCK(nvp->nv_vp, F_SETLK, &fl, flags,
 	    (u_offset_t)0, NULL, CRED(), NULL);
 
 	DTRACE_PROBE3(setlk__res, struct flock64 *, &fl,
@@ -446,13 +539,13 @@ doreply:
 		 * to block indefinitely if needed.
 		 */
 		(void) svc_detach_thread(sr->rq_xprt);
-		nlm_block(argp, host, nv, &fl, grant_cb, sr->rq_vers);
+		nlm_block(argp, host, nvp->nv_vp, &fl, grant_cb, sr->rq_vers);
 	}
 
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
-	nlm_vhold_release(host, nv, FALSE);
+	nlm_vhold_release(host, nvp);
 	nlm_host_release(g, host);
 }
 
@@ -465,7 +558,7 @@ static void
 nlm_block(
 	nlm4_lockargs *lockargs,
 	struct nlm_host *host,
-	struct nlm_vhold *nv,
+	vnode_t *vp,
 	struct flock64 *fl,
 	nlm_testargs_cb grant_cb,
 	rpcvers_t vers)
@@ -485,7 +578,7 @@ nlm_block(
 	 * then if we don't insert, free the new one.
 	 * Caller already has vp held.
 	 */
-	nssp = nlm_slock_srv_create(host, nv->nv_vp, fl);
+	nssp = nlm_slock_srv_create(host, vp, fl);
 	if (nssp == NULL) {
 		/*
 		 * There's already the same sleeping lock. Let
@@ -547,8 +640,8 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
-	struct nlm_vhold *nv = NULL;
 	struct netbuf *addr;
+	vnode_t *vp = NULL;
 	char *netid;
 	int error;
 	struct flock64 fl;
@@ -568,21 +661,21 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_cancargs *, argp);
 
-	nv = nlm_vhold_find_fh(host, &argp->alock.fh);
-	if (nv == NULL) {
-		resp->stat.stat = nlm4_stale_fh;
+	if (ddi_get_lbolt() < nlm_grace_threshold) {
+		resp->stat.stat = nlm4_denied_grace_period;
 		goto out;
 	}
 
-	if (ddi_get_lbolt() < nlm_grace_threshold) {
-		resp->stat.stat = nlm4_denied_grace_period;
+	vp = nlm_fh_to_vp(&argp->alock.fh);
+	if (vp == NULL) {
+		resp->stat.stat = nlm4_stale_fh;
 		goto out;
 	}
 
 	nlm_init_flock(&fl, &argp->alock, host->nh_sysid);
 	fl.l_type = (argp->exclusive) ? F_WRLCK : F_RDLCK;
 
-	nssp = nlm_slock_srv_find(host, nv->nv_vp, &fl);
+	nssp = nlm_slock_srv_find(host, vp, &fl);
 	fl.l_type = F_UNLCK;
 	if (nssp != NULL) {
 		/*
@@ -599,7 +692,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	 * We interested in frlock retcode only if
 	 * server-side sleeping lock wasn't found.
 	 */
-	error = VOP_FRLOCK(nv->nv_vp, F_SETLK, &fl,
+	error = VOP_FRLOCK(vp, F_SETLK, &fl,
 	    F_REMOTELOCK | FREAD | FWRITE,
 	    (u_offset_t)0, NULL, CRED(), NULL);
 
@@ -638,7 +731,9 @@ out:
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
-	nlm_vhold_release(host, nv, FALSE);
+	if (vp != NULL)
+		VN_RELE(vp);
+
 	nlm_host_release(g, host);
 }
 
@@ -653,8 +748,8 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
-	struct nlm_vhold *nv = NULL;
 	struct netbuf *addr;
+	vnode_t *vp = NULL;
 	char *netid;
 	int error, sysid;
 	bool_t nvp_check_locks = FALSE;
@@ -675,14 +770,14 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_unlockargs *, argp);
 
-	nv = nlm_vhold_findcreate_fh(host, &argp->alock.fh);
-	if (nv == NULL) {
-		resp->stat.stat = nlm4_stale_fh;
+	if (ddi_get_lbolt() < nlm_grace_threshold) {
+		resp->stat.stat = nlm4_denied_grace_period;
 		goto out;
 	}
 
-	if (ddi_get_lbolt() < nlm_grace_threshold) {
-		resp->stat.stat = nlm4_denied_grace_period;
+	vp = nlm_fh_to_vp(&argp->alock.fh);
+	if (vp == NULL) {
+		resp->stat.stat = nlm4_stale_fh;
 		goto out;
 	}
 
@@ -690,7 +785,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	fl.l_type = F_UNLCK;
 
 	/* BSD: VOP_ADVLOCK(nv->nv_vp, NULL, F_UNLCK, &fl, F_REMOTE); */
-	error = VOP_FRLOCK(nv->nv_vp, F_SETLK, &fl,
+	error = VOP_FRLOCK(vp, F_SETLK, &fl,
 	    F_REMOTELOCK | FREAD | FWRITE,
 	    (u_offset_t)0, NULL, CRED(), NULL);
 
@@ -700,7 +795,6 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	 */
 	DTRACE_PROBE1(unlock__res, int, error);
 	resp->stat.stat = nlm4_granted;
-	nvp_check_locks = TRUE;
 
 out:
 	/*
@@ -734,7 +828,9 @@ out:
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
-	nlm_vhold_release(host, nv, nvp_check_locks);
+	if (vp != NULL)
+		VN_RELE(vp);
+
 	nlm_host_release(g, host);
 }
 
@@ -915,11 +1011,11 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
-	struct nlm_vhold *nv = NULL;
 	struct netbuf *addr;
+	struct nlm_vhold *nvp;
 	char *netid;
 	char *name;
-	int error, flags;
+	int error;
 	struct shrlock shr;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
@@ -944,18 +1040,20 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 		goto out;
 	}
 
-	nv = nlm_vhold_findcreate_fh(host, &argp->share.fh);
-	if (nv == NULL) {
+	/*
+	 * Get holded vnode when on lock operation.
+	 * Only lock() and share() need vhold objects.
+	 */
+	nvp = nlm_fh_to_vhold(host, &argp->share.fh);
+	if (nvp == NULL) {
 		resp->stat = nlm4_stale_fh;
 		goto out;
 	}
 
 	/* Convert to local form. */
 	nlm_init_shrlock(&shr, &argp->share, host);
-
-	flags = FREAD|FWRITE;
-	error = VOP_SHRLOCK(nv->nv_vp, F_SHARE, &shr,
-	    flags, CRED(), NULL);
+	error = VOP_SHRLOCK(nvp->nv_vp, F_SHARE, &shr,
+	    FREAD | FWRITE, CRED(), NULL);
 
 	resp->stat = error ? nlm4_denied : nlm4_granted;
 
@@ -963,7 +1061,7 @@ out:
 	DTRACE_PROBE3(share__end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_shareres *, resp);
 
-	nlm_vhold_release(host, nv, FALSE);
+	nlm_vhold_release(host, nvp);
 	nlm_host_release(g, host);
 }
 
@@ -977,11 +1075,11 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
-	struct nlm_vhold *nv = NULL;
 	struct netbuf *addr;
+	vnode_t *vp = NULL;
 	char *netid;
 	char *name;
-	int error, flags;
+	int error;
 	struct shrlock shr;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
@@ -991,7 +1089,7 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	addr = svc_getrpccaller(sr->rq_xprt);
 
 	g = zone_getspecific(nlm_zone_key, curzone);
-	host = nlm_host_findcreate(g, name, netid, addr);
+	host = nlm_host_find(g, netid, addr);
 	if (host == NULL) {
 		resp->stat = nlm4_denied_nolocks;
 		return;
@@ -1006,18 +1104,16 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 		goto out;
 	}
 
-	nv = nlm_vhold_findcreate_fh(host, &argp->share.fh);
-	if (nv == NULL) {
+	vp = nlm_fh_to_vp(&argp->share.fh);
+	if (vp == NULL) {
 		resp->stat = nlm4_stale_fh;
 		goto out;
 	}
 
 	/* Convert to local form. */
 	nlm_init_shrlock(&shr, &argp->share, host);
-
-	flags = FREAD|FWRITE;
-	error = VOP_SHRLOCK(nv->nv_vp, F_UNSHARE, &shr,
-	    flags, CRED(), NULL);
+	error = VOP_SHRLOCK(vp, F_UNSHARE, &shr,
+	    FREAD | FWRITE, CRED(), NULL);
 
 	(void) error;
 	resp->stat = nlm4_granted;
@@ -1026,6 +1122,8 @@ out:
 	DTRACE_PROBE3(unshare__end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_shareres *, resp);
 
-	nlm_vhold_release(host, nv, TRUE);
+	if (vp != NULL)
+		VN_RELE(vp);
+
 	nlm_host_release(g, host);
 }

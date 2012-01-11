@@ -241,7 +241,6 @@ nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flkp,
 		return (ENOSYS);
 	}
 
-
 	g = zone_getspecific(nlm_zone_key, curzone);
 	hostp = nlm_host_findcreate(g, sv->sv_hostname, netid, &sv->sv_addr);
 	if (hostp == NULL)
@@ -337,9 +336,7 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
     struct netobj *fhp, struct flk_callback *flcb,
     int vers, bool_t do_block)
 {
-	struct nlm_vhold *nvp;
 	int error, xflags;
-	bool_t nvp_check_locks = FALSE;
 
 	error = convoff(vp, flkp, 0, (offset_t)offset);
 	if (error != 0)
@@ -354,29 +351,14 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 
 	if (flkp->l_type == F_UNLCK) {
 		/*
-		 * Do not create new nlm_vhold in case of F_UNLCK,
-		 * there must be one already. (if there's no nlm_vhold
-		 * created earlier, just return 0).
-		 */
-		nvp = nlm_vhold_find(hostp, vp);
-		if (nvp == NULL)
-			return (0);
-
-		/*
 		 * Purge local (cached) lock information first,
 		 * then clear the remote lock.
 		 */
-		(void) nlm_local_setlk(nvp->nv_vp, flkp, flags);
-		error = nlm_call_unlock(nvp->nv_vp, flkp, hostp, fhp, vers);
-		if (error == 0)
-			nvp_check_locks = TRUE;
+		(void) nlm_local_setlk(vp, flkp, flags);
+		error = nlm_call_unlock(vp, flkp, hostp, fhp, vers);
 
-		goto out;
+		return (error);
 	}
-
-	nvp = nlm_vhold_findcreate(hostp, vp);
-	if (nvp == NULL)
-		return (ENOLCK);
 
 	if (!do_block) {
 		/*
@@ -387,7 +369,7 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 		struct flock64 flk0;
 
 		flk0 = *flkp;
-		error = nlm_local_getlk(nvp->nv_vp, &flk0, flags);
+		error = nlm_local_getlk(vp, &flk0, flags);
 		if (error != 0 && flk0.l_type != F_UNLCK) {
 			/* Found a conflicting lock. */
 			error = EAGAIN;
@@ -398,19 +380,17 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 		xflags = NLM_X_BLOCKING;
 	}
 
-	error = nlm_call_lock(nvp->nv_vp, flkp, hostp, fhp, flcb, vers, xflags);
+	error = nlm_call_lock(vp, flkp, hostp, fhp, flcb, vers, xflags);
 	if (error != 0)
-		goto out;
+		return (error);
 
-	error = nlm_local_setlk(nvp->nv_vp, flkp, flags);
+	error = nlm_local_setlk(vp, flkp, flags);
 	if (error != 0) {
 		NLM_ERR("nlm_frlock_setlk: Failed to set local lock. [err=%d]\n",
 			error);
 		/* XXX[DK]: unlock remote lock? */
 	}
 
-out:
-	nlm_vhold_release(hostp, nvp, nvp_check_locks);
 	return (error);
 }
 
@@ -1139,14 +1119,12 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	int flags, struct netobj *fh, int vers)
 {
 	struct shrlock shlk;
-	struct nlm_vhold *nvp = NULL;
 	mntinfo_t *mi;
 	servinfo_t *sv;
 	const char *netid;
 	struct nlm_host *host = NULL;
 	int error, xflags;
 	struct nlm_globals *g;
-	bool_t check_locks = FALSE;
 
 	mi = VTOMI(vp);
 	sv = mi->mi_curr_serv;
@@ -1161,12 +1139,6 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	host = nlm_host_findcreate(g, sv->sv_hostname, netid, &sv->sv_addr);
 	if (host == NULL)
 		return (ENOSYS);
-
-	nvp = nlm_vhold_findcreate(host, vp);
-	if (nvp == NULL) {
-		error = ENOLCK;
-		goto out;
-	}
 
 	/*
 	 * Fill in s_sysid for the local locking calls.
@@ -1183,9 +1155,6 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 		 */
 		(void) nlm_local_shrlock(vp, &shlk, cmd, flags);
 		error = nlm_call_unshare(vp, &shlk, host, fh, vers);
-		if (error == 0)
-			check_locks = TRUE;
-
 		goto out;
 	}
 
@@ -1218,7 +1187,6 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	nlm_host_monitor(g, host, 0);
 
 out:
-	nlm_vhold_release(host, nvp, check_locks);
 	nlm_host_release(g, host);
 
 	return (error);
@@ -1401,6 +1369,7 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 			 * their shares. Wait for a few seconds and try
 			 * again.
 			 */
+			/* FIXME[DK]: may be define waiting period as a constant? */
 			error = delay_sig(SEC_TO_TICK(5));
 			if (error != 0)
 				return (error);

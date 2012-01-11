@@ -152,42 +152,35 @@ extern clock_t nlm_grace_threshold;
 #define NLM_WARN(...) \
 	cmn_err(CE_WARN, __VA_ARGS__)
 
-enum {
-	NLM_NH_JUSTBORN   = 0x01,
-	NLM_NH_CHECKLOCKS = 0x02
-};
-
 /*
- * nlm_vhold structure keep a hold (be VN_HOLD) of active vnodes
- * locked by the client. The tree of vholds is kept on both client
- * and server sides. Client side keeps a tree of vholds client
- * locked on given host. Server side keeps a tree of vholds
- * locked on the host by given client.
+ * NLM vhold object is a sort of wrapper on vnodes remote
+ * clients have locked (or added share reservation)
+ * on NLM server. Vhold keeps vnode held (by VN_HOLD())
+ * while vnode has any locks or shares made by parent host.
  *
- * Server uses nlm_vholds tree to prevent vnodes to be destroyed
- * by VOP_INACTIVE. Client uses this tree to keep a track of all
- * vnodes it locked to simplify resources cleanup mechanism.
+ * It's important to keep vnode held on server side
+ * because it guaranties us that vnode won't dissappear until
+ * server removes all locks and shares from it.
+ *
+ * Each NLM host object has a collection of vholds associated
+ * with vnodes host touched earlier by adding locks or shares.
+ * Having this collection allows us to decide if host is still
+ * in use. When it has any vhold objects it's considered to be
+ * in use. Otherwise we're free to destroy it.
+ *
+ * Vholds are destroyed by garbage collecter thread that
+ * periodically checks whether they have any locks or shares.
+ * Checking occures when parent host is untouched by client
+ * or server for some period of time (NLM_IDLE_TIMEOUT).
  *
  * struct nlm_vhold:
- *   nv_vp  - A pointer to vnode that is hold by given nlm_vhold
- *   nv_refs - Reference counter.
- *             The _refs member is or active functions calls,
- *             incremented in nlm_vhold_find[_fh]/nlm_vhold_findcreate[_fh]
- *             and decremented nlm_vhold_release.
- *   nv_flags - nlm_vhold ORed flags:
- *     NLM_NH_JUSTBORN: nlm_vhold is just born. It's a very first time
- *                  anyone uses it.
- *     NLM_NH_CHECKLOCKS: denotes that nlm_vhold_relese() must check whether
- *                    there're any locks in os/flock on given vnode
- *                    taken by given host. If there're no such locks,
- *                    nlm_vhold will be freed and vnode it holds will
- *                    be released.
- *   nv_link - list node to store vholds in host's nh_vnodes_list
+ *   nv_vp: a pointer to vnode that is hold by given nlm_vhold
+ *   nv_refcnt: reference counter (non zero when vhold is inuse)
+ *   nv_link: list node to store vholds in host's nh_vnodes_list
  */
 struct nlm_vhold {
 	vnode_t    *nv_vp;
-	uint_t      nv_refs;
-	uint8_t     nv_flags;
+	int         nv_refcnt;
 	TAILQ_ENTRY(nlm_vhold) nv_link;
 };
 TAILQ_HEAD(nlm_vhold_list, nlm_vhold);
@@ -549,18 +542,8 @@ extern int nlm_host_get_sysid(struct nlm_host *host);
  * Return the remote NSM state value for a host.
  */
 extern int nlm_host_get_state(struct nlm_host *host);
-
-
-struct nlm_vhold * nlm_vhold_find(struct nlm_host *hostp,
-    vnode_t *vp);
-struct nlm_vhold * nlm_vhold_findcreate(struct nlm_host *hostp,
-    vnode_t *vp);
-struct nlm_vhold *nlm_vhold_find_fh(struct nlm_host *hostp,
-	struct netobj *np);
-struct nlm_vhold * nlm_vhold_findcreate_fh(struct nlm_host *hostp,
-    struct netobj *np);
-void nlm_vhold_release(struct nlm_host *hostp,
-    struct nlm_vhold *nvp, bool_t check_locks);
+struct nlm_vhold *nlm_vhold_get(struct nlm_host *hostp, vnode_t *vp);
+void nlm_vhold_release(struct nlm_host *hostp, struct nlm_vhold *nvp);
 
 /*
  * Sleeping locks functions
