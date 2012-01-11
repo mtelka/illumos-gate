@@ -671,7 +671,6 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	struct flk_callback *flcb, int vers, int xflags)
 {
 	struct nlm4_lockargs args;
-	struct nlm4_res res;
 	struct nlm_owner_handle oh;
 	struct nlm_globals *g;
 	rnode_t *rnp = VTOR(vp);
@@ -700,6 +699,8 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	for (;;) {
 		nlm_rpc_t *rpcp;
 		enum clnt_stat stat;
+		struct nlm4_res res;
+		enum nlm4_stats nlm_err;
 
 		error = nlm_host_get_rpc(hostp, vers, &rpcp);
 		if (error != 0) {
@@ -720,8 +721,9 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		}
 
 		DTRACE_PROBE1(lock__res, enum nlm4_stats, res.stat.stat);
+		nlm_err = res.stat.stat;
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
-		if (res.stat.stat == nlm4_denied_grace_period) {
+		if (nlm_err == nlm4_denied_grace_period) {
 			if (args.reclaim) {
 				error = ENOLCK;
 				goto out;
@@ -735,7 +737,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		}
 
 
-		switch (res.stat.stat) {
+		switch (nlm_err) {
 		case nlm4_granted:
 		case nlm4_blocked:
 			error = 0;
@@ -746,7 +748,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 			break;
 
 		default:
-			error = nlm_map_status(res.stat.stat);
+			error = nlm_map_status(nlm_err);
 		}
 
 		/*
@@ -756,7 +758,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		 * is finished.
 		 */
 		if (nslp == NULL			||
-		    res.stat.stat != nlm4_blocked	||
+		    nlm_err != nlm4_blocked		||
 		    error != 0)
 			goto out;
 
@@ -916,7 +918,7 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
 {
 	struct nlm4_unlockargs args;
 	struct nlm_owner_handle oh;
-	struct nlm4_res res;
+	enum nlm4_stats nlm_err;
 	uint32_t xid;
 	int error;
 
@@ -930,6 +932,7 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
 
 	for (;;) {
 		nlm_rpc_t *rpcp;
+		struct nlm4_res res;
 		enum clnt_stat stat;
 
 		error = nlm_host_get_rpc(hostp, vers, &rpcp);
@@ -949,8 +952,9 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
 		}
 
 		DTRACE_PROBE1(unlock__res, enum nlm4_stats, res.stat.stat);
+		nlm_err = res.stat.stat;
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
-		if (res.stat.stat == nlm4_denied_grace_period) {
+		if (nlm_err == nlm4_denied_grace_period) {
 			error = nlm_host_wait_grace(hostp);
 			if (error != 0)
 				return (error);
@@ -962,12 +966,12 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
 	}
 
 	/* special cases */
-	switch (res.stat.stat) {
+	switch (nlm_err) {
 	case nlm4_denied:
 		error = EINVAL;
 		break;
 	default:
-		error = nlm_map_status(res.stat.stat);
+		error = nlm_map_status(nlm_err);
 		break;
 	}
 
@@ -983,9 +987,9 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 	struct nlm_host *hostp, struct netobj *fhp, int vers)
 {
 	struct nlm4_testargs args;
-	struct nlm4_testres res;
-	struct nlm4_holder *h;
+	struct nlm4_holder h;
 	struct nlm_owner_handle oh;
+	enum nlm4_stats nlm_err;
 	uint32_t xid;
 	int error;
 
@@ -1000,6 +1004,7 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 
 	for (;;) {
 		nlm_rpc_t *rpcp;
+		struct nlm4_testres res;
 		enum clnt_stat stat;
 
 		error = nlm_host_get_rpc(hostp, vers, &rpcp);
@@ -1019,8 +1024,10 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 		}
 
 		DTRACE_PROBE1(test__res, enum nlm4_stats, res.stat.stat);
+		nlm_err = res.stat.stat;
+		bcopy(&res.stat.nlm4_testrply_u.holder, &h, sizeof (h));
 		xdr_free((xdrproc_t)xdr_nlm4_testres, (void *)&res);
-		if (res.stat.stat == nlm4_denied_grace_period) {
+		if (nlm_err == nlm4_denied_grace_period) {
 			error = nlm_host_wait_grace(hostp);
 			if (error != 0)
 				return (error);
@@ -1031,25 +1038,24 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 		break;
 	}
 
-	switch (res.stat.stat) {
+	switch (nlm_err) {
 	case nlm4_granted:
 		flp->l_type = F_UNLCK;
 		error = 0;
 		break;
 
 	case nlm4_denied:
-		h = &res.stat.nlm4_testrply_u.holder;
-		flp->l_start = h->l_offset;
-		flp->l_len = h->l_len;
-		flp->l_pid = h->svid;
-		flp->l_type = (h->exclusive) ? F_WRLCK : F_RDLCK;
+		flp->l_start = h.l_offset;
+		flp->l_len = h.l_len;
+		flp->l_pid = h.svid;
+		flp->l_type = (h.exclusive) ? F_WRLCK : F_RDLCK;
 		flp->l_whence = SEEK_SET;
 		flp->l_sysid = 0;
 		error = 0;
 		break;
 
 	default:
-		error = nlm_map_status(res.stat.stat);
+		error = nlm_map_status(nlm_err);
 		break;
 	}
 
@@ -1186,9 +1192,9 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 	int vers, int reclaim)
 {
 	struct nlm4_shareargs args;
-	struct nlm4_shareres res;
 	struct nlm_owner_handle oh;
 	struct nlm_globals *g;
+	enum nlm4_stats nlm_err;
 	uint32_t xid;
 	int error;
 
@@ -1205,6 +1211,7 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 
 	for (;;) {
 		nlm_rpc_t *rpcp;
+		struct nlm4_shareres res;
 		enum clnt_stat stat;
 
 		error = nlm_host_get_rpc(host, vers, &rpcp);
@@ -1223,9 +1230,10 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 			return (error);
 		}
 
-		DTRACE_PROBE1(share__res, enum nlm4_stat, res.stat);
+		DTRACE_PROBE1(share__res, enum nlm4_stats, res.stat);
+		nlm_err = res.stat;
 		xdr_free((xdrproc_t)xdr_nlm4_shareres, (void *)&res);
-		if (res.stat == nlm4_denied_grace_period) {
+		if (nlm_err == nlm4_denied_grace_period) {
 			if (args.reclaim)
 				return (ENOLCK);
 
@@ -1239,7 +1247,7 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 		break;
 	}
 
-	switch (res.stat) {
+	switch (nlm_err) {
 	case nlm4_granted:
 		error = 0;
 		break;
@@ -1267,8 +1275,8 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 	struct nlm_host *host, struct netobj *fh, int vers)
 {
 	struct nlm4_shareargs args;
-	struct nlm4_shareres res;
 	struct nlm_owner_handle oh;
+	enum nlm4_stats nlm_err;
 	uint32_t xid;
 	int error;
 
@@ -1282,6 +1290,7 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 
 	for (;;) {
 		nlm_rpc_t *rpcp;
+		struct nlm4_shareres res;
 		enum clnt_stat stat;
 
 		error = nlm_host_get_rpc(host, vers, &rpcp);
@@ -1300,9 +1309,10 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 			return (error);
 		}
 
-		DTRACE_PROBE1(unshare__res, enum nlm4_stat, res.stat);
+		DTRACE_PROBE1(unshare__res, enum nlm4_stats, res.stat);
+		nlm_err = res.stat;
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
-		if (res.stat == nlm4_denied_grace_period) {
+		if (nlm_err == nlm4_denied_grace_period) {
 			error = nlm_host_wait_grace(host);
 			if (error != 0)
 				return (error);
@@ -1313,7 +1323,7 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 		break;
 	}
 
-	switch (res.stat) {
+	switch (nlm_err) {
 	case nlm4_granted:
 		error = 0;
 		break;
@@ -1447,7 +1457,7 @@ nlm_map_clnt_stat(enum clnt_stat stat)
 }
 
 static int
-nlm_map_status(nlm4_stats stat)
+nlm_map_status(enum nlm4_stats stat)
 {
 	switch (stat) {
 	case nlm4_granted:
