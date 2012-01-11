@@ -705,9 +705,6 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		nlm_host_rele_rpc(hostp, rpcp);
 
 		if (stat != RPC_SUCCESS) {
-			if (stat == RPC_PROCUNAVAIL)
-				nlm_host_invalidate_binding(hostp);
-
 			error = EINVAL;
 			continue;
 		}
@@ -842,9 +839,6 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 
 		DTRACE_PROBE1(cancel__rloop_end, enum clnt_stat, stat);
 		if (stat != RPC_SUCCESS) {
-			if (stat == RPC_PROCUNAVAIL)
-				nlm_host_invalidate_binding(hostp);
-
 			delay(SEC_TO_TICK(10));
 			error = EAGAIN;
 			continue;
@@ -928,9 +922,6 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
 		nlm_host_rele_rpc(hostp, rpcp);
 
 		if (stat != RPC_SUCCESS) {
-			if (stat == RPC_PROCUNAVAIL)
-				nlm_host_invalidate_binding(hostp);
-
 			error = EINVAL;
 			continue;
 		}
@@ -1013,9 +1004,6 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 		nlm_host_rele_rpc(hostp, rpcp);
 
 		if (stat != RPC_SUCCESS) {
-			if (stat == RPC_PROCUNAVAIL)
-				nlm_host_invalidate_binding(hostp);
-
 			error = EINVAL;
 			continue;
 		}
@@ -1266,9 +1254,6 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 		nlm_host_rele_rpc(host, rpcp);
 
 		if (stat != RPC_SUCCESS) {
-			if (stat == RPC_PROCUNAVAIL)
-				nlm_host_invalidate_binding(host);
-
 			error = EINVAL;
 			continue;
 		}
@@ -1359,9 +1344,6 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 		nlm_host_rele_rpc(host, rpcp);
 
 		if (stat != RPC_SUCCESS) {
-			if (stat == RPC_PROCUNAVAIL)
-				nlm_host_invalidate_binding(host);
-
 			error = EINVAL;
 			continue;
 		}

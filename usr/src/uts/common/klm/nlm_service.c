@@ -322,15 +322,11 @@ out:
 			/* i.e. nlm_test_res_4_cb */
 			stat = (*cb)(resp, NULL, rpcp->nr_handle);
 			if (stat != RPC_SUCCESS) {
-				if (stat == RPC_PROCUNAVAIL) {
-					nlm_host_invalidate_binding(host);
-				} else {
-					struct rpc_err err;
+				struct rpc_err err;
 
-					CLNT_GETERR(rpcp->nr_handle, &err);
-					NLM_ERR("NLM: do_test CB, stat=%d err=%d\n",
-					    stat, err.re_errno);
-				}
+				CLNT_GETERR(rpcp->nr_handle, &err);
+				NLM_ERR("NLM: do_test CB, stat=%d err=%d\n",
+				    stat, err.re_errno);
 			}
 
 			nlm_host_rele_rpc(host, rpcp);
@@ -510,15 +506,11 @@ doreply:
 			/* i.e. nlm_lock_res_1_cb */
 			stat = (*res_cb)(resp, NULL, rpcp->nr_handle);
 			if (stat != RPC_SUCCESS) {
-				if (stat == RPC_PROCUNAVAIL) {
-					nlm_host_invalidate_binding(host);
-				} else {
-					struct rpc_err err;
+				struct rpc_err err;
 
-					CLNT_GETERR(rpcp->nr_handle, &err);
-					NLM_ERR("NLM: do_lock CB, stat=%d err=%d\n",
-					    stat, err.re_errno);
-				}
+				CLNT_GETERR(rpcp->nr_handle, &err);
+				NLM_ERR("NLM: do_lock CB, stat=%d err=%d\n",
+				    stat, err.re_errno);
 			}
 
 			nlm_host_rele_rpc(host, rpcp);
@@ -622,14 +614,11 @@ nlm_block(
 	args.alock	= lockargs->alock;
 	stat = (*grant_cb)(&args, NULL, rpcp->nr_handle);
 	if (stat != RPC_SUCCESS) {
-		if (stat == RPC_PROCUNAVAIL) {
-			nlm_host_invalidate_binding(host);
-		} else {
-			struct rpc_err err;
-			CLNT_GETERR(rpcp->nr_handle, &err);
-			NLM_ERR("NLM: grant CB, stat=%d err=%d\n",
-			    stat, err.re_errno);
-		}
+		struct rpc_err err;
+
+		CLNT_GETERR(rpcp->nr_handle, &err);
+		NLM_ERR("NLM: grant CB, stat=%d err=%d\n",
+		    stat, err.re_errno);
 	}
 
 	nlm_host_rele_rpc(host, rpcp);
@@ -720,14 +709,11 @@ out:
 			/* i.e. nlm_cancel_res_4_cb */
 			stat = (*cb)(resp, NULL, rpcp->nr_handle);
 			if (stat != RPC_SUCCESS) {
-				if (stat == RPC_PROCUNAVAIL) {
-					nlm_host_invalidate_binding(host);
-				} else {
-					struct rpc_err err;
-					CLNT_GETERR(rpcp->nr_handle, &err);
-					NLM_ERR("NLM: do_cancel CB, stat=%d err=%d\n",
-					    stat, err.re_errno);
-				}
+				struct rpc_err err;
+
+				CLNT_GETERR(rpcp->nr_handle, &err);
+				NLM_ERR("NLM: do_cancel CB, stat=%d err=%d\n",
+				    stat, err.re_errno);
 			}
 
 			nlm_host_rele_rpc(host, rpcp);
@@ -816,15 +802,11 @@ out:
 			/* i.e. nlm_unlock_res_4_cb */
 			stat = (*cb)(resp, NULL, rpcp->nr_handle);
 			if (stat != RPC_SUCCESS) {
-				if (stat == RPC_PROCUNAVAIL) {
-					nlm_host_invalidate_binding(host);
-				} else {
-					struct rpc_err err;
+				struct rpc_err err;
 
-					CLNT_GETERR(rpcp->nr_handle, &err);
-					NLM_ERR("NLM: do_unlock CB, stat=%d err=%d\n",
-					    stat, err.re_errno);
-				}
+				CLNT_GETERR(rpcp->nr_handle, &err);
+				NLM_ERR("NLM: do_unlock CB, stat=%d err=%d\n",
+				    stat, err.re_errno);
 			}
 
 			nlm_host_rele_rpc(host, rpcp);
@@ -911,15 +893,11 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 			/* i.e. nlm_granted_res_4_cb */
 			stat = (*cb)(resp, NULL, rpcp->nr_handle);
 			if (stat != RPC_SUCCESS) {
-				if (stat == RPC_PROCUNAVAIL) {
-					nlm_host_invalidate_binding(host);
-				} else {
-					struct rpc_err err;
+				struct rpc_err err;
 
-					CLNT_GETERR(rpcp->nr_handle, &err);
-					NLM_ERR("NLM: do_grantd CB, stat=%d err=%d\n",
-					    stat, err.re_errno);
-				}
+				CLNT_GETERR(rpcp->nr_handle, &err);
+				NLM_ERR("NLM: do_grantd CB, stat=%d err=%d\n",
+				    stat, err.re_errno);
 			}
 
 			nlm_host_rele_rpc(host, rpcp);

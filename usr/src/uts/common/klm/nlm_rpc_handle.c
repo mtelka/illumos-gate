@@ -46,8 +46,9 @@
 
 static struct kmem_cache *nlm_rpch_cache = NULL;
 
-static int nlm_rpch_ctor(void *, void *, int);
-static void nlm_rpch_dtor(void *, void *);
+static int nlm_rpch_ctor(void *datap, void *cdrarg, int kmflags);
+static void nlm_rpch_dtor(void *datap, void *cdrarg);
+static void destroy_rpch(nlm_rpc_t *rpcp);
 
 static nlm_rpc_t *
 get_nlm_rpc_fromcache(struct nlm_host *hostp, int vers)
@@ -55,6 +56,7 @@ get_nlm_rpc_fromcache(struct nlm_host *hostp, int vers)
 	nlm_rpc_t *rpcp;
 	bool_t found = FALSE;
 
+	ASSERT(MUTEX_HELD(&hostp->nh_lock));
 	if (TAILQ_EMPTY(&hostp->nh_rpchc))
 		return (NULL);
 
@@ -125,10 +127,18 @@ refresh_nlm_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
 
 	if (ret == 0) {
 		enum clnt_stat stat;
-		NLM_WARN("Call null proc\n");
+
+		/*
+		 * Check whether host's RPC binding is still
+		 * fresh, i.e. if remote program is still sits
+		 * on the same port we assume. Call NULL proc
+		 * to do it.
+		 */
 		stat = nlm_null_rpc(rpcp->nr_handle, NULL);
-		NLM_WARN("result %d\n", stat);
+		if (stat == RPC_PROCUNAVAIL)
+			ret = ESTALE;
 	}
+
 	return (ret);
 }
 
@@ -154,6 +164,7 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 	 * See comments to enum nlm_rpcb_state for more
 	 * details.
 	 */
+again:
 	while (hostp->nh_rpcb_state != NRPCB_UPDATED) {
 		if (hostp->nh_rpcb_state == NRPCB_UPDATE_INPROGRESS) {
 			rc = cv_wait_sig(&hostp->nh_rpcb_cv, &hostp->nh_lock);
@@ -199,14 +210,20 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 	 */
 	rc = refresh_nlm_rpc(hostp, rpcp);
 	if (rc != 0) {
-		/*
-		 * Just put handle back to the cache in hope
-		 * that it will be reinitialized later wihout
-		 * errors by somebody else...
-		 */
-		mutex_enter(&hostp->nh_lock);
-		nlm_host_rele_rpc(hostp, rpcp);
-		mutex_exit(&hostp->nh_lock);
+		if (rc == ESTALE) {
+			/*
+			 * Host's RPC binding is stale, we have
+			 * to update it. Put the RPC handle back
+			 * to the cache and mark the host as
+			 * "need update".
+			 */
+			mutex_enter(&hostp->nh_lock);
+			hostp->nh_rpcb_state = NRPCB_NEED_UPDATE;
+			nlm_host_rele_rpc(hostp, rpcp);
+			goto again;
+		}
+
+		destroy_rpch(rpcp);
 		return (rc);
 	}
 
@@ -253,7 +270,7 @@ nlm_rpc_init(void)
 void
 nlm_rpc_cache_destroy(struct nlm_host *hostp)
 {
-	nlm_rpc_t *rpcp, *rpcp_next;
+	nlm_rpc_t *rpcp;
 
 	/*
 	 * There's no need to lock host's mutex here,
@@ -262,14 +279,9 @@ nlm_rpc_cache_destroy(struct nlm_host *hostp)
 	 * resources host owns are already cleaned up.
 	 * So there shouldn't be any raises.
 	 */
-	TAILQ_FOREACH_SAFE(rpcp, rpcp_next, &hostp->nh_rpchc, nr_link) {
-		if (rpcp->nr_handle != NULL) {
-			AUTH_DESTROY(rpcp->nr_handle->cl_auth);
-			CLNT_DESTROY(rpcp->nr_handle);
-			rpcp->nr_handle = NULL;
-		}
-
-		kmem_cache_free(nlm_rpch_cache, rpcp);
+	while ((rpcp = TAILQ_FIRST(&hostp->nh_rpchc)) != NULL) {
+		TAILQ_REMOVE(&hostp->nh_rpchc, rpcp, nr_link);
+		destroy_rpch(rpcp);
 	}
 }
 
@@ -287,4 +299,16 @@ nlm_rpch_dtor(void *datap, void *cdrarg)
 {
 	nlm_rpc_t *rpcp = (nlm_rpc_t *)datap;
 	ASSERT(rpcp->nr_handle == NULL);
+}
+
+static void
+destroy_rpch(nlm_rpc_t *rpcp)
+{
+	if (rpcp->nr_handle != NULL) {
+		AUTH_DESTROY(rpcp->nr_handle->cl_auth);
+		CLNT_DESTROY(rpcp->nr_handle);
+		rpcp->nr_handle = NULL;
+	}
+
+	kmem_cache_free(nlm_rpch_cache, rpcp);
 }

@@ -436,7 +436,6 @@ void nlm_globals_unregister(struct nlm_globals *g);
 extern int nlm_host_get_rpc(struct nlm_host *hostp,
     int vers, nlm_rpc_t **rpcpp);
 extern void nlm_host_rele_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp);
-extern void nlm_host_invalidate_binding(struct nlm_host *hostp);
 
 
 /* nlm_client.c */
