@@ -170,6 +170,9 @@ static struct nlm_host *nlm_host_find_locked(struct nlm_globals *g,
  */
 static void nlm_slock_clnt_destroy(nlm_slock_clnt_t *nscp);
 static void nlm_cancel_all_wait_locks(struct nlm_globals *g);
+static nlm_slock_srv_t *nlm_slock_srv_find_locked(struct nlm_host *hostp,
+    vnode_t *vp, struct flock64 *flp);
+
 
 /*
  * Acquire the next sysid for remote locks not handled by the NLM.
@@ -684,75 +687,12 @@ nlm_lock_callback(flk_cb_when_t when, void *arg)
 #endif
 
 /*
- * Free an async lock request. The request must have been removed from
- * any list.
- */
-void
-nlm_free_async_lock(struct nlm_async_lock *af)
-{
-	/*
-	 * Free an async lock.
-	 */
-#if 0
-	if (af->af_rpc)
-		CLNT_RELEASE(af->af_rpc);
-	xdr_free((xdrproc_t)xdr_nlm4_testargs, (void *)&af->af_granted);
-#endif
-	kmem_free(af, sizeof (*af));
-}
-
-/*
- * Cancel our async request - this must be called with
- * af->nh_host->nh_lock held.
- */
-int
-nlm_cancel_async_lock(struct nlm_async_lock *af)
-{
-	struct flock64 fl;
-	struct nlm_host *host;
-	vnode_t *vp;
-	int error, flags;
-
-	/* Save these while locked. */
-	host = af->af_host;
-	vp = af->af_vp;
-	fl = af->af_fl;		/* struct! */
-
-	ASSERT(MUTEX_HELD(&host->nh_lock));
-
-	mutex_exit(&host->nh_lock);
-
-	/*
-	 * BSD: VOP_ADVLOCKASYNC(af->af_vp, NULL, F_CANCEL, &af->af_fl,
-	 * F_REMOTE, NULL, &af->af_cookie);
-	 */
-
-	/*
-	 * Interesting os/flock.c feature:
-	 * Blocked F_SETLKW calls can be cancelled by an
-	 * F_UNLCK of exactly the same flock information.
-	 */
-	fl.l_type = F_UNLCK;
-	flags = F_REMOTELOCK | FREAD | FWRITE;
-	error = VOP_FRLOCK(vp, F_SETLK, &fl, flags,
-	    (u_offset_t)0, NULL, CRED(), NULL);
-
-	mutex_enter(&host->nh_lock);
-
-	/*
-	 * This af is removed from the list by the
-	 * blocking thread (see nlm_block).
-	 */
-	return (error);
-}
-
-/*
  * Cancel pending blocked locks for this client.
  */
 static void
 nlm_destroy_client_pending(struct nlm_host *host)
 {
-	struct nlm_async_lock *af, *next_af;
+	nlm_slock_srv_t *nssp, *next_nssp;
 
 	ASSERT(MUTEX_HELD(&host->nh_lock));
 
@@ -760,11 +700,13 @@ nlm_destroy_client_pending(struct nlm_host *host)
 	 * Cancel all blocked lock requests.
 	 * The blocked threads will cleanup.
 	 */
-	af = TAILQ_FIRST(&host->nh_pending);
-	while (af != NULL) {
-		next_af = TAILQ_NEXT(af, af_link);
-		(void) nlm_cancel_async_lock(af);
-		af = next_af;
+	nssp = TAILQ_FIRST(&host->nh_srv_slocks);
+	while (nssp != NULL) {
+		next_nssp = TAILQ_NEXT(nssp, nss_link);
+#if 0
+		(void) nlm_cancel_async_lock(nssp);
+#endif
+		nssp = next_nssp;
 	}
 }
 
@@ -823,7 +765,7 @@ nlm_host_destroy(struct nlm_host *hostp)
 {
 	ASSERT(hostp->nh_name != NULL);
 	ASSERT(hostp->nh_netid != NULL);
-	ASSERT(TAILQ_EMPTY(&hostp->nh_pending));
+	ASSERT(TAILQ_EMPTY(&hostp->nh_srv_slocks));
 
 	strfree(hostp->nh_name);
 	strfree(hostp->nh_netid);
@@ -995,7 +937,7 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	    sizeof (struct nlm_vnode),
 	    offsetof(struct nlm_vnode, nv_tree));
 
-	TAILQ_INIT(&host->nh_pending);
+	TAILQ_INIT(&host->nh_srv_slocks);
 	TAILQ_INIT(&host->nh_rpchc);
 
 	return (host);
@@ -1557,6 +1499,98 @@ nlm_slock_clnt_destroy(nlm_slock_clnt_t *nscp)
 	kmem_free(nscp->nsc_fh.n_bytes, nscp->nsc_fh.n_len);
 	cv_destroy(&nscp->nsc_cond);
 	kmem_free(nscp, sizeof (*nscp));
+}
+
+/*
+ * Create and register new unique server-side sleeping lock.
+ * If such a lock has been registered already the function
+ * returns NULL.
+ */
+nlm_slock_srv_t *
+nlm_slock_srv_create(struct nlm_host *hostp,
+    vnode_t *vp, struct flock64 *flp)
+{
+	nlm_slock_srv_t *nssp, *tmp_nssp;
+
+	nssp = kmem_zalloc(sizeof (*nssp), KM_SLEEP);
+	nssp->nss_host = hostp;
+	nssp->nss_vp = vp;
+	nssp->nss_fl = *flp;
+
+	mutex_enter(&hostp->nh_lock);
+
+	/*
+	 * Check if other thead has already registered
+	 * the same sleeping lock.
+	 */
+	tmp_nssp = nlm_slock_srv_find_locked(hostp, vp, flp);
+	if (tmp_nssp != NULL) {
+		/* Found a duplicate, free allocated lock */
+		mutex_exit(&hostp->nh_lock);
+		kmem_free(nssp, sizeof (*nssp));
+		nssp = NULL;
+	} else {
+		/* Not found. Insert our new entry. */
+		TAILQ_INSERT_TAIL(&hostp->nh_srv_slocks, nssp, nss_link);
+		mutex_exit(&hostp->nh_lock);
+	}
+
+	return (nssp);
+}
+
+/*
+ * Deregister and free server-side sleeping lock.
+ */
+void
+nlm_slock_srv_destroy(struct nlm_host *hostp, nlm_slock_srv_t *nssp)
+{
+	mutex_enter(&hostp->nh_lock);
+	TAILQ_REMOVE(&hostp->nh_srv_slocks, nssp, nss_link);
+	mutex_exit(&hostp->nh_lock);
+
+	kmem_free(nssp, sizeof (*nssp));
+}
+
+/*
+ * Lookup server-side sleeping lock
+ * by given file lock and vnode.
+ */
+nlm_slock_srv_t *
+nlm_slock_srv_find(struct nlm_host *hostp,
+    vnode_t *vp, struct flock64 *flp)
+{
+	nlm_slock_srv_t *nssp;
+
+	mutex_enter(&hostp->nh_lock);
+	nssp = nlm_slock_srv_find_locked(hostp, vp, flp);
+	mutex_exit(&hostp->nh_lock);
+
+	return (nssp);
+}
+
+/*
+ * Find server-side sleeping lock by given vnode
+ * and file lock structure.
+ * NOTE: host's lock must be acquired.
+ */
+static nlm_slock_srv_t *
+nlm_slock_srv_find_locked(struct nlm_host *hostp,
+    vnode_t *vp, struct flock64 *flp)
+{
+	nlm_slock_srv_t *nssp = NULL;
+
+	ASSERT(MUTEX_HELD(&hostp->nh_lock));
+	TAILQ_FOREACH(nssp, &hostp->nh_srv_slocks, nss_link) {
+		if (nssp->nss_vp == vp &&
+		    nssp->nss_fl.l_start	== flp->l_start &&
+		    nssp->nss_fl.l_len == flp->l_len &&
+		    nssp->nss_fl.l_pid == flp->l_pid &&
+		    nssp->nss_fl.l_type == flp->l_type) {
+			break;
+		}
+	}
+
+	return (nssp);
 }
 
 /*

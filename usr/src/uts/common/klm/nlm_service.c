@@ -461,16 +461,7 @@ nlm_block(
 	int error, flags;
 	enum clnt_stat stat;
 	nlm_rpc_t *rpcp;
-
-	struct nlm_async_lock *taf, *af = NULL;
-
-	/*
-	 * Now we're ready to block.
-	 *
-	 * XXX: Do we need to setup an flk_cb?
-	 * flk_callback_t flk_cb;
-	 * flk_init_callback(&flk_cb, ...);
-	 */
+	nlm_slock_srv_t *nssp, *tmp_nssp = NULL;
 
 	/*
 	 * Keep a list of blocked locks on nh_pending, and use it
@@ -481,64 +472,35 @@ nlm_block(
 	 * then if we don't insert, free the new one.
 	 * Caller already has vp held.
 	 */
-	af = kmem_zalloc(sizeof (*af), KM_SLEEP);
-	af->af_host = host;
-	af->af_vp = nv->nv_vp;
-	af->af_fl = *fl;	/* struct */
-
-	mutex_enter(&host->nh_lock);
-
-	/*
-	 * Not comparing l_sysid because this list is
-	 * maintained per-host (all the same sysid).
-	 */
-	TAILQ_FOREACH(taf, &host->nh_pending, af_link) {
-		if (taf->af_vp		== af->af_vp &&
-		    taf->af_fl.l_start	== af->af_fl.l_start &&
-		    taf->af_fl.l_len	== af->af_fl.l_len &&
-		    taf->af_fl.l_pid	== af->af_fl.l_pid &&
-		    taf->af_fl.l_type	== af->af_fl.l_type) {
-			break;
-		}
-	}
-	if (taf == NULL) {
-		/* Not found. Insert our new entry. */
-		TAILQ_INSERT_TAIL(&host->nh_pending, af, af_link);
-	}
-
-	mutex_exit(&host->nh_lock);
-
-	if (taf != NULL) {
+	nssp = nlm_slock_srv_create(host, nv->nv_vp, fl);
+	if (nssp == NULL) {
 		/*
-		 * Lock is already pending.  Let the other
-		 * thread do the granted callback, etc.
+		 * There's already the same sleeping lock. Let
+		 * other thread do the granted callback, etc.
 		 */
-		goto out;
+		return;
 	}
 
 	/* BSD: VOP_ADVLOCK(vp, NULL, F_SETLK, fl, F_REMOTE); */
 	flags = F_REMOTELOCK | FREAD | FWRITE;
-	error = VOP_FRLOCK(af->af_vp, F_SETLKW, &af->af_fl,
+	error = VOP_FRLOCK(nssp->nss_vp, F_SETLKW, &nssp->nss_fl,
 	    flags, (u_offset_t)0, NULL, CRED(), NULL);
 
 	/*
 	 * Done waiting (no longer pending)
 	 */
-	mutex_enter(&host->nh_lock);
-	TAILQ_REMOVE(&host->nh_pending, af, af_link);
-	mutex_exit(&host->nh_lock);
-
+	nlm_slock_srv_destroy(host, nssp);
 	if (error != 0) {
 		/*
 		 * We failed getting the lock, but have no way to
 		 * tell the client about that.  Let 'em time out.
 		 */
-		goto out;
+		return;
 	}
 
 	error = nlm_host_get_rpc(host, vers, &rpcp);
 	if (error != 0)
-		goto out;
+		return;
 
 	/*
 	 * Do the "granted" call-back to the client.
@@ -559,9 +521,6 @@ nlm_block(
 	}
 
 	nlm_host_rele_rpc(host, rpcp);
-
-out:
-	nlm_free_async_lock(af);
 }
 
 /*
@@ -580,10 +539,9 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	char *netid;
 	int error;
 	struct flock64 fl;
-	struct nlm_async_lock *af;
+	nlm_slock_srv_t *nssp = NULL;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
-
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
@@ -611,36 +569,26 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	nlm_init_flock(&fl, &argp->alock, host->nh_sysid);
 	fl.l_type = (argp->exclusive) ? F_WRLCK : F_RDLCK;
 
+	nssp = nlm_slock_srv_find(host, nv->nv_vp, &fl);
+	fl.l_type = F_UNLCK;
+	if (nssp != NULL) {
+		/*
+		 * Registered sleeping lock was found.
+		 * Just destroy it, so that nobody can
+		 * reuse it.
+		 */
+		nlm_slock_srv_destroy(host, nssp);
+	}
+
 	/*
-	 * First we need to try and find the async lock request - if
-	 * there isn't one, we give up and return nlm4_denied.
+	 * Sleeping lock we're trying to cancel could
+	 * already be applied. In this case we have to try
+	 * to ask our local os/flock manager to unlock it.
 	 */
-	mutex_enter(&host->nh_lock);
-
-	TAILQ_FOREACH(af, &host->nh_pending, af_link) {
-		if (af->af_fl.l_start == fl.l_start &&
-		    af->af_fl.l_len == fl.l_len &&
-		    af->af_fl.l_pid == fl.l_pid &&
-		    af->af_fl.l_type == fl.l_type) {
-			break;
-		}
-	}
-
-	if (!af) {
-		mutex_exit(&host->nh_lock);
-		resp->stat.stat = nlm4_denied;
-		goto out;
-	}
-
-	error = nlm_cancel_async_lock(af);
-
-	if (error) {
-		resp->stat.stat = nlm4_denied;
-	} else {
-		resp->stat.stat = nlm4_granted;
-	}
-
-	mutex_exit(&host->nh_lock);
+	error = VOP_FRLOCK(nv->nv_vp, F_SETLK, &fl,
+	    F_REMOTELOCK | FREAD | FWRITE,
+	    (u_offset_t)0, NULL, CRED(), NULL);
+	resp->stat.stat = ((error != 0) ? nlm4_denied : nlm4_granted);
 
 out:
 	/*
