@@ -325,6 +325,12 @@ struct nlm_owner_handle {
 #define NLM_RPC_FRESH_PERIOD (2 * 60)
 
 /*
+ * Number retries NLM RPC call is repeatead in case of failure.
+ * (used in case of conectionless transport).
+ */
+#define NLM_RPC_RETRIES 5
+
+/*
  * RPC handles cache: nlm_rpc_handle.c
  */
 

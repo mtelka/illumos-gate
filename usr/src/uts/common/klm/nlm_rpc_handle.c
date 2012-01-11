@@ -123,10 +123,11 @@ refresh_nlm_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
 	mutex_exit(&hostp->nh_lock);
 	if (rpcp->nr_handle == NULL) {
 		ret = clnt_tli_kcreate(&hostp->nh_knc, &hostp->nh_addr,
-		    NLM_PROG, rpcp->nr_vers, 0, 0, CRED(), &rpcp->nr_handle);
+		    NLM_PROG, rpcp->nr_vers, 0, NLM_RPC_RETRIES,
+		    CRED(), &rpcp->nr_handle);
 	} else {
 		ret = clnt_tli_kinit(rpcp->nr_handle, &hostp->nh_knc,
-		    &hostp->nh_addr, 0, 0, CRED());
+		    &hostp->nh_addr, 0, NLM_RPC_RETRIES, CRED());
 	}
 
 	mutex_enter(&hostp->nh_lock);
