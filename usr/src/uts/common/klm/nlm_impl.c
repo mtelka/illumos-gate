@@ -71,13 +71,6 @@
 #include "nlm_impl.h"
 
 /*
- * If a host is inactive (and holds no locks)
- * for this amount of seconds, we consider it
- * unused, so that we unmonitor and destroy it.
- */
-#define	NLM_IDLE_TIMEOUT	300
-
-/*
  * Number of attempts NLM tries to obtain RPC binding
  * of local statd.
  */
@@ -276,7 +269,7 @@ nlm_gc(struct nlm_globals *g)
 	struct nlm_host *hostp;
 	clock_t now, idle_period;
 
-	idle_period = SEC_TO_TICK(NLM_IDLE_TIMEOUT);
+	idle_period = SEC_TO_TICK(g->cn_idle_tmo);
 	mutex_enter(&g->lock);
 	for (;;) {
 		/*
@@ -355,7 +348,7 @@ nlm_gc(struct nlm_globals *g)
 			 * 1) Host hasn't any locks or share reservations
 			 * 2) Host is unused
 			 * 3) Host wasn't touched by anyone at least for
-			 *    NLM_IDLE_TIMEOUT seconds.
+			 *    g->cn_idle_tmo seconds.
 			 *
 			 * So, now we can destroy it.
 			 */
@@ -1482,7 +1475,7 @@ nlm_host_release(struct nlm_globals *g, struct nlm_host *hostp)
 	 * and move it to the idle hosts LRU list.
 	 */
 	hostp->nh_idle_timeout = ddi_get_lbolt() +
-		SEC_TO_TICK(NLM_IDLE_TIMEOUT);
+		SEC_TO_TICK(g->cn_idle_tmo);
 
 	TAILQ_INSERT_TAIL(&g->nlm_idle_hosts, hostp, nh_link);
 	mutex_exit(&g->lock);
