@@ -266,14 +266,19 @@ nlm_frlock_getlk(struct nlm_host *hostp, vnode_t *vp,
 	 * Check local (cached) locks first.
 	 * If we find one, no need for RPC.
 	 */
-	error = nlm_local_getlk(vp, flkp, flags);
+	flk0 = *flkp;
+	flk0.l_pid = curproc->p_pid;
+	error = nlm_local_getlk(vp, &flk0, flags);
 	if (error != 0)
 		return (error);
-	if (flkp->l_type != F_UNLCK)
+	if (flk0.l_type != F_UNLCK) {
+		*flkp = flk0;
 		return (0);
+	}
 
 	/* Not found locally.  Try remote. */
 	flk0 = *flkp;
+	flk0.l_pid = curproc->p_pid;
 	error = convoff(vp, &flk0, 0, (offset_t)offset);
 	if (error != 0)
 		return (error);
@@ -1029,7 +1034,7 @@ nlm_init_lock(struct nlm4_lock *lock,
 	lock->fh.n_bytes = fh->n_bytes;
 	lock->oh.n_len = sizeof (*oh);
 	lock->oh.n_bytes = (void *)oh;
-	lock->svid = curproc->p_pid;
+	lock->svid = fl->l_pid;
 	lock->l_offset = fl->l_start;
 	lock->l_len = fl->l_len;
 }
