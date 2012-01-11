@@ -717,7 +717,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 
 	NLM_DEBUG(NLM_LL3, "nlm_do_unlock(): name = %s sysid = %d\n", name, sysid);
 
-	nv = nlm_vnode_findcreate(host, &argp->alock.fh);
+	nv = nlm_vnode_find(host, &argp->alock.fh);
 	if (nv == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto out;

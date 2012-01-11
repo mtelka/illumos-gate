@@ -455,8 +455,11 @@ extern int nlm_host_get_sysid(struct nlm_host *host);
  */
 extern int nlm_host_get_state(struct nlm_host *host);
 
-struct nlm_vnode *
-nlm_vnode_findcreate(struct nlm_host *host, struct netobj *n);
+
+struct nlm_vnode *nlm_vnode_find(struct nlm_host *hostp,
+	struct netobj *np);
+struct nlm_vnode * nlm_vnode_findcreate(struct nlm_host *hostp,
+    struct netobj *np);
 void nlm_vnode_release(struct nlm_host *host, struct nlm_vnode *nv);
 
 

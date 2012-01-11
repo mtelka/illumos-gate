@@ -297,59 +297,112 @@ nlm_svc_release_nsm(struct nlm_nsm *nsm)
  */
 
 /*
- * Find or create an nlm_vnode.
- * See comments at struct nlm_vnode def.
+ * Gets vnode from client netobject
+ * NOTE: Holds vnode.
  */
-struct nlm_vnode *
-nlm_vnode_findcreate(struct nlm_host *host, struct netobj *n)
+static vnode_t *
+nlm_netobj_to_vnode(struct netobj *np)
 {
 	fhandle_t *fhp;
-	vnode_t *vp;
-	struct nlm_vnode *nv, *new_nv;
 
 	/*
 	 * Get a vnode pointer for the given NFS file handle.
 	 * Note that it could be an NFSv2 for NFSv3 handle,
 	 * which means the size might vary.  (don't copy)
 	 */
-	if (n->n_len < sizeof (*fhp))
+	if (np->n_len < sizeof (*fhp))
 		return (NULL);
-	/* We know this is aligned (mem_alloc) */
-	/* LINTED: alignment */
-	fhp = (fhandle_t *)n->n_bytes;
-	vp = lm_fhtovp(fhp);
+
+	/* We know this is aligned (kmem_alloc) */
+	fhp = (fhandle_t *)np->n_bytes;
+	return (lm_fhtovp(fhp));
+}
+
+/*
+ * Finds nlm_vnode by given pointer to vnode_t.
+ * On success returns a pointer to nlm_vnode that was found,
+ * on error returns NULL.
+ *
+ * NOTE: hostp->nh_lock must be locked.
+ */
+static struct nlm_vnode *
+nlm_vnode_find_locked(struct nlm_host *hostp, const vnode_t *vp)
+{
+	struct nlm_vnode *nv;
+
+	ASSERT(MUTEX_HELD(&hostp->nh_lock));
+	TAILQ_FOREACH(nv, &hostp->nh_vnodes, nv_link)
+		if (nv->nv_vp == vp)
+			return (nv);
+
+	return (NULL);
+}
+
+/*
+ * Find nlm_vnode by given netobj
+ */
+struct nlm_vnode *
+nlm_vnode_find(struct nlm_host *hostp, struct netobj *np)
+{
+	struct nlm_vnode *nv;
+	vnode_t *vp;
+
+	vp = nlm_netobj_to_vnode(np);
 	if (vp == NULL)
 		return (NULL);
-	/* Note: VN_HOLD from fhtovp */
 
+	mutex_enter(&hostp->nh_lock);
+	nv = nlm_vnode_find_locked(hostp, vp);
+	if (nv == NULL)
+		VN_RELE(vp);
+
+	mutex_exit(&hostp->nh_lock);
+	return (nv);
+}
+
+/*
+ * Find or create an nlm_vnode.
+ * See comments at struct nlm_vnode def.
+ */
+struct nlm_vnode *
+nlm_vnode_findcreate(struct nlm_host *hostp, struct netobj *np)
+{
+	fhandle_t *fhp;
+	vnode_t *vp;
+	struct nlm_vnode *nv, *new_nv;
+
+	vp = nlm_netobj_to_vnode(np);
+	if (vp == NULL)
+		return (NULL);
+
+	mutex_enter(&hostp->nh_lock);
+	nv = nlm_vnode_find_locked(hostp, vp);
+	mutex_exit(&hostp->nh_lock);
+	if (nv != NULL)
+		return (nv);
+
+	/* nlm_vnode wasn't found, then create a new one */
 	/* XXX: maybe use a kmem_cache? */
 	new_nv = kmem_zalloc(sizeof (*new_nv), KM_SLEEP);
-
-	mutex_enter(&host->nh_lock);
-
-	TAILQ_FOREACH(nv, &host->nh_vnodes, nv_link) {
-		if (nv->nv_vp == vp)
-			break;
-	}
-	if (nv != NULL) {
-		/*
-		 * Found existing entry.  We already did a VN_HOLD
-		 * when we created this entry. Just bump refs.
-		 */
-		kmem_free(new_nv, sizeof (*new_nv));
-		nv->nv_refs++;
-		mutex_exit(&host->nh_lock);
-		/* Give up the hold from fhtovp */
-		VN_RELE(vp);
+	mutex_enter(&hostp->nh_lock);
+	nv = nlm_vnode_find_locked(hostp, vp);
+	if (nv == NULL) {
+		nv = new_nv;
+		nv->nv_refs = 1;
+		nv->nv_vp = vp;
+		TAILQ_INSERT_TAIL(&hostp->nh_vnodes, nv, nv_link);
+		mutex_exit(&hostp->nh_lock);
 		return (nv);
 	}
-	/* Add an entry. */
-	nv = new_nv;
-	nv->nv_refs = 1;
-	nv->nv_vp = vp;		/* Keep hold from fhtovp */
-	TAILQ_INSERT_TAIL(&host->nh_vnodes, nv, nv_link);
 
-	mutex_exit(&host->nh_lock);
+	/*
+	 * Found existing entry.  We already did a VN_HOLD
+	 * when we created this entry. Just bump refs.
+	 */
+	nv->nv_refs++;
+	mutex_exit(&hostp->nh_lock);
+	kmem_free(new_nv, sizeof (*new_nv));
+	VN_RELE(vp);
 
 	return (nv);
 }
