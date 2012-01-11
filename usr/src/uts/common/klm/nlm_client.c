@@ -78,7 +78,7 @@ static int nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
     struct netobj *fhp, struct flk_callback *flcb,
     int vers, bool_t do_block);
 
-static int nlm_init_lock(struct nlm4_lock *lock,
+static void nlm_init_lock(struct nlm4_lock *lock,
 	const struct flock64 *fl, struct netobj *fh,
 	struct nlm_owner_handle *oh);
 
@@ -682,9 +682,8 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 		intr = 0;
 
 	g = zone_getspecific(nlm_zone_key, curzone);
-	error = nlm_init_lock(&args.alock, fl, fh, &oh);
-	if (error)
-		return (error);
+	nlm_init_lock(&args.alock, fl, fh, &oh);
+
 	args.block = block;
 	args.exclusive = exclusive;
 	args.reclaim = xflags & NLM_X_RECLAIM;
@@ -941,11 +940,7 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *fl,
 	bzero(&args, sizeof (args));
 	bzero(&res, sizeof (res));
 
-	error = nlm_init_lock(&args.alock, fl, fh, &oh);
-	if (error)
-		return (error);
-
-	/* Update OH */
+	nlm_init_lock(&args.alock, fl, fh, &oh);
 	oh.oh_sysid = nlm_host_get_sysid(host);
 
 	for (;;) {
@@ -1031,9 +1026,7 @@ nlm_call_test(struct vnode *vp, struct flock64 *fl,
 
 	exclusive = (fl->l_type == F_WRLCK);
 
-	error = nlm_init_lock(&args.alock, fl, fh, &oh);
-	if (error)
-		return (error);
+	nlm_init_lock(&args.alock, fl, fh, &oh);
 	args.exclusive = exclusive;
 
 	/* Update OH */
@@ -1107,15 +1100,14 @@ nlm_call_test(struct vnode *vp, struct flock64 *fl,
 }
 
 
-static int
+static void
 nlm_init_lock(struct nlm4_lock *lock,
 	const struct flock64 *fl, struct netobj *fh,
 	struct nlm_owner_handle *oh)
 {
 
 	/* Caller converts to zero-base. */
-	ASSERT(fl->l_whence == SEEK_SET);
-
+	VERIFY(fl->l_whence == SEEK_SET);
 	bzero(lock, sizeof (*lock));
 	bzero(oh, sizeof (*oh));
 
@@ -1127,8 +1119,6 @@ nlm_init_lock(struct nlm4_lock *lock,
 	lock->svid = curproc->p_pid;
 	lock->l_offset = fl->l_start;
 	lock->l_len = fl->l_len;
-
-	return (0);
 }
 
 static int
