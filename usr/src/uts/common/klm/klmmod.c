@@ -215,14 +215,6 @@ lm_svc(struct lm_svc_args *args)
 	}
 
 	/*
-	 * Validate log level
-	 */
-	if ((args->debug < NLM_LL0) || (args->debug > NLM_LL3)) {
-		NLM_WARN("lm_svc: Unexpected loglevel %d\n", args->debug);
-		args->debug = NLM_LL0;
-	}
-
-	/*
 	 * Build knetconfig, checking arg values.
 	 * Also come up with the "netid" string.
 	 * (With some knowledge of /etc/netconfig)
@@ -299,7 +291,6 @@ lm_svc(struct lm_svc_args *args)
 		g->cn_idle_tmo  = args->timout;
 		g->grace_period = args->grace;
 		g->retrans_tmo  = args->retransmittimeout;
-		g->loglevel     = args->debug;
 
 		/* See nfs_sys.c (not yet per-zone) */
 		if (INGLOBALZONE(curproc)) {

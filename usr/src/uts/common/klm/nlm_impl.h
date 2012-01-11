@@ -43,6 +43,8 @@
 #include <sys/avl.h>
 
 #define	RPC_MSGOUT(args...)	cmn_err(CE_NOTE, args)
+#define	NLM_ERR(...)		cmn_err(CE_NOTE, __VA_ARGS__)
+#define	NLM_WARN(...)		cmn_err(CE_WARN, __VA_ARGS__)
 
 #ifndef	SEEK_SET
 #define	SEEK_SET	0
@@ -100,56 +102,13 @@ typedef enum {
 } nlm_run_status_t;
 
 /*
- * Per-zone NLM debug level.
- * NLM_LL0: no verbose output
- * NLM_LL1: verbose error messages
- * NLM_LL2: verbose debug output in monitor/unmonitor/recovery operations
- * NLM_LL3: verbose debug output in server functions
- *
- * NOTE: log level has sense only when NLM was compiled with DEBUG option.
- */
-typedef enum {
-	NLM_LL0 = 0,
-	NLM_LL1,
-	NLM_LL2,
-	NLM_LL3,
-} nlm_loglevel_t;
-
-/*
- * Data structures
- */
-
-/* XXX: temporary... */
-extern zone_key_t nlm_zone_key;
-
-/*
  * Locks:
  * (l)		locked by nh_lock
- * (s)		only accessed via server RPC which is single threaded XXX
- * (g)		locked by nlm_global_lock
+ * (s)		only accessed via server RPC which is single threaded
+ * (g)		locked by nlm_globals->lock
  * (c)		const until freeing
  * (a)		modified using atomic ops
  */
-/*
- * Debug level passed in from userland.
- */
-#ifdef DEBUG
-#define NLM_DEBUG(_level, ...)	  \
-	do { \
-		struct nlm_globals *__g; \
-		(__g) = zone_getspecific(nlm_zone_key, curzone); \
-		if ((__g)->loglevel >= (_level)) \
-			cmn_err(CE_CONT, __VA_ARGS__); \
-	} while (0)
-#else /* !DEBUG */
-#define NLM_DEBUG(_level, ...) ((void)0)
-#endif /* DEBUG */
-
-#define	NLM_ERR(...)	\
-	cmn_err(CE_NOTE, __VA_ARGS__)
-
-#define NLM_WARN(...) \
-	cmn_err(CE_WARN, __VA_ARGS__)
 
 /*
  * NLM sleeping lock request.
@@ -252,9 +211,6 @@ struct nlm_slock {
 TAILQ_HEAD(nlm_slock_list, nlm_slock);
 
 /*
- * NLM host.
- */
-/*
  * NLM RPC handle object.
  *
  * In kRPC subsystem it's unsafe to use one RPC handle by
@@ -304,6 +260,12 @@ enum nlm_rpcb_state {
 };
 
 /*
+ * NLM host flags
+ */
+#define NLM_NH_MONITORED   0x01
+#define NLM_NH_RECLAIM     0x02
+
+/*
  * NLM host object is the most major structure in NLM.
  * It identifies remote client or remote server or both.
  * NLM host object keep a track of all vnodes client/server
@@ -326,6 +288,8 @@ enum nlm_rpcb_state {
  *   nh_state: last seen host's state reported by NSM.
  *   nh_flags: ORed host flags.
  *   nh_idle_timeout: host idle timeout. When expired host is freed.
+ *   nh_recl_cv: condition variable used for reporting that reclamation
+ *               process is finished.
  *   nh_rpcb_cv: condition variable that is used to make sure
  *               that only one thread renews host's RPC binding.
  *   nh_rpcb_ustat: error code returned by RPC binding update operation.
@@ -348,6 +312,7 @@ struct nlm_host {
 	int32_t                    nh_state;
 	clock_t                    nh_idle_timeout;
 	uint8_t                    nh_flags;
+	kcondvar_t                 nh_recl_cv;
 	kcondvar_t                 nh_rpcb_cv;
 	enum clnt_stat             nh_rpcb_ustat;
 	enum nlm_rpcb_state        nh_rpcb_state;
@@ -356,13 +321,6 @@ struct nlm_host {
 	struct nlm_vhold_list      nh_vholds_list;
 };
 TAILQ_HEAD(nlm_host_list, nlm_host);
-
-/*
- * NLM host flags
- */
-#define NLM_NH_MONITORED   0x01
-#define NLM_NH_RECLAIM     0x02
-
 
 /*
  * nlm_nsm structure describes RPC client handle that can be
@@ -396,7 +354,6 @@ struct nlm_globals {
 	clock_t                     grace_threshold;
 	pid_t                       lockd_pid;
 	nlm_run_status_t            run_status;
-	nlm_loglevel_t              loglevel;
 	int32_t                     nsm_state;
 	kthread_t                  *nlm_gc_thread;
 	kcondvar_t                  nlm_gc_sched_cv;
@@ -432,9 +389,10 @@ struct nlm_owner_handle {
 #define NLM_RPC_RETRIES 5
 
 /*
- * Klmmod global R/W lock
+ * Klmmod global variables
  */
 extern krwlock_t lm_lck;
+extern zone_key_t nlm_zone_key;
 
 /*
  * NLM internal functions for initialization.
@@ -533,6 +491,7 @@ extern struct nlm_host * nlm_host_find(struct nlm_globals *g,
 extern struct nlm_host *nlm_host_find_by_sysid(struct nlm_globals *g,
     int sysid);
 void nlm_host_cancel_slocks(struct nlm_globals *, struct nlm_host *);
+int nlm_host_wait_grace(struct nlm_host *);
 
 /*
  * Register this NLM host with the local NSM so that we can be
@@ -642,12 +601,5 @@ void nlm_do_unshare(nlm4_shareargs *, nlm4_shareres *, struct svc_req *);
  * Free all locks associated with the hostname argp->name.
  */
 void nlm_do_free_all(nlm4_notify *, void *, struct svc_req *);
-
-/*
- * Interface from NFS client code to the NLM.
- */
-struct vop_advlock_args;
-struct vop_reclaim_args;
-extern int nlm_advlock(struct vop_advlock_args *ap);
 
 #endif	/* _NLM_NLM_H_ */

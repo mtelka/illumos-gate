@@ -67,7 +67,6 @@ static volatile uint32_t nlm_xid = 1;
 
 static int nlm_init_fh_by_vp(vnode_t *, struct netobj *, rpcvers_t *);
 static int nlm_map_status(nlm4_stats);
-static void nlm_wait_grace(void);
 static int nlm_map_clnt_stat(enum clnt_stat stat);
 
 static int nlm_frlock_getlk(struct nlm_host *hostp, vnode_t *vp,
@@ -114,94 +113,6 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 
 static int
 nlm_local_shrlock(vnode_t *vp, struct shrlock *sl, int cmd, int flags);
-
-static int
-nlm_msg(kthread_t *td, const char *server, const char *msg, int error)
-{
-
-	if (error) {
-		uprintf("nfs server %s: %s, error %d\n", server,
-		    msg, error);
-	} else {
-		uprintf("nfs server %s: %s\n", server, msg);
-	}
-	return (0);
-}
-
-struct nlm_feedback_arg {
-	bool_t	nf_printed;
-	mntinfo_t *nf_nmp;
-};
-
-static void
-nlm_down(struct nlm_feedback_arg *nf, kthread_t *td,
-    const char *msg, int error)
-{
-	mntinfo_t *nmp = nf->nf_nmp;
-
-	if (nmp == NULL)
-		return;
-#if 0	/* XXX */
-	mutex_enter(&nmp->mi_lock);
-	if (!(nmp->nm_state & NFSSTA_LOCKTIMEO)) {
-		nmp->nm_state |= NFSSTA_LOCKTIMEO;
-		mutex_exit(&nmp->mi_lock);
-		vfs_event_signal(&nmp->nm_mountp->mnt_stat.f_fsid,
-		    VQ_NOTRESPLOCK, 0);
-	} else {
-		mutex_exit(&nmp->mi_lock);
-	}
-#endif	/* XXX */
-
-	nf->nf_printed = TRUE;
-	nlm_msg(td, nmp->mi_curr_serv->sv_hostname, msg, error);
-}
-
-static void
-nlm_up(struct nlm_feedback_arg *nf, kthread_t *td,
-    const char *msg)
-{
-	mntinfo_t *nmp = nf->nf_nmp;
-
-	if (!nf->nf_printed)
-		return;
-
-	nlm_msg(td, nmp->mi_curr_serv->sv_hostname, msg, 0);
-
-#if 0	/* XXX not yet */
-	mutex_enter(&nmp->mi_lock);
-	if (nmp->nm_state & NFSSTA_LOCKTIMEO) {
-		nmp->nm_state &= ~NFSSTA_LOCKTIMEO;
-		mutex_exit(&nmp->mi_lock);
-		vfs_event_signal(&nmp->nm_mountp->mnt_stat.f_fsid,
-		    VQ_NOTRESPLOCK, 1);
-	} else {
-		mutex_exit(&nmp->mi_lock);
-	}
-#endif	/* XXX not yet */
-}
-
-#if 0	/* XXX not yet */
-static void
-nlm_feedback(int type, int proc, void *arg)
-{
-	kthread_t *td = curthread;
-	struct nlm_feedback_arg *nf = (struct nlm_feedback_arg *)arg;
-
-	switch (type) {
-	case FEEDBACK_REXMIT2:
-	case FEEDBACK_RECONNECT:
-		nlm_down(nf, td, "lockd not responding", 0);
-		break;
-
-	case FEEDBACK_OK:
-		nlm_up(nf, td, "lockd is alive again");
-		break;
-	}
-}
-#endif	/* XXX not yet */
-
-/* **************************************************************** */
 
 /*
  * Reclaim locks/shares acquired by the client side
@@ -778,7 +689,10 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 				goto out;
 			}
 
-			nlm_wait_grace();
+			error = nlm_host_wait_grace(hostp);
+			if (error != 0)
+				goto out;
+
 			continue;
 		}
 
@@ -998,7 +912,10 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
 		DTRACE_PROBE1(unlock__res, enum nlm4_stats, res.stat.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
 		if (res.stat.stat == nlm4_denied_grace_period) {
-			nlm_wait_grace();
+			error = nlm_host_wait_grace(hostp);
+			if (error != 0)
+				return (error);
+
 			continue;
 		}
 
@@ -1064,8 +981,13 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 
 		DTRACE_PROBE1(test__res, enum nlm4_stats, res.stat.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_testres, (void *)&res);
-		if (res.stat.stat == nlm4_denied_grace_period)
-			nlm_wait_grace();
+		if (res.stat.stat == nlm4_denied_grace_period) {
+			error = nlm_host_wait_grace(hostp);
+			if (error != 0)
+				return (error);
+
+			continue;
+		}
 
 		break;
 	}
@@ -1222,12 +1144,6 @@ out:
  */
 
 /*
- * Moved these to nlm_client.c:
- * nlm_share_rpc
- * nlm_unshare_rpc
- */
-
-/*
  * Set local share information for some NFS server.
  *
  * Called after a share request (set or clear) succeeded. We record
@@ -1301,7 +1217,11 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 			if (args.reclaim)
 				return (ENOLCK);
 
-			nlm_wait_grace();
+			error = nlm_host_wait_grace(hostp);
+			if (error != 0)
+				return (error);
+
+			continue;
 		}
 
 		break;
@@ -1374,8 +1294,13 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 
 		DTRACE_PROBE1(unshare__res, enum nlm4_stat, res.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
-		if (res.stat == nlm4_denied_grace_period)
-			nlm_wait_grace();
+		if (res.stat == nlm4_denied_grace_period) {
+			error = nlm_host_wait_grace(hostp);
+			if (error != 0)
+				return (error);
+
+			continue;
+		}
 
 		break;
 	}
@@ -1445,17 +1370,6 @@ nlm_init_share(struct nlm4_share *args,
 		args->access = fsa_RW;
 		break;
 	}
-}
-
-/*
- * Called when remote NLM server is
- * in grace period. We need to block
- * for some time.
- */
-static void
-nlm_wait_grace(void)
-{
-	(void) delay_sig(SEC_TO_TICK(5));
 }
 
 /*

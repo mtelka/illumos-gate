@@ -397,6 +397,7 @@ nlm_reclaimer(struct nlm_host *hostp)
 
 	mutex_enter(&hostp->nh_lock);
 	hostp->nh_flags &= ~NLM_NH_RECLAIM;
+	cv_broadcast(&hostp->nh_recl_cv);
 	mutex_exit(&hostp->nh_lock);
 
 	/*
@@ -924,6 +925,7 @@ nlm_host_destroy(struct nlm_host *hostp)
 
 	mutex_destroy(&hostp->nh_lock);
 	cv_destroy(&hostp->nh_rpcb_cv);
+	cv_destroy(&hostp->nh_recl_cv);
 
 	kmem_cache_free(nlm_hosts_cache, hostp);
 }
@@ -1034,6 +1036,38 @@ nlm_host_notify_client(struct nlm_host *hostp, int32_t state)
 }
 
 /*
+ * The function is called when NLM client detects that
+ * server has entered in grace period and client needs
+ * to wait until reclamation process (if any) does
+ * its job.
+ */
+int
+nlm_host_wait_grace(struct nlm_host *hostp)
+{
+	struct nlm_globals *g;
+	int error = 0;
+
+	g = zone_getspecific(nlm_zone_key, curzone);
+	mutex_enter(&hostp->nh_lock);
+
+	do {
+		int rc;
+
+		rc = cv_timedwait_sig(&hostp->nh_recl_cv,
+		    &hostp->nh_lock, ddi_get_lbolt() +
+		    SEC_TO_TICK(g->retrans_tmo));
+
+		if (rc == 0) {
+			error = EINTR;
+			break;
+		}
+	} while (hostp->nh_flags & NLM_NH_RECLAIM);
+
+	mutex_exit(&hostp->nh_lock);
+	return (error);
+}
+
+/*
  * Create a new NLM host.
  */
 static struct nlm_host *
@@ -1046,8 +1080,9 @@ nlm_create_host(struct nlm_globals *g, char *name,
 
 	mutex_init(&host->nh_lock, NULL, MUTEX_DEFAULT, NULL);
 	cv_init(&host->nh_rpcb_cv, NULL, CV_DEFAULT, NULL);
-	host->nh_refs = 1;
+	cv_init(&host->nh_recl_cv, NULL, CV_DEFAULT, NULL);
 
+	host->nh_refs = 1;
 	host->nh_name = strdup(name);
 	host->nh_netid = strdup(netid);
 	host->nh_knc = *knc;
@@ -1796,8 +1831,6 @@ static SVC_CALLOUT_TABLE nlm_sct_in = {
 	nlm_svcs_in	/* table above */
 };
 
-static void nlm_xprtclose(const SVCMASTERXPRT *xprt);
-
 /*
  * Called by klmmod.c when lockd adds a network endpoint
  * on which we should begin RPC services.
@@ -1806,7 +1839,6 @@ int
 nlm_svc_add_ep(struct nlm_globals *g, struct file *fp,
     const char *netid, struct knetconfig *knc)
 {
-	int err;
 	SVCMASTERXPRT *xprt = NULL;
 	SVC_CALLOUT_TABLE *sct;
 
@@ -1815,15 +1847,8 @@ nlm_svc_add_ep(struct nlm_globals *g, struct file *fp,
 	else
 		sct = &nlm_sct_in;
 
-	err = svc_tli_kcreate(fp, 0, (char *)netid, NULL, &xprt,
-	    sct, nlm_xprtclose, NLM_SVCPOOL_ID, FALSE);
-	if (err) {
-		NLM_DEBUG(NLM_LL1, "nlm_svc_add_ep: svc_tli_kcreate failed for "
-		    "<netid=%s, protofamily=%s> [ERR=%d]\n", netid, knc->knc_protofmly,
-			err);
-	}
-
-	return (0);
+	return (svc_tli_kcreate(fp, 0, (char *)netid, NULL, &xprt,
+	    sct, NULL, NLM_SVCPOOL_ID, FALSE));
 }
 
 /*
@@ -1959,18 +1984,4 @@ nlm_svc_stopping(struct nlm_globals *g)
 	nlm_nsm_fini(&g->nlm_nsm);
 	g->lockd_pid = 0;
 	g->run_status = NLM_ST_DOWN;
-}
-
-/*
- * Called by the RPC code when it's done with this transport.
- */
-static void nlm_xprtclose(const SVCMASTERXPRT *xprt)
-{
-	char *netid;
-
-	netid = svc_getnetid(xprt);
-	/* Destroy all hosts using this netid...  */
-	(void) netid;
-
-	/* XXX - todo */
 }
