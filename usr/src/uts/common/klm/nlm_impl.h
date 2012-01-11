@@ -59,6 +59,7 @@
 struct nlm_host;
 struct vnode;
 struct exportinfo;
+struct _kthread;
 
 /*
  * How to read the code: probably the best point to start
@@ -310,6 +311,8 @@ enum nlm_rpcb_state {
  *   nh_rpchc: host's RPC handles cache.
  *   nh_vholds_by_vp: a hash table of all vholds host owns. (used for lookup)
  *   nh_vholds_list: a linked list of all vholds host owns. (used for iteration)
+ *   nh_reclaimer: a pointer to reclamation thread (kthread_t)
+ *                 NULL if reclamation thread doesn't exist
  */
 struct nlm_host {
 	kmutex_t		nh_lock;		/* (c) */
@@ -331,6 +334,7 @@ struct nlm_host {
 	struct nlm_rpch_list	nh_rpchc;		/* (l) */
 	mod_hash_t		*nh_vholds_by_vp;	/* (l) */
 	struct nlm_vhold_list	nh_vholds_list;		/* (l) */
+	kthread_t		*nh_reclaimer;		/* (l) */
 };
 TAILQ_HEAD(nlm_host_list, nlm_host);
 

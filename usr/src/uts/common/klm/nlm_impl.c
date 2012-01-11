@@ -455,11 +455,16 @@ nlm_reclaimer(struct nlm_host *hostp)
 {
 	struct nlm_globals *g;
 
+	mutex_enter(&hostp->nh_lock);
+	hostp->nh_reclaimer = curthread;
+	mutex_exit(&hostp->nh_lock);
+
 	g = zone_getspecific(nlm_zone_key, curzone);
 	nlm_reclaim_client(g, hostp);
 
 	mutex_enter(&hostp->nh_lock);
 	hostp->nh_flags &= ~NLM_NH_RECLAIM;
+	hostp->nh_reclaimer = NULL;
 	cv_broadcast(&hostp->nh_recl_cv);
 	mutex_exit(&hostp->nh_lock);
 
