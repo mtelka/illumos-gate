@@ -485,6 +485,21 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 		status = nlm4_denied_nolocks;
 		break;
 
+	case EROFS:
+		/* read-only file system */
+		status = nlm4_rofs;
+		break;
+
+	case EFBIG:
+		/* file too big */
+		status = nlm4_fbig;
+		break;
+
+	case EDEADLK:
+		/* dead lock condition */
+		status = nlm4_deadlk;
+		break;
+
 	default:
 		status = nlm4_denied;
 		break;
