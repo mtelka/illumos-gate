@@ -88,7 +88,7 @@ struct lm_svc_args lmargs = {
 	.debug = 0,
 	.timout = 5 * 60,
 	.grace = 60,
-	.retransmittimeout = 5
+	.retransmittimeout = 15
 };
 int max_servers = 20;
 
