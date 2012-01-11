@@ -1054,7 +1054,7 @@ nlm_host_cancel_slocks(struct nlm_globals *g, struct nlm_host *hostp)
 	struct nlm_slock *nslp;
 
 	mutex_enter(&g->lock);
-	while ((nslp = TAILQ_FIRST(&g->nlm_slocks)) != NULL) {
+	TAILQ_FOREACH(nslp, &g->nlm_slocks, nsl_link) {
 		if (nslp->nsl_host == hostp) {
 			nslp->nsl_state = NLM_SL_CANCELLED;
 			cv_broadcast(&nslp->nsl_cond);

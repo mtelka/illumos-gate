@@ -74,7 +74,8 @@
 
 static volatile uint32_t nlm_xid = 1;
 
-static int nlm_map_status(nlm4_stats stat);
+static int nlm_init_fh_by_vp(vnode_t *, struct netobj *, rpcvers_t *);
+static int nlm_map_status(nlm4_stats);
 static void nlm_wait_grace(void);
 static int nlm_map_clnt_stat(enum clnt_stat stat);
 
@@ -223,7 +224,7 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
 {
 	int32_t state;
 	int error, sysid;
-	struct locklist *llp;
+	struct locklist *llp_head, *llp;
 	bool_t restart;
 
 	sysid = nlm_host_get_sysid(hostp) | NLM_SYSID_CLIENT;
@@ -245,12 +246,13 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
 		/*
 		 * Try to reclaim all active locks we have
 		 */
-		llp = flk_get_active_locks(sysid, NOPID);
+		llp_head = llp = flk_get_active_locks(sysid, NOPID);
 		while (llp != NULL) {
 			error = nlm_reclaim_lock(hostp, llp->ll_vp,
 			    &llp->ll_flock, state);
 
 			if (error == 0) {
+				llp = llp->ll_next;
 				continue;
 			} else if (error == ERESTART) {
 				restart = FALSE;
@@ -262,9 +264,11 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
 				 */
 				nlm_local_cancelk(llp->ll_vp, &llp->ll_flock);
 			}
+
+			llp = llp->ll_next;
 		}
 
-		flk_free_locklist(llp);
+		flk_free_locklist(llp_head);
 		if (restart) {
 			/*
 			 * Lock reclamation fucntion reported us that
@@ -469,6 +473,42 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 }
 
 /*
+ * Cancel all client side remote locks/shares on the
+ * given host. Report to the processes that own
+ * cancelled locks that they are removed by force
+ * by sending SIGLOST.
+ */
+void
+nlm_client_cancel_all(struct nlm_globals *g, struct nlm_host *hostp)
+{
+	struct locklist *llp_head, *llp;
+	struct netobj lm_fh;
+	rpcvers_t vers;
+	int32_t sysid;
+	int error;
+
+	sysid = nlm_host_get_sysid(hostp) | NLM_SYSID_CLIENT;
+	nlm_host_cancel_slocks(g, hostp);
+
+	llp_head = llp = flk_get_active_locks(sysid, NOPID);
+	while (llp != NULL) {
+		llp->ll_flock.l_type = F_UNLCK;
+
+		error = nlm_init_fh_by_vp(llp->ll_vp, &lm_fh, &vers);
+		if (error == 0)
+			(void) nlm_call_unlock(llp->ll_vp, &llp->ll_flock,
+			    hostp, &lm_fh, vers);
+
+		nlm_local_cancelk(llp->ll_vp, &llp->ll_flock);
+		llp = llp->ll_next;
+	}
+
+	flk_free_locklist(llp_head);
+
+	/* TODO: share reservations */
+}
+
+/*
  * The function determines whether the lock "fl" can
  * be safely upplied to the file vnode "vp" corresponds to.
  * The lock can be "safely" applied if all the conditions
@@ -511,23 +551,23 @@ nlm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
 int
 nlm_safemap(const vnode_t *vp)
 {
-	struct locklist *ll, *ll_next;
+	struct locklist *llp, *llp_next;
 	struct nlm_slock *nslp;
 	struct nlm_globals *g;
 	int safe = 1;
 
 	/* Check active locks at first */
-	ll = flk_active_locks_for_vp(vp);
-	while (ll) {
-		if ((ll->ll_vp == vp) &&
-		    ((ll->ll_flock.l_start != 0) ||
-		     (ll->ll_flock.l_len != 0)))
+	llp = flk_active_locks_for_vp(vp);
+	while (llp != NULL) {
+		if ((llp->ll_vp == vp) &&
+		    ((llp->ll_flock.l_start != 0) ||
+		     (llp->ll_flock.l_len != 0)))
 			safe = 0;
 
-		ll_next = ll->ll_next;
-		VN_RELE(ll->ll_vp);
-		kmem_free(ll, sizeof (*ll));
-		ll = ll_next;
+		llp_next = llp->ll_next;
+		VN_RELE(llp->ll_vp);
+		kmem_free(llp, sizeof (*llp));
+		llp = llp_next;
 	}
 	if (!safe)
 		return (safe);
@@ -580,7 +620,6 @@ static int
 nlm_reclaim_lock(struct nlm_host *hostp, vnode_t *vp,
     struct flock64 *flp, int32_t orig_state)
 {
-	mntinfo_t *mi = VTOMI(vp);
 	struct netobj lm_fh;
 	int error, state;
 	rpcvers_t vers;
@@ -594,27 +633,9 @@ nlm_reclaim_lock(struct nlm_host *hostp, vnode_t *vp,
 	if (state != orig_state)
 		return (ERESTART);
 
-	/*
-	 * Too bad the NFS code doesn't just carry the FH
-	 * in a netobj or a netbuf.
-	 */
-	switch (mi->mi_vers) {
-	case NFS_V3:
-		/* See nfs3_frlock() */
-		vers = NLM4_VERS;
-		lm_fh.n_len = VTOFH3(vp)->fh3_length;
-		lm_fh.n_bytes = (char *)&(VTOFH3(vp)->fh3_u.data);
-		break;
-
-	case NFS_VERSION:
-		/* See nfs_frlock() */
-		vers = NLM_VERS;
-		lm_fh.n_len = sizeof (fhandle_t);
-		lm_fh.n_bytes = (char *)VTOFH(vp);
-		break;
-	default:
-		return (ENOSYS);
-	}
+	error = nlm_init_fh_by_vp(vp, &lm_fh, &vers);
+	if (error != 0)
+		return (error);
 
 	return (nlm_call_lock(vp, flp, hostp, &lm_fh,
 	        NULL, vers, NLM_X_RECLAIM));
@@ -1444,6 +1465,42 @@ static void
 nlm_wait_grace(void)
 {
 	(void) delay_sig(SEC_TO_TICK(5));
+}
+
+/*
+ * Initialize filehandle according to the version
+ * of NFS vnode was created on. The version of
+ * NLM that can be used with given NFS version
+ * is saved to lm_vers.
+ */
+static int
+nlm_init_fh_by_vp(vnode_t *vp, struct netobj *fh, rpcvers_t *lm_vers)
+{
+	mntinfo_t *mi = VTOMI(vp);
+
+	/*
+	 * Too bad the NFS code doesn't just carry the FH
+	 * in a netobj or a netbuf.
+	 */
+	switch (mi->mi_vers) {
+	case NFS_V3:
+		/* See nfs3_frlock() */
+		*lm_vers = NLM4_VERS;
+		fh->n_len = VTOFH3(vp)->fh3_length;
+		fh->n_bytes = (char *)&(VTOFH3(vp)->fh3_u.data);
+		break;
+
+	case NFS_VERSION:
+		/* See nfs_frlock() */
+		*lm_vers = NLM_VERS;
+		fh->n_len = sizeof (fhandle_t);
+		fh->n_bytes = (char *)VTOFH(vp);
+		break;
+	default:
+		return (ENOSYS);
+	}
+
+	return (0);
 }
 
 static int
