@@ -34,6 +34,7 @@ SYMBOL_SCOPE {
 		lm_global_nlmid;
 		lm_has_sleep;
 		lm_rel_sysid;
+		lm_remove_file_locks;
 		lm_safelock;
 		lm_safemap;
 		lm_set_nlmid_flk;

@@ -153,6 +153,30 @@ extern clock_t nlm_grace_threshold;
 	cmn_err(CE_WARN, __VA_ARGS__)
 
 /*
+ * NLM sleeping lock request.
+ *
+ * Sleeping lock requests are server side only objects
+ * that are created when client asks server to add new
+ * sleeping lock and when this lock needs to block.
+ * Server keeps a track of these requests in order to be
+ * able to cancel them or clean them up.
+ *
+ * Sleeping lock requests are closely tiled with particular
+ * vnode or, strictly speaking, NLM vhold object that holds
+ * the vnode.
+ *
+ * struct nlm_slreq:
+ *   nsr_fl: an information about file lock
+ *   nsr_link: a list node to store lock requests
+ *             in vhold object.
+ */
+struct nlm_slreq {
+	struct flock64		nsr_fl;
+	TAILQ_ENTRY(nlm_slreq)	nsr_link;
+};
+TAILQ_HEAD(nlm_slreq_list, nlm_slreq);
+
+/*
  * NLM vhold object is a sort of wrapper on vnodes remote
  * clients have locked (or added share reservation)
  * on NLM server. Vhold keeps vnode held (by VN_HOLD())
@@ -176,11 +200,14 @@ extern clock_t nlm_grace_threshold;
  * struct nlm_vhold:
  *   nv_vp: a pointer to vnode that is hold by given nlm_vhold
  *   nv_refcnt: reference counter (non zero when vhold is inuse)
+ *   nv_slreqs: sleeping lock requests that were made on the nv_vp
+ *              (i.e. locks that are blocked on the nv_vp).
  *   nv_link: list node to store vholds in host's nh_vnodes_list
  */
 struct nlm_vhold {
-	vnode_t    *nv_vp;
-	int         nv_refcnt;
+	vnode_t               *nv_vp;
+	int                    nv_refcnt;
+	struct nlm_slreq_list  nv_slreqs;
 	TAILQ_ENTRY(nlm_vhold) nv_link;
 };
 TAILQ_HEAD(nlm_vhold_list, nlm_vhold);
@@ -216,28 +243,6 @@ typedef struct nlm_slock_clnt {
 	TAILQ_ENTRY(nlm_slock_clnt) nsc_link;
 } nlm_slock_clnt_t;
 TAILQ_HEAD(nlm_slock_clnt_list, nlm_slock_clnt);
-
-
-/*
- * A server-side sleeping lock. Storend in host's nh_srv_slocks.
- * Server-side sleeping lock represents a blocked lock on a
- * existing one. After existing lock is dropped, bloked lock is
- * automatically becomes active and server sends the GRANT request
- * to a client.
- *  nlm_slock_srv_t
- *   nss_host: A host owning this lock
- *   nss_vp: A vnode given lock is blocked on
- *   nss_fl: A structure describing sleeping lock
- *   nss_link: A list node (used in host's nh_srv_slocks list)
- */
-typedef struct nlm_slock_srv {
-	struct nlm_host *nss_host;
-	struct vnode	*nss_vp;
-	struct flock64   nss_fl;
-	int              nss_refcnt;
-	TAILQ_ENTRY(nlm_slock_srv) nss_link;
-} nlm_slock_srv_t;
-TAILQ_HEAD(nlm_slock_srv_list, nlm_slock_srv);
 
 /*
  * NLM host.
@@ -322,8 +327,6 @@ enum nlm_rpcb_state {
  *   nh_rpchc: host's RPC handles cache.
  *   nh_vholds_by_vp: a hash table of all vholds host owns. (used for lookup)
  *   nh_vholds_list: a linked list of all vholds host owns. (used for iteration)
- *   nh_srv_slocks: a list of all server side sleeping locks made
- *                  by given host object.
  */
 struct nlm_host {
 	kmutex_t                   nh_lock;
@@ -344,7 +347,6 @@ struct nlm_host {
 	struct nlm_rpch_list       nh_rpchc;
 	mod_hash_t                *nh_vholds_by_vp;
 	struct nlm_vhold_list      nh_vholds_list;
-	struct nlm_slock_srv_list  nh_srv_slocks;
 };
 TAILQ_HEAD(nlm_host_list, nlm_host);
 
@@ -547,7 +549,7 @@ struct nlm_vhold *nlm_vhold_get(struct nlm_host *hostp, vnode_t *vp);
 void nlm_vhold_release(struct nlm_host *hostp, struct nlm_vhold *nvp);
 
 /*
- * Sleeping locks functions
+ * Sleeping locks (client side)
  */
 extern nlm_slock_clnt_t *nlm_slock_clnt_register(struct nlm_globals *g,
     struct nlm_host *host, struct nlm4_lock *lock, struct vnode *vp);
@@ -555,12 +557,14 @@ extern void nlm_slock_clnt_deregister(struct nlm_globals *g,
     nlm_slock_clnt_t *nscp);
 extern int nlm_slock_clnt_wait(struct nlm_globals *g,
     nlm_slock_clnt_t *nscp, bool_t is_intr);
-extern nlm_slock_srv_t *nlm_slock_srv_create(struct nlm_host *hostp,
-    vnode_t *vp, struct flock64 *flp);
-extern nlm_slock_srv_t *nlm_slock_srv_find(struct nlm_host *hostp,
-    vnode_t *vp, struct flock64 *flp);
-extern void nlm_slock_srv_deregister(struct nlm_host *hostp,
-    nlm_slock_srv_t *nssp);
+
+/*
+ * Sleeping lock requests (server side)
+ */
+int nlm_slreq_register(struct nlm_host *,
+    struct nlm_vhold *, struct flock64 *);
+int nlm_slreq_unregister(struct nlm_host *,
+    struct nlm_vhold *, struct flock64 *);
 
 /*
  * Called when a host restarts.

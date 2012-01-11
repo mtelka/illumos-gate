@@ -73,7 +73,7 @@
 static void nlm_block(
 	nlm4_lockargs *lockargs,
 	struct nlm_host *host,
-	vnode_t *vp,
+	struct nlm_vhold *nvp,
 	struct flock64 *fl,
 	nlm_testargs_cb grant_cb,
 	rpcvers_t vers);
@@ -537,7 +537,7 @@ doreply:
 		 * to block indefinitely if needed.
 		 */
 		(void) svc_detach_thread(sr->rq_xprt);
-		nlm_block(argp, host, nvp->nv_vp, &fl, grant_cb, sr->rq_vers);
+		nlm_block(argp, host, nvp, &fl, grant_cb, sr->rq_vers);
 	}
 
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
@@ -556,16 +556,15 @@ static void
 nlm_block(
 	nlm4_lockargs *lockargs,
 	struct nlm_host *host,
-	vnode_t *vp,
-	struct flock64 *fl,
+	struct nlm_vhold *nvp,
+	struct flock64 *flp,
 	nlm_testargs_cb grant_cb,
 	rpcvers_t vers)
 {
 	nlm4_testargs args;
-	int error, flags;
+	int error;
 	enum clnt_stat stat;
 	nlm_rpc_t *rpcp;
-	nlm_slock_srv_t *nssp, *tmp_nssp = NULL;
 
 	/*
 	 * Keep a list of blocked locks on nh_pending, and use it
@@ -576,24 +575,26 @@ nlm_block(
 	 * then if we don't insert, free the new one.
 	 * Caller already has vp held.
 	 */
-	nssp = nlm_slock_srv_create(host, vp, fl);
-	if (nssp == NULL) {
+
+	if (nlm_slreq_register(host, nvp, flp) < 0) {
 		/*
-		 * There's already the same sleeping lock. Let
-		 * other thread do the granted callback, etc.
+		 * Sleeping lock request with given fl is already
+		 * registered by someone else. This means that
+		 * some other thread is handling the request, let
+		 * him do its work.
 		 */
 		return;
 	}
 
 	/* BSD: VOP_ADVLOCK(vp, NULL, F_SETLK, fl, F_REMOTE); */
-	flags = F_REMOTELOCK | FREAD | FWRITE;
-	error = VOP_FRLOCK(nssp->nss_vp, F_SETLKW, &nssp->nss_fl,
-	    flags, (u_offset_t)0, NULL, CRED(), NULL);
+	error = VOP_FRLOCK(nvp->nv_vp, F_SETLKW, flp,
+	    F_REMOTELOCK | FREAD | FWRITE,
+	    (u_offset_t)0, NULL, CRED(), NULL);
 
 	/*
-	 * Done waiting (no longer pending)
+	 * Done waiting, it's time to unregister sleeping request
 	 */
-	nlm_slock_srv_deregister(host, nssp);
+	nlm_slreq_unregister(host, nvp, flp);
 	if (error != 0) {
 		/*
 		 * We failed getting the lock, but have no way to
@@ -636,11 +637,11 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	struct nlm_globals *g;
 	struct nlm_host *host;
 	struct netbuf *addr;
-	vnode_t *vp = NULL;
+	struct nlm_vhold *nvp;
 	char *netid;
 	int error;
+	bool_t slreq_unreg = FALSE;
 	struct flock64 fl;
-	nlm_slock_srv_t *nssp = NULL;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 	netid = svc_getnetid(sr->rq_xprt);
@@ -661,38 +662,32 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 		goto out;
 	}
 
-	vp = nlm_fh_to_vp(&argp->alock.fh);
-	if (vp == NULL) {
+	nvp = nlm_fh_to_vhold(host, &argp->alock.fh);
+	if (nvp == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto out;
 	}
 
 	nlm_init_flock(&fl, &argp->alock, host->nh_sysid);
 	fl.l_type = (argp->exclusive) ? F_WRLCK : F_RDLCK;
+	if (nlm_slreq_unregister(host, nvp, &fl) == 0)
+		slreq_unreg = TRUE;
 
-	nssp = nlm_slock_srv_find(host, vp, &fl);
 	fl.l_type = F_UNLCK;
-	if (nssp != NULL) {
-		/*
-		 * Registered sleeping lock was found.
-		 * Just release it so nobody can use it.
-		 */
-		nlm_slock_srv_deregister(host, nssp);
-	}
 
 	/*
 	 * Sleeping lock we're trying to cancel could
 	 * already be applied. In this case we have to try
 	 * to ask our local os/flock manager to unlock it.
 	 * We interested in frlock retcode only if
-	 * server-side sleeping lock wasn't found.
+	 * server-side sleeping request wasn't found.
 	 */
-	error = VOP_FRLOCK(vp, F_SETLK, &fl,
+	error = VOP_FRLOCK(nvp->nv_vp, F_SETLK, &fl,
 	    F_REMOTELOCK | FREAD | FWRITE,
 	    (u_offset_t)0, NULL, CRED(), NULL);
 
 	resp->stat.stat = nlm4_granted;
-	if (nssp == NULL && error != 0)
+	if (!slreq_unreg && error != 0)
 		resp->stat.stat = nlm4_denied;
 
 out:
@@ -723,9 +718,7 @@ out:
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
-	if (vp != NULL)
-		VN_RELE(vp);
-
+	nlm_vhold_release(host, nvp);
 	nlm_host_release(g, host);
 }
 
