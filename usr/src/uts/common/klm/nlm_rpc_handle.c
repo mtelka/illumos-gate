@@ -31,6 +31,7 @@
 #include <sys/unistd.h>
 #include <sys/queue.h>
 #include <sys/sdt.h>
+#include <netinet/in.h>
 
 #include <rpc/rpc.h>
 #include <rpc/xdr.h>
@@ -80,6 +81,7 @@ update_host_rpcbinding(struct nlm_host *hostp, int vers)
 {
 	enum clnt_stat stat;
 	int ret = 0;
+	struct netbuf nb;
 
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
 
@@ -92,7 +94,13 @@ update_host_rpcbinding(struct nlm_host *hostp, int vers)
 	hostp->nh_rpcb_ustat = RPC_SUCCESS;
 	mutex_exit(&hostp->nh_lock);
 
-	stat = rpcbind_getaddr(&hostp->nh_knc, NLM_PROG, vers, &hostp->nh_addr);
+	nb.buf = (void *)&hostp->nh_addr;
+	if (hostp->nh_addr.sa.sa_family == AF_INET)
+		nb.len = nb.maxlen = sizeof (hostp->nh_addr.sin);
+	else /* AF_INET6 */
+		nb.len = nb.maxlen = sizeof (hostp->nh_addr.sin6);
+
+	stat = rpcbind_getaddr(&hostp->nh_knc, NLM_PROG, vers, &nb);
 	mutex_enter(&hostp->nh_lock);
 
 	if (stat == RPC_SUCCESS) {
@@ -121,18 +129,36 @@ static int
 refresh_nlm_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
 {
 	int ret;
+	struct netbuf nb;
+	nlm_addr_t tmp_naddr;
 
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
-
 	rpcp->nr_sn = hostp->nh_rpcb_sn;
+
+	/*
+	 * It's important to make a copy of host address
+	 * structure at the same time we get the serial number
+	 * that uniquely denotes given binding. And it's important
+	 * to do it atomically. We need to be sure that given
+	 * binding's serial number is congruent to actual content
+	 * of the host's address.
+	 */
+	bcopy(&hostp->nh_addr, &tmp_naddr, sizeof (tmp_naddr));
 	mutex_exit(&hostp->nh_lock);
+
+	nb.buf = (char *)&tmp_naddr;
+	if (tmp_naddr.sa.sa_family == AF_INET)
+		nb.len = nb.maxlen = sizeof (tmp_naddr.sin);
+	else /* AF_INET6 */
+		nb.len = nb.maxlen = sizeof (tmp_naddr.sin6);
+
 	if (rpcp->nr_handle == NULL) {
-		ret = clnt_tli_kcreate(&hostp->nh_knc, &hostp->nh_addr,
+		ret = clnt_tli_kcreate(&hostp->nh_knc, &nb,
 		    NLM_PROG, rpcp->nr_vers, 0, NLM_RPC_RETRIES,
 		    CRED(), &rpcp->nr_handle);
 	} else {
 		ret = clnt_tli_kinit(rpcp->nr_handle, &hostp->nh_knc,
-		    &hostp->nh_addr, 0, NLM_RPC_RETRIES, CRED());
+		    &nb, 0, NLM_RPC_RETRIES, CRED());
 	}
 
 	mutex_enter(&hostp->nh_lock);

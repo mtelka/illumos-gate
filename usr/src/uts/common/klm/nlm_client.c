@@ -47,6 +47,7 @@
 #include <sys/vnode.h>
 #include <sys/queue.h>
 #include <sys/sdt.h>
+#include <netinet/in.h>
 
 #include <fs/fs_subr.h>
 #include <rpcsvc/nlm_prot.h>

@@ -52,6 +52,7 @@
 #include <sys/vfs.h>
 #include <sys/queue.h>
 #include <sys/sdt.h>
+#include <netinet/in.h>
 
 #include <rpc/rpc.h>
 #include <rpc/xdr.h>

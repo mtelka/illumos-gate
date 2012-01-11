@@ -186,21 +186,6 @@ nlm_acquire_next_sysid(void)
  */
 
 /*
- * Copy a struct netbuf.  (see tiuser.h)
- */
-void
-nlm_copy_netbuf(struct netbuf *dst, struct netbuf *src)
-{
-
-	ASSERT(src->len <= src->maxlen);
-
-	dst->maxlen = src->maxlen;
-	dst->len = src->len;
-	dst->buf = kmem_zalloc(src->maxlen, KM_SLEEP);
-	bcopy(src->buf, dst->buf, src->len);
-}
-
-/*
  * Copy a struct netobj.  (see xdr.h)
  */
 void
@@ -758,8 +743,6 @@ nlm_host_destroy(struct nlm_host *host)
 		strfree(host->nh_name);
 	if (host->nh_netid)
 		strfree(host->nh_netid);
-	if (host->nh_addr.buf != NULL)
-		kmem_free(host->nh_addr.buf, host->nh_addr.maxlen);
 
 	mutex_destroy(&host->nh_lock);
 	/* sysctl_ctx_free(&host->nh_sysctl); XXX */
@@ -898,7 +881,7 @@ object and start the recovery thread.  mark recovery as 'running'.
  */
 static struct nlm_host *
 nlm_create_host(struct nlm_globals *g, char *name,
-    const char *netid, struct knetconfig *knc, struct netbuf *addr)
+    const char *netid, struct knetconfig *knc, nlm_addr_t *naddr)
 {
 	struct nlm_host *host;
 
@@ -910,7 +893,7 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	host->nh_name = strdup(name);
 	host->nh_netid = strdup(netid);
 	host->nh_knc = *knc;
-	nlm_copy_netbuf(&host->nh_addr, addr);
+	bcopy(naddr, &host->nh_addr, sizeof (naddr));
 
 	host->nh_state = 0;
 	host->nh_monstate = NLM_UNMONITORED;
@@ -980,25 +963,15 @@ nlm_check_idle(void)
  *   1: nb1's address is "greater" than nb2's
  */
 static int
-nlm_netbuf_addrs_cmp(struct netbuf *nb1, struct netbuf *nb2)
+nlm_netbuf_addrs_cmp(nlm_addr_t *na1, nlm_addr_t *na2)
 {
-	union {
-		struct sockaddr_in *sin;
-		struct sockaddr_in6 *sin6;
-	} addr1, addr2;
-
-	addr1.sin = (struct sockaddr_in *)nb1->buf;
-	addr2.sin = (struct sockaddr_in *)nb2->buf;
-
-	switch (addr1.sin->sin_family) {
+	switch (na1->sa.sa_family) {
 	case AF_INET:
-		return (memcmp(&addr1.sin->sin_addr.s_addr,
-		        &addr2.sin->sin_addr.s_addr,
-		        sizeof (addr1.sin->sin_addr.s_addr)));
+		return (memcmp(&na1->sin.sin_addr, &na2->sin.sin_addr,
+		        sizeof (na1->sin.sin_addr)));
 	case AF_INET6:
-		    return (memcmp(&addr1.sin6->sin6_addr,
-		            &addr2.sin6->sin6_addr,
-		            sizeof (&addr1.sin6->sin6_addr)));
+		return (memcmp(&na1->sin6.sin6_addr, &na2->sin6.sin6_addr,
+		        sizeof (na1->sin6.sin6_addr)));
 	default:
 		VERIFY(0);
 
@@ -1013,19 +986,20 @@ nlm_netbuf_addrs_cmp(struct netbuf *nb1, struct netbuf *nb2)
  */
 static struct nlm_host *
 nlm_host_find_locked(struct nlm_globals *g, const char *netid,
-    struct netbuf *addr)
+    nlm_addr_t *naddr)
 {
 	struct nlm_host *host;
 
 	ASSERT(MUTEX_HELD(&g->lock));
 
 	TAILQ_FOREACH(host, &g->nlm_hosts, nh_link) {
-		if (nlm_netbuf_addrs_cmp(&host->nh_addr, addr) == 0
+		if (nlm_netbuf_addrs_cmp(&host->nh_addr, naddr) == 0
 		    && strcmp(host->nh_netid, netid) == 0) {
 			host->nh_refs++;
 			break;
 		}
 	}
+
 	return (host);
 }
 
@@ -1037,9 +1011,14 @@ nlm_host_find(struct nlm_globals *g, const char *netid,
     struct netbuf *addr)
 {
 	struct nlm_host *hostp;
+	nlm_addr_t *naddr;
+
+	naddr = (nlm_addr_t *)addr->buf;
+	VERIFY(naddr->sa.sa_family == AF_INET ||
+	    naddr->sa.sa_family == AF_INET6);
 
 	mutex_enter(&g->lock);
-	hostp = nlm_host_find_locked(g, netid, addr);
+	hostp = nlm_host_find_locked(g, netid, naddr);
 	mutex_exit(&g->lock);
 
 	return (hostp);
@@ -1061,9 +1040,14 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	int err;
 	struct nlm_host *host, *newhost;
 	struct knetconfig knc;
+	nlm_addr_t *naddr;
+
+	naddr = (nlm_addr_t *)addr->buf;
+	VERIFY(naddr->sa.sa_family == AF_INET ||
+	    naddr->sa.sa_family == AF_INET6);
 
 	mutex_enter(&g->lock);
-	host = nlm_host_find_locked(g, netid, addr);
+	host = nlm_host_find_locked(g, netid, naddr);
 	mutex_exit(&g->lock);
 	if (host != NULL)
 		goto done;
@@ -1076,9 +1060,9 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	 * Do allocations (etc.) outside of mutex,
 	 * and then check again before inserting.
 	 */
-	newhost = nlm_create_host(g, name, netid, &knc, addr);
+	newhost = nlm_create_host(g, name, netid, &knc, naddr);
 	mutex_enter(&g->lock);
-	host = nlm_host_find_locked(g, netid, addr);
+	host = nlm_host_find_locked(g, netid, naddr);
 	if (host == NULL) {
 		newhost->nh_sysid = nlm_acquire_next_sysid();
 		TAILQ_INSERT_TAIL(&g->nlm_hosts, newhost, nh_link);

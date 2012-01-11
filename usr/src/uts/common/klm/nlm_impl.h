@@ -266,6 +266,12 @@ enum nlm_rpcb_state {
 	NRPCB_UPDATED
 };
 
+typedef union nlm_addr {
+	struct sockaddr_in sin;
+	struct sockaddr_in6 sin6;
+	struct sockaddr sa;
+} nlm_addr_t;
+
 struct nlm_host {
 	kmutex_t	nh_lock;
 	volatile uint_t	nh_refs;	/* (a) reference count */
@@ -273,7 +279,7 @@ struct nlm_host {
 	char		*nh_name;	/* (c) printable name of host */
 	char		*nh_netid;	/* TLI binding name */
 	struct knetconfig nh_knc;	/* (c) knetconfig for nh_addr */
-	struct netbuf	nh_addr;	/* (c) remote address of host */
+	nlm_addr_t	nh_addr;	/* (c) remote address of host */
 	int32_t		nh_sysid;	/* (c) our allocaed system ID */
 	int		nh_state;	/* (s) last seen NSM state of host */
 	kcondvar_t nh_rpcb_cv;
