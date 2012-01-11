@@ -1054,9 +1054,14 @@ nlm_host_find_locked(struct nlm_globals *g, const char *netid,
 	hostp = avl_find(&g->nlm_hosts_tree, &key, &pos);
 
 	if (hostp != NULL) {
-		hostp->nh_refs++;
-		if (TAILQ_NEXT(hostp, nh_link) == NULL)
+		/*
+		 * Host is inuse now. Remove it from idle
+		 * hosts list if needed.
+		 */
+		if (hostp->nh_refs == 0)
 			TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
+
+		hostp->nh_refs++;
 	}
 	if (wherep != NULL)
 		*wherep = pos;
@@ -1094,7 +1099,7 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
     const char *netid, struct netbuf *addr)
 {
 	int err;
-	struct nlm_host *host, *newhost;
+	struct nlm_host *host, *newhost = NULL;
 	struct knetconfig knc;
 	avl_index_t where;
 
@@ -1102,7 +1107,7 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	host = nlm_host_find_locked(g, netid, addr, NULL);
 	mutex_exit(&g->lock);
 	if (host != NULL)
-		goto done;
+		return (host);
 
 	err = nlm_knetconfig_from_netid(netid, &knc);
 	if (err)
@@ -1116,35 +1121,28 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	mutex_enter(&g->lock);
 	host = nlm_host_find_locked(g, netid, addr, &where);
 	if (host == NULL) {
-		newhost->nh_sysid = nlm_acquire_next_sysid();
+		host = newhost;
+		newhost = NULL;
+		host->nh_sysid = nlm_acquire_next_sysid();
 
 		/*
 		 * Insert host to the hosts AVL tree that is
 		 * used to lookup by <netid, address> pair.
 		 */
-		avl_insert(&g->nlm_hosts_tree, newhost, where);
+		avl_insert(&g->nlm_hosts_tree, host, where);
 
 		/*
 		 * Insert host ot the hosts hash table that is
 		 * used to lookup host by sysid.
 		 */
 		VERIFY(mod_hash_insert(g->nlm_hosts_hash,
-		        (mod_hash_key_t)(uintptr_t)newhost->nh_sysid,
-		        (mod_hash_val_t)newhost) == 0);
+		        (mod_hash_key_t)(uintptr_t)host->nh_sysid,
+		        (mod_hash_val_t)host) == 0);
 	}
 
 	mutex_exit(&g->lock);
-	if (host != NULL) {
+	if (newhost != NULL)
 		nlm_host_destroy(newhost);
-		newhost = NULL;
-	} else {
-		/* We inserted */
-		host = newhost;
-	}
-
-done:
-	host->nh_idle_timeout = ddi_get_lbolt() +
-	    SEC_TO_TICK(NLM_IDLE_TIMEOUT);
 
 	return (host);
 }
@@ -1161,25 +1159,39 @@ nlm_host_find_by_sysid(struct nlm_globals *g, int sysid)
 	struct nlm_host *hostp = NULL;
 
 	mutex_enter(&g->lock);
-	if (mod_hash_find(g->nlm_hosts_hash,
-	        (mod_hash_key_t)(uintptr_t)sysid, &hval) == 0) {
-		hostp = (struct nlm_host *)hval;
-		if (hostp->nh_refs++ == 0)
-			TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
-	}
+	mod_hash_find(g->nlm_hosts_hash,
+	    (mod_hash_key_t)(uintptr_t)sysid,
+	    (mod_hash_val_t)&hostp);
 
+	if (hostp == NULL)
+		goto out;
+
+	/*
+	 * Host is inuse now. Remove it
+	 * from idle hosts list if needed.
+	 */
+	if (hostp->nh_refs == 0)
+		TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
+
+	hostp->nh_refs++;
+
+out:
 	mutex_exit(&g->lock);
 	return (hostp);
 }
 
 /*
- * Release a reference to some host.  If it has no references
- * arrange for its destruction ...eventually.
+ * Release the given host.
+ * I.e. drop a reference that was taken earlier by one of
+ * the following functions: nlm_host_findcreate(), nlm_host_find(),
+ * nlm_host_find_by_sysid().
  *
- * XXX: This needs work.  We want these to stay in the list for
- * up to NLM_IDLE_TIMEOUT so they can be found and reused by the
- * same host during that time.  After the idle time expires,
- * hosts should be removed (and tell statd to stop monitoring).
+ * When the very last reference is dropped, host is moved to
+ * so-called "idle state". All hosts that are in idle state
+ * have an idle timeout. If timeout is expired, GC thread
+ * checks whether hosts have any locks and if they heven't
+ * any, it removes them.
+ * NOTE: only unused hosts can be in idle state.
  */
 void
 nlm_host_release(struct nlm_globals *g, struct nlm_host *hostp)
@@ -1188,36 +1200,24 @@ nlm_host_release(struct nlm_globals *g, struct nlm_host *hostp)
 		return;
 
 	mutex_enter(&g->lock);
-	hostp->nh_refs--;
+	ASSERT(hostp->nh_refs > 0);
 
-	/*
-	 * NLM host can not be move into an idle state
-	 * either if it has non-zero reference counter
-	 * or if it has any active/sleeping locks.
-	 *
-	 * NOTE: We don't need to check whether there're
-	 * any sleeping locks made by this host, because
-	 * each lock (doesn't matter if it's active or
-	 * sleeping) has a nlm_vhold associated with it.
-	 */
-	if (hostp->nh_refs != 0 ||
-	    !TAILQ_EMPTY(&hostp->nh_vholds_list)) {
+	hostp->nh_refs--;
+	if (hostp->nh_refs != 0) {
 		mutex_exit(&g->lock);
 		return;
 	}
 
-	/* Start idle timer */
+	/*
+	 * The very last reference to the host was dropped,
+	 * thus host is unused now. Set its idle timeout
+	 * and move it to the idle hosts LRU list.
+	 */
 	hostp->nh_idle_timeout = ddi_get_lbolt() +
 		SEC_TO_TICK(NLM_IDLE_TIMEOUT);
 
 	TAILQ_INSERT_TAIL(&g->nlm_idle_hosts, hostp, nh_link);
 	mutex_exit(&g->lock);
-
-	/*
-	 * Free and unmonitor all unused hosts
-	 * with expired idle timeout (if any)
-	 */
-	nlm_free_idle_hosts(g);
 }
 
 /*
