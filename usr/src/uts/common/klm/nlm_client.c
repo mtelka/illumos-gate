@@ -77,6 +77,7 @@ static int nlm_init_fh_by_vp(vnode_t *, struct netobj *, rpcvers_t *);
 static int nlm_map_status(nlm4_stats);
 static int nlm_map_clnt_stat(enum clnt_stat);
 static const char *nlm_servinfo_netid(servinfo_t *);
+static void nlm_send_siglost(pid_t);
 
 static int nlm_frlock_getlk(struct nlm_host *, vnode_t *,
     struct flock64 *, int, u_offset_t, struct netobj *, int);
@@ -115,6 +116,7 @@ static int nlm_call_share(vnode_t *, struct shrlock *,
 static int nlm_call_unshare(struct vnode *, struct shrlock *,
 	struct nlm_host *, struct netobj *, int);
 static int nlm_local_shrlock(vnode_t *, struct shrlock *, int, int);
+static void nlm_local_shrcancel(vnode_t *, struct shrlock *);
 
 /*
  * Reclaim locks/shares acquired by the client side
@@ -415,6 +417,7 @@ void
 nlm_client_cancel_all(struct nlm_globals *g, struct nlm_host *hostp)
 {
 	struct locklist *llp_head, *llp;
+	struct nlm_shres *nsp_head, *nsp;
 	struct netobj lm_fh;
 	rpcvers_t vers;
 	int error, sysid;
@@ -422,6 +425,9 @@ nlm_client_cancel_all(struct nlm_globals *g, struct nlm_host *hostp)
 	sysid = nlm_host_get_sysid(hostp) | LM_SYSID_CLIENT;
 	nlm_host_cancel_slocks(g, hostp);
 
+	/*
+	 * Destroy all active locks
+	 */
 	llp_head = llp = flk_get_active_locks(sysid, NOPID);
 	while (llp != NULL) {
 		llp->ll_flock.l_type = F_UNLCK;
@@ -437,7 +443,22 @@ nlm_client_cancel_all(struct nlm_globals *g, struct nlm_host *hostp)
 
 	flk_free_locklist(llp_head);
 
-	/* TODO: share reservations */
+	/*
+	 * Destroy all active share reservations
+	 */
+	nsp_head = nsp = nlm_get_active_shres(hostp);
+	while (nsp != NULL) {
+		error = nlm_init_fh_by_vp(nsp->ns_vp, &lm_fh, &vers);
+		if (error == 0)
+			(void) nlm_call_unshare(nsp->ns_vp, nsp->ns_shr,
+			    hostp, &lm_fh, vers);
+
+		nlm_local_shrcancel(nsp->ns_vp, nsp->ns_shr);
+		nlm_shres_untrack(hostp, nsp->ns_vp, nsp->ns_shr);
+		nsp = nsp->ns_next;
+	}
+
+	nlm_free_shrlist(nsp_head);
 }
 
 /*
@@ -652,16 +673,7 @@ nlm_local_cancelk(vnode_t *vp, struct flock64 *flp)
 
 	flp->l_type = F_UNLCK;
 	(void) nlm_local_setlk(vp, flp, FREAD | FWRITE);
-
-	/*
-	 * Notify lock owner that the lock was lost.
-	 */
-	mutex_enter(&pidlock);
-	p = prfind(flp->l_pid);
-	if (p != NULL)
-		psignal(p, SIGLOST);
-
-	mutex_exit(&pidlock);
+	nlm_send_siglost(flp->l_pid);
 }
 
 /*
@@ -1199,6 +1211,13 @@ nlm_local_shrlock(vnode_t *vp, struct shrlock *shr, int cmd, int flags)
 	return (fs_shrlock(vp, cmd, shr, flags, CRED(), NULL));
 }
 
+static void
+nlm_local_shrcancel(vnode_t *vp, struct shrlock *shr)
+{
+	(void) nlm_local_shrlock(vp, shr, F_UNSHARE, FREAD | FWRITE);
+	nlm_send_siglost(shr->s_pid);
+}
+
 /*
  * Do NLM_SHARE call.
  * Was: nlm_setshare()
@@ -1452,6 +1471,25 @@ nlm_servinfo_netid(servinfo_t *svp)
 		nlm_knc_activate(svp->sv_knconf);
 
 	return (netid);
+}
+
+/*
+ * Send SIGLOST to the process identified by pid.
+ * NOTE: called when NLM decides to remove lock
+ * or share reservation ownder by the process
+ * by force.
+ */
+static void
+nlm_send_siglost(pid_t pid)
+{
+	proc_t *p;
+
+	mutex_enter(&pidlock);
+	p = prfind(pid);
+	if (p != NULL)
+		psignal(p, SIGLOST);
+
+	mutex_exit(&pidlock);
 }
 
 static int

@@ -583,6 +583,8 @@ int nlm_slreq_unregister(struct nlm_host *,
 
 void nlm_shres_track(struct nlm_host *, vnode_t *, struct shrlock *);
 void nlm_shres_untrack(struct nlm_host *, vnode_t *, struct shrlock *);
+struct nlm_shres *nlm_get_active_shres(struct nlm_host *);
+void nlm_free_shrlist(struct nlm_shres *);
 
 int nlm_host_wait_grace(struct nlm_host *);
 int nlm_host_cmp(const void *, const void *);

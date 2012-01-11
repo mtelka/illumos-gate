@@ -1911,6 +1911,47 @@ nlm_shres_untrack(struct nlm_host *hostp, vnode_t *vp, struct shrlock *shrp)
 	mutex_exit(&hostp->nh_lock);
 }
 
+/*
+ * Get a _copy_ of the list of all active share reservations
+ * made by the given host.
+ * NOTE: the list function returns _must_ be released using
+ *       nlm_free_shrlist().
+ */
+struct nlm_shres *
+nlm_get_active_shres(struct nlm_host *hostp)
+{
+	struct nlm_shres *nsp, *nslist = NULL;
+
+	mutex_enter(&hostp->nh_lock);
+	for (nsp = hostp->nh_shrlist; nsp != NULL; nsp = nsp->ns_next) {
+		struct nlm_shres *nsp_new;
+
+		nsp_new = nlm_shres_create_item(nsp->ns_shr, nsp->ns_vp);
+		nsp_new->ns_next = nslist;
+		nslist = nsp_new;
+	}
+
+	mutex_exit(&hostp->nh_lock);
+	return (nslist);
+}
+
+/*
+ * Free memory allocated for the active share reservations
+ * list created by nlm_get_active_shres() function.
+ */
+void
+nlm_free_shrlist(struct nlm_shres *nslist)
+{
+	struct nlm_shres *nsp;
+
+	while (nslist != NULL) {
+		nsp =  nslist;
+		nslist = nslist->ns_next;
+
+		nlm_shres_destroy_item(nsp);
+	}
+}
+
 static bool_t
 nlm_shres_equal(struct shrlock *shrp1, struct shrlock *shrp2)
 {
