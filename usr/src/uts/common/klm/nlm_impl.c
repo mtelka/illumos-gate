@@ -83,6 +83,12 @@
 #define	NLM_IDLE_PERIOD		5
 
 /*
+ * Returns true if given sysid has active or sleeping locks
+ */
+#define nlm_sysid_has_locks(sysid)	  \
+	flk_sysid_has_locks(sysid, FLK_QUERY_ACTIVE | FLK_QUERY_SLEEPING)
+
+/*
  * Grace period handling. The value of nlm_grace_threshold is the
  * value of ddi_get_lbolt() after which we are serving requests normally.
  */
@@ -111,10 +117,12 @@ static volatile uint32_t nlm_next_sysid = 0;	/* (g) */
 static recovery_cb nlm_recovery_func = NULL;	/* (c) */
 
 /*
- * Returns true if given sysid has active or sleeping locks
+ * NLM NSM functions
  */
-#define nlm_sysid_has_locks(sysid)	  \
-	flk_sysid_has_locks(sysid, FLK_QUERY_ACTIVE | FLK_QUERY_SLEEPING)
+static int nlm_svc_create_nsm(struct knetconfig *, struct nlm_nsm **);
+static void nlm_svc_destroy_nsm(struct nlm_nsm *);
+static struct nlm_nsm *nlm_svc_acquire_nsm(struct nlm_globals *);
+static void nlm_svc_release_nsm(struct nlm_nsm *);
 
 /*
  * Acquire the next sysid for remote locks not handled by the NLM.
@@ -191,7 +199,7 @@ nlm_copy_netobj(struct netobj *dst, struct netobj *src)
  * In case of success the function returns 0 and newly allocated
  * nlm_nsm is saved to out_nsm.
  */
-int
+static int
 nlm_svc_create_nsm(struct knetconfig *knc, struct nlm_nsm **out_nsm)
 {
 	CLIENT *clnt = NULL;
@@ -257,7 +265,7 @@ err:
  * NOTE: must be called when nsm->refcnt == 0.
  * NOTE: nsm->handle must be released before this function is called.
  */
-void
+static void
 nlm_svc_destroy_nsm(struct nlm_nsm *nsm)
 {
 	ASSERT(nsm->refcnt == 0);
@@ -270,7 +278,7 @@ nlm_svc_destroy_nsm(struct nlm_nsm *nsm)
  * NOTE: the instance returned by this function must be
  * explicitly released by calling nlm_svc_release_nsm.
  */
-struct nlm_nsm *
+static struct nlm_nsm *
 nlm_svc_acquire_nsm(struct nlm_globals *g)
 {
 	struct nlm_nsm *nsm;
