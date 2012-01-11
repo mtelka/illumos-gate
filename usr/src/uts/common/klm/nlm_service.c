@@ -867,10 +867,16 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 		return;
 	}
 
+	if (NLM_IN_GRACE(g)) {
+		resp->stat.stat = nlm4_denied_grace_period;
+		goto out;
+	}
+
 	error = nlm_slock_grant(g, host, &argp->alock);
 	resp->stat.stat = (error == 0) ?
 		nlm4_granted : nlm4_denied;
 
+out:
 	/*
 	 * If we have a callback funtion, use that to
 	 * deliver the response via another RPC call.
