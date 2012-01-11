@@ -691,7 +691,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 
 		error = nlm_host_get_rpc(host, vers, &rpc);
 		if (error != 0)
-			return (error); /* XXX retry? */
+			return (ENOLCK); /* XXX retry? */
 
 		if (block) {
 			wait_handle = nlm_register_wait_lock(g, host,
@@ -707,6 +707,8 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
+			if (stat == RPC_PROCUNAVAIL)
+				nlm_host_invalidate_binding(host);
 			if (block) {
 				nlm_deregister_wait_lock(g, wait_handle);
 				wait_handle = NULL;
@@ -850,12 +852,15 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 		error = nlm_host_get_rpc(host, vers, &rpc);
 		if (error != 0)
 			/* XXX retry? */
-			return (error);
+			return (ENOLCK);
 
 		stat = nlm_cancel_rpc(&cargs, &res, rpc->nr_handle, vers);
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
+			if (stat == RPC_PROCUNAVAIL)
+				nlm_host_invalidate_binding(host);
+
 			/*
 			 * We need to cope with temporary network partitions
 			 * as well as server reboots. This means we have to
@@ -938,7 +943,7 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *fl,
 	for (;;) {
 		error = nlm_host_get_rpc(host, vers, &rpc);
 		if (error != 0)
-			return (error); /* XXX retry? */
+			return (ENOLCK); /* XXX retry? */
 
 		xid = atomic_inc_32_nv(&nlm_xid);
 		args.cookie.n_len = sizeof (xid);
@@ -948,10 +953,14 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *fl,
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
+			if (stat == RPC_PROCUNAVAIL)
+				nlm_host_invalidate_binding(host);
+
 			if (retries) {
 				retries--;
 				continue;
 			}
+
 			return (EINVAL);
 		}
 
@@ -1025,7 +1034,7 @@ nlm_call_test(struct vnode *vp, struct flock64 *fl,
 	for (;;) {
 		error = nlm_host_get_rpc(host, vers, &rpc);
 		if (error != 0)
-			return (error); /* XXX retry? */
+			return (ENOLCK); /* XXX retry? */
 
 		xid = atomic_inc_32_nv(&nlm_xid);
 		args.cookie.n_len = sizeof (xid);
@@ -1035,10 +1044,14 @@ nlm_call_test(struct vnode *vp, struct flock64 *fl,
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
+			if (stat == RPC_PROCUNAVAIL)
+				nlm_host_invalidate_binding(host);
+
 			if (retries) {
 				retries--;
 				continue;
 			}
+
 			return (EINVAL);
 		}
 
@@ -1280,7 +1293,7 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 	for (;;) {
 		error = nlm_host_get_rpc(host, vers, &rpc);
 		if (error != 0)
-			return (error); /* XXX retry? */
+			return (ENOLCK); /* XXX retry? */
 
 
 		/* XXX: Get XID from RPC handle? */
@@ -1292,10 +1305,14 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
+			if (stat == RPC_PROCUNAVAIL)
+				nlm_host_invalidate_binding(host);
+
 			if (retries) {
 				retries--;
 				continue;
 			}
+
 			return (EINVAL);
 		}
 
@@ -1372,7 +1389,7 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 	for (;;) {
 		error = nlm_host_get_rpc(host, vers, &rpc);
 		if (error != 0)
-			return (error); /* XXX retry? */
+			return (ENOLCK); /* XXX retry? */
 
 		xid = atomic_inc_32_nv(&nlm_xid);
 		args.cookie.n_len = sizeof (xid);
@@ -1382,10 +1399,14 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 		nlm_host_rele_rpc(host, rpc);
 
 		if (stat != RPC_SUCCESS) {
+			if (stat == RPC_PROCUNAVAIL)
+				nlm_host_invalidate_binding(host);
+
 			if (retries) {
 				retries--;
 				continue;
 			}
+
 			return (EINVAL);
 		}
 
