@@ -100,12 +100,6 @@
 krwlock_t lm_lck;
 
 /*
- * Grace period handling. The value of nlm_grace_threshold is the
- * Value of ddi_get_lbolt() after which we are serving requests normally.
- */
-clock_t nlm_grace_threshold;
-
-/*
  * List of all Zone globals nlm_globals instences
  * linked together.
  */

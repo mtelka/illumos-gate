@@ -70,6 +70,8 @@
 
 #include "nlm_impl.h"
 
+#define NLM_IN_GRACE(g) (ddi_get_lbolt() < (g)->grace_threshold)
+
 static void nlm_block(
 	nlm4_lockargs *lockargs,
 	struct nlm_host *host,
@@ -278,7 +280,7 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 		goto out;
 	}
 
-	if (ddi_get_lbolt() < nlm_grace_threshold) {
+	if (NLM_IN_GRACE(g)) {
 		resp->stat.stat = nlm4_denied_grace_period;
 		goto out;
 	}
@@ -393,8 +395,7 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	/*
 	 * During the "grace period", only allow reclaim.
 	 */
-	if (argp->reclaim == 0 &&
-	    ddi_get_lbolt() < nlm_grace_threshold) {
+	if (argp->reclaim == 0 && NLM_IN_GRACE(g)) {
 		status = nlm4_denied_grace_period;
 		goto doreply;
 	}
@@ -657,7 +658,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_cancargs *, argp);
 
-	if (ddi_get_lbolt() < nlm_grace_threshold) {
+	if (NLM_IN_GRACE(g)) {
 		resp->stat.stat = nlm4_denied_grace_period;
 		goto out;
 	}
@@ -755,7 +756,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_unlockargs *, argp);
 
-	if (ddi_get_lbolt() < nlm_grace_threshold) {
+	if (NLM_IN_GRACE(g)) {
 		resp->stat.stat = nlm4_denied_grace_period;
 		goto out;
 	}
@@ -1011,8 +1012,7 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	DTRACE_PROBE3(share__start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_shareargs *, argp);
 
-	if (argp->reclaim == 0 &&
-	    ddi_get_lbolt() < nlm_grace_threshold) {
+	if (argp->reclaim == 0 && NLM_IN_GRACE(g)) {
 		resp->stat = nlm4_denied_grace_period;
 		goto out;
 	}
@@ -1080,8 +1080,7 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	DTRACE_PROBE3(unshare__start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_shareargs *, argp);
 
-	if (argp->reclaim == 0 &&
-	    ddi_get_lbolt() < nlm_grace_threshold) {
+	if (NLM_IN_GRACE(g)) {
 		resp->stat = nlm4_denied_grace_period;
 		goto out;
 	}

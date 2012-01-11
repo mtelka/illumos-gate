@@ -121,7 +121,6 @@ typedef enum {
 
 /* XXX: temporary... */
 extern zone_key_t nlm_zone_key;
-extern clock_t nlm_grace_threshold;
 
 /*
  * Locks:
