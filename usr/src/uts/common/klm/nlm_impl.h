@@ -58,6 +58,7 @@
 
 struct nlm_host;
 struct vnode;
+struct exportinfo;
 
 /*
  * Callback functions for nlm_do_lock() and others.
@@ -162,7 +163,6 @@ TAILQ_HEAD(nlm_slreq_list, nlm_slreq);
  *   nv_vp: a pointer to vnode that is hold by given nlm_vhold
  *   nv_refcnt: reference counter (non zero when vhold is inuse)
  *   nv_slreqs: sleeping lock requests that were made on the nv_vp
- *              (i.e. locks that are blocked on the nv_vp).
  *   nv_link: list node to store vholds in host's nh_vnodes_list
  */
 struct nlm_vhold {
@@ -398,6 +398,22 @@ extern krwlock_t lm_lck;
 extern zone_key_t nlm_zone_key;
 
 /*
+ * NLM interface functions (called directly by
+ * either klmmod or klmpos)
+ */
+extern int nlm_frlock(struct vnode *, int, struct flock64 *, int, u_offset_t,
+    struct cred *, struct netobj *, struct flk_callback *, int);
+extern int nlm_shrlock(struct vnode *, int, struct shrlock *, int,
+    struct netobj *, int);
+extern int nlm_safemap(const vnode_t *);
+extern int nlm_safelock(vnode_t *, const struct flock64 *, cred_t *);
+extern int nlm_has_sleep(const vnode_t *);
+int nlm_vp_active(const vnode_t *vp);
+void nlm_sysid_free(sysid_t);
+int nlm_vp_active(const vnode_t *);
+void nlm_unexport(struct exportinfo *);
+
+/*
  * NLM startup/shutdown
  */
 int nlm_svc_starting(struct nlm_globals *, struct file *,
@@ -415,19 +431,10 @@ void nlm_rpc_cache_destroy(struct nlm_host *);
 void nlm_globals_register(struct nlm_globals *);
 void nlm_globals_unregister(struct nlm_globals *);
 sysid_t nlm_sysid_alloc(void);
-void nlm_sysid_free(sysid_t);
-int nlm_vp_active(const vnode_t *);
 
 /*
- * Client functions (nlm_client.c)
+ * Client reclamation/cancelation
  */
-extern int nlm_frlock(struct vnode *, int, struct flock64 *, int, u_offset_t,
-    struct cred *, struct netobj *, struct flk_callback *, int);
-extern int nlm_shrlock(struct vnode *, int, struct shrlock *, int,
-    struct netobj *, int);
-extern int nlm_safemap(const vnode_t *);
-extern int nlm_safelock(vnode_t *, const struct flock64 *, cred_t *);
-extern int nlm_has_sleep(const vnode_t *);
 void nlm_reclaim_client(struct nlm_globals *, struct nlm_host *);
 void nlm_client_cancel_all(struct nlm_globals *, struct nlm_host *);
 

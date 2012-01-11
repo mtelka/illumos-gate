@@ -81,7 +81,6 @@ static void nlm_block(
 	rpcvers_t vers);
 
 static void nlm_init_flock(struct flock64 *, struct nlm4_lock *, int);
-static vnode_t *nlm_do_fh_to_vp(struct netobj *);
 static vnode_t *nlm_fh_to_vp(struct netobj *);
 static struct nlm_vhold *nlm_fh_to_vhold(struct nlm_host *, struct netobj *);
 static void nlm_init_shrlock(struct shrlock *, nlm4_share *, struct nlm_host *);
@@ -104,7 +103,7 @@ nlm_init_flock(struct flock64 *fl, struct nlm4_lock *nl, int sysid)
  * released by VN_RELE().
  */
 static vnode_t *
-nlm_do_fh_to_vp(struct netobj *fh)
+nlm_fh_to_vp(struct netobj *fh)
 {
 	fhandle_t *fhp;
 
@@ -119,39 +118,6 @@ nlm_do_fh_to_vp(struct netobj *fh)
 	/* We know this is aligned (kmem_alloc) */
 	fhp = (fhandle_t *)fh->n_bytes;
 	return (lm_fhtovp(fhp));
-}
-
-/*
- * Like nlm_do_fh_to_vp(), but checks some access rights
- * on vnode before returning it.
- * NOTE: vnode _must_ be explicitly released by VN_RELE().
- */
-static vnode_t *
-nlm_fh_to_vp(struct netobj *fh)
-{
-	vnode_t *vp;
-
-	vp = nlm_do_fh_to_vp(fh);
-	if (vp == NULL)
-		return (vp);
-
-	/*
-	 * Do not allow to add locks/shares to read only
-	 * file system.
-	 */
-	if (vp->v_vfsp->vfs_flag & VFS_RDONLY)
-		goto error;
-
-	/*
-	 * TODO[DK]: check whether given thread can add locks
-	 * to given vnode.
-	 */
-
-	return (vp);
-
-error:
-	VN_RELE(vp);
-	return (NULL);
 }
 
 /*
@@ -275,12 +241,7 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 		return;
 	}
 
-	/*
-	 * Do not check access rights to vnode when
-	 * deal with NLM_TEST. It's simply a read
-	 * access to filesystem.
-	 */
-	vp = nlm_do_fh_to_vp(&argp->alock.fh);
+	vp = nlm_fh_to_vp(&argp->alock.fh);
 	if (vp == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto out;

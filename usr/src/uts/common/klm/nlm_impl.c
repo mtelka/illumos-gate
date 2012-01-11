@@ -198,6 +198,7 @@ static void nlm_vhold_dtor(void *, void *);
 static void nlm_vhold_destroy(struct nlm_host *,
     struct nlm_vhold *);
 static bool_t nlm_vhold_busy(struct nlm_host *, struct nlm_vhold *);
+static void nlm_vhold_clean(struct nlm_vhold *, int);
 
 /*
  * NLM client/server sleeping locks functions
@@ -295,6 +296,60 @@ nlm_vp_active(const vnode_t *vp)
 
 	mutex_exit(&g->lock);
 	return (active);
+}
+
+/*
+ * Called right before NFS export is going to
+ * dissapear. The function finds all vnodes
+ * belonging to the given export and cleans
+ * all remote locks and share reservations
+ * on them.
+ */
+void
+nlm_unexport(struct exportinfo *exi)
+{
+	struct nlm_globals *g;
+	struct nlm_host *hostp;
+
+	g = zone_getspecific(nlm_zone_key, curzone);
+
+	mutex_enter(&g->lock);
+	hostp = avl_first(&g->nlm_hosts_tree);
+	while (hostp != NULL) {
+		struct nlm_vhold *nvp;
+		int sysid;
+
+		sysid = nlm_host_get_sysid(hostp);
+		mutex_enter(&hostp->nh_lock);
+		TAILQ_FOREACH(nvp, &hostp->nh_vholds_list, nv_link) {
+			vnode_t *vp;
+
+			nvp->nv_refcnt++;
+			mutex_exit(&hostp->nh_lock);
+
+			vp = nvp->nv_vp;
+
+			if (!EQFSID(&exi->exi_fsid, &vp->v_vfsp->vfs_fsid))
+				goto next_iter;
+
+			/*
+			 * Ok, it we found out that vnode vp is under
+			 * control by the exportinfo exi, now we need
+			 * to drop all locks from this vnode, let's
+			 * do it.
+			 */
+			nlm_vhold_clean(nvp, sysid);
+
+		next_iter:
+			mutex_enter(&hostp->nh_lock);
+			nvp->nv_refcnt--;
+		}
+
+		mutex_exit(&hostp->nh_lock);
+		hostp = AVL_NEXT(&g->nlm_hosts_tree, hostp);
+	}
+
+	mutex_exit(&g->lock);
 }
 
 /*
@@ -798,6 +853,18 @@ nlm_vhold_release(struct nlm_host *hostp, struct nlm_vhold *nvp)
 	mutex_exit(&hostp->nh_lock);
 }
 
+/*
+ * Clean all locks and share reservations on the
+ * given vhold object that were acquired by the
+ * given sysid
+ */
+static void
+nlm_vhold_clean(struct nlm_vhold *nvp, int sysid)
+{
+	cleanlocks(nvp->nv_vp, IGN_PID, sysid);
+	cleanshares_by_sysid(nvp->nv_vp, sysid);
+}
+
 static void
 nlm_vhold_destroy(struct nlm_host *hostp, struct nlm_vhold *nvp)
 {
@@ -993,12 +1060,13 @@ nlm_host_notify_server(struct nlm_host *hostp, int32_t state)
 			TAILQ_INSERT_TAIL(&slreqs2free, slr, nsr_link);
 		}
 
+		nvp->nv_refcnt++;
 		mutex_exit(&hostp->nh_lock);
 
-		/* cleanup all active locks and shares */
-		cleanlocks(nvp->nv_vp, IGN_PID, sysid);
-		cleanshares_by_sysid(nvp->nv_vp, sysid);
+		nlm_vhold_clean(nvp, sysid);
+
 		mutex_enter(&hostp->nh_lock);
+		nvp->nv_refcnt--;
 	}
 
 	mutex_exit(&hostp->nh_lock);

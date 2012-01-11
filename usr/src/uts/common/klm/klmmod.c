@@ -350,9 +350,9 @@ lm_shutdown(void)
  * See nfs_export.c:unexport()
  */
 void
-lm_unexport(struct exportinfo *ei)
+lm_unexport(struct exportinfo *exi)
 {
-	/* XXX - todo... */
+	nlm_unexport(exi);
 }
 
 /*
