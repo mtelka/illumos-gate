@@ -242,13 +242,6 @@ TAILQ_HEAD(nlm_slock_srv_list, nlm_slock_srv);
 /*
  * NLM host.
  */
-enum nlm_host_state {
-	NLM_UNMONITORED,
-	NLM_MONITORED,
-	NLM_MONITOR_FAILED,
-	NLM_RECOVERING
-};
-
 /*
  * NLM RPC handle object.
  *
@@ -319,14 +312,13 @@ enum nlm_rpcb_state {
  *   nh_addr: host's address (either IPv4 or IPv6).
  *   nh_sysid: unique sysid associated with this host.
  *   nh_state: last seen host's state reported by NSM.
+ *   nh_flags: ORed host flags.
+ *   nh_idle_timeout: host idle timeout. When expired host is freed.
  *   nh_rpcb_cv: condition variable that is used to make sure
  *               that only one thread renews host's RPC binding.
  *   nh_rpcb_ustat: error code returned by RPC binding update operation.
  *   nh_rpcb_state: host's RPC binding state (see enum nlm_rpcb_state
  *                  for more details).
- *   nh_monstate: host NSM state (see enum nlm_host_state for more info).
- *   nh_nsm_state: last seen host's state reported by NSM
- *   nh_idle_timeout: host idle timeout. When expired host is freed.
  *   nh_rpchc: host's RPC handles cache.
  *   nh_vholds_by_vp: a hash table of all vholds host owns. (used for lookup)
  *   nh_vholds_list: a linked list of all vholds host owns. (used for iteration)
@@ -343,19 +335,25 @@ struct nlm_host {
 	struct knetconfig          nh_knc;
 	struct netbuf              nh_addr;
 	int32_t                    nh_sysid;
-	int                        nh_state;
+	int32_t                    nh_state;
+	clock_t                    nh_idle_timeout;
+	uint8_t                    nh_flags;
 	kcondvar_t                 nh_rpcb_cv;
 	enum clnt_stat             nh_rpcb_ustat;
 	enum nlm_rpcb_state        nh_rpcb_state;
-	enum nlm_host_state        nh_monstate;
-	int                        nh_nsm_state;
-	time_t                     nh_idle_timeout;
 	struct nlm_rpch_list       nh_rpchc;
 	mod_hash_t                *nh_vholds_by_vp;
 	struct nlm_vhold_list      nh_vholds_list;
 	struct nlm_slock_srv_list  nh_srv_slocks;
 };
 TAILQ_HEAD(nlm_host_list, nlm_host);
+
+/*
+ * NLM host flags
+ */
+#define NLM_NH_MONITORED   0x01
+#define NLM_NH_RECOVERY    0x02
+
 
 /*
  * nlm_nsm structure describes RPC client handle that can be

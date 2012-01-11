@@ -863,7 +863,6 @@ nlm_client_recovery_start(void *arg)
 	NLM_DEBUG(NLM_LL2, "NLM: client lock recovery for %s completed\n",
 	    host->nh_name);
 
-	host->nh_monstate = NLM_MONITORED;
 	g = zone_getspecific(nlm_zone_key, curzone);
 	/* Note: refcnt was incremented before this thread started. */
 	nlm_host_release(g, host);
@@ -946,7 +945,6 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	nlm_copy_netbuf(&host->nh_addr, naddr);
 
 	host->nh_state = 0;
-	host->nh_monstate = NLM_UNMONITORED;
 	host->nh_rpcb_state = NRPCB_NEED_UPDATE;
 
 	host->nh_vholds_by_vp = mod_hash_create_ptrhash("nlm vholds hash",
@@ -1329,7 +1327,7 @@ nlm_host_unmonitor(struct nlm_globals *g, struct nlm_host *host)
 	struct nlm_nsm *nsm;
 
 	VERIFY(host->nh_refs == 0);
-	if (host->nh_monstate == NLM_UNMONITORED)
+	if (!(host->nh_flags & NLM_NH_MONITORED))
 		return;
 
 	/*
@@ -1357,9 +1355,9 @@ nlm_host_unmonitor(struct nlm_globals *g, struct nlm_host *host)
 	}
 
 	nlm_svc_release_nsm(nsm);
+	host->nh_flags &= ~NLM_NH_MONITORED;
 	DTRACE_PROBE2(unmon__done, struct nlm_host *, host,
 	    int, res.state);
-	host->nh_monstate = NLM_UNMONITORED;
 }
 
 /*
@@ -1386,17 +1384,16 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 	}
 
 	mutex_enter(&host->nh_lock);
-	if (host->nh_monstate == NLM_MONITORED) {
+	if (host->nh_flags & NLM_NH_MONITORED) {
 		mutex_exit(&host->nh_lock);
 		return;
 	}
 
-	host->nh_monstate = NLM_MONITORED;
 	mutex_exit(&host->nh_lock);
 
 	/*
 	 * Tell statd how to call us with status updates for
-	 * this host.  Updates arrive via nlm_do_notify1().
+	 * this host. Updates arrive via nlm_do_notify1().
 	 *
 	 * We put our assigned system ID value in the priv field to
 	 * make it simpler to find the host if we are notified of a
@@ -1426,13 +1423,12 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 	nlm_svc_release_nsm(nsm);
 	if (res.res_stat == stat_fail) {
 		NLM_WARN("Local NSM refuses to monitor %s\n", host->nh_name);
-		mutex_enter(&host->nh_lock);
-		host->nh_monstate = NLM_MONITOR_FAILED;
-		mutex_exit(&host->nh_lock);
 		return;
 	}
 
-	host->nh_monstate = NLM_MONITORED;
+	mutex_enter(&host->nh_lock);
+	host->nh_flags |= NLM_NH_MONITORED;
+	mutex_exit(&host->nh_lock);
 }
 
 int
