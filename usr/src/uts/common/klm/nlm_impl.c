@@ -1750,14 +1750,14 @@ nlm_slock_grant(struct nlm_globals *g,
  * flp on the given vhold object.
  * On success function returns 0, otherwise (if
  * lock request with the same flp is already
- * registered) function returns -1.
+ * registered) function returns EEXIST.
  */
 int
 nlm_slreq_register(struct nlm_host *hostp, struct nlm_vhold *nvp,
 	struct flock64 *flp)
 {
 	struct nlm_slreq *slr, *new_slr = NULL;
-	int ret = -1;
+	int ret = EEXIST;
 
 	mutex_enter(&hostp->nh_lock);
 	slr = nlm_slreq_find_locked(hostp, nvp, flp);
@@ -1791,7 +1791,7 @@ out:
  * to flp from the given vhold object.
  * On success function returns 0, otherwise (if
  * lock request corresponding to flp isn't found
- * on the given vhold) function returns -1.
+ * on the given vhold) function returns ENOENT.
  */
 int
 nlm_slreq_unregister(struct nlm_host *hostp, struct nlm_vhold *nvp,
@@ -1803,7 +1803,7 @@ nlm_slreq_unregister(struct nlm_host *hostp, struct nlm_vhold *nvp,
 	slr = nlm_slreq_find_locked(hostp, nvp, flp);
 	if (slr == NULL) {
 		mutex_exit(&hostp->nh_lock);
-		return (-1);
+		return (ENOENT);
 	}
 
 	TAILQ_REMOVE(&nvp->nv_slreqs, slr, nsr_link);

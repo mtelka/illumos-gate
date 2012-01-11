@@ -72,6 +72,12 @@
 
 #define	NLM_IN_GRACE(g) (ddi_get_lbolt() < (g)->grace_threshold)
 
+struct nlm_block_cb_data {
+	struct nlm_host		*hostp;
+	struct nlm_vhold	*nvp;
+	struct flock64		*flp;
+};
+
 static void nlm_block(
 	nlm4_lockargs *lockargs,
 	struct nlm_host *host,
@@ -84,6 +90,7 @@ static void nlm_init_flock(struct flock64 *, struct nlm4_lock *, int);
 static vnode_t *nlm_fh_to_vp(struct netobj *);
 static struct nlm_vhold *nlm_fh_to_vhold(struct nlm_host *, struct netobj *);
 static void nlm_init_shrlock(struct shrlock *, nlm4_share *, struct nlm_host *);
+static callb_cpr_t *nlm_block_callback(flk_cb_when_t, void *);
 
 static void
 nlm_init_flock(struct flock64 *fl, struct nlm4_lock *nl, int sysid)
@@ -546,7 +553,9 @@ nlm_block(nlm4_lockargs *lockargs,
 	nlm4_testargs args;
 	int error;
 	enum clnt_stat stat;
+	flk_callback_t flk_cb;
 	nlm_rpc_t *rpcp;
+	struct nlm_block_cb_data cb_data;
 
 	/*
 	 * Keep a list of blocked locks on nh_pending, and use it
@@ -558,25 +567,28 @@ nlm_block(nlm4_lockargs *lockargs,
 	 * Caller already has vp held.
 	 */
 
-	if (nlm_slreq_register(host, nvp, flp) < 0) {
+	error = nlm_slreq_register(host, nvp, flp);
+	if (error != 0) {
 		/*
 		 * Sleeping lock request with given fl is already
 		 * registered by someone else. This means that
 		 * some other thread is handling the request, let
 		 * him do its work.
 		 */
+		ASSERT(error == EEXIST);
 		return;
 	}
+
+	cb_data.hostp = host;
+	cb_data.nvp = nvp;
+	cb_data.flp = flp;
+	flk_init_callback(&flk_cb, nlm_block_callback, &cb_data);
 
 	/* BSD: VOP_ADVLOCK(vp, NULL, F_SETLK, fl, F_REMOTE); */
 	error = VOP_FRLOCK(nvp->nv_vp, F_SETLKW, flp,
 	    F_REMOTELOCK | FREAD | FWRITE,
 	    (u_offset_t)0, NULL, CRED(), NULL);
 
-	/*
-	 * Done waiting, it's time to unregister sleeping request
-	 */
-	nlm_slreq_unregister(host, nvp, flp);
 	if (error != 0) {
 		/*
 		 * We failed getting the lock, but have no way to
@@ -605,6 +617,28 @@ nlm_block(nlm4_lockargs *lockargs,
 	}
 
 	nlm_host_rele_rpc(host, rpcp);
+}
+
+/*
+ * The function that is used as flk callback when NLM server
+ * sets new sleeping lock. The function unregisters NLM
+ * sleeping lock request (nlm_slreq) asspciated with the
+ * sleeping lock _before_ lock becomes active. It prevents
+ * potential race condition between nlm_block() and
+ * nlm_do_cancel().
+ */
+static callb_cpr_t *
+nlm_block_callback(flk_cb_when_t when, void *data)
+{
+	struct nlm_block_cb_data *cb_data;
+
+	cb_data = (struct nlm_block_cb_data *)data;
+	if (when == FLK_AFTER_SLEEP) {
+		(void) nlm_slreq_unregister(cb_data->hostp,
+		    cb_data->nvp, cb_data->flp);
+	}
+
+	return (0);
 }
 
 /*
@@ -652,25 +686,25 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 
 	nlm_init_flock(&fl, &argp->alock, nlm_host_get_sysid(host));
 	fl.l_type = (argp->exclusive) ? F_WRLCK : F_RDLCK;
-	if (nlm_slreq_unregister(host, nvp, &fl) == 0)
-		slreq_unreg = TRUE;
+
+	error = nlm_slreq_unregister(host, nvp, &fl);
+	if (error != 0) {
+		/*
+		 * There's no sleeping lock request corresponding
+		 * to the lock. Then requested sleeping lock
+		 * doesn't exist.
+		 */
+		resp->stat.stat = nlm4_denied;
+		goto out;
+	}
 
 	fl.l_type = F_UNLCK;
-
-	/*
-	 * Sleeping lock we're trying to cancel could
-	 * already be applied. In this case we have to try
-	 * to ask our local os/flock manager to unlock it.
-	 * We interested in frlock retcode only if
-	 * server-side sleeping request wasn't found.
-	 */
 	error = VOP_FRLOCK(nvp->nv_vp, F_SETLK, &fl,
 	    F_REMOTELOCK | FREAD | FWRITE,
 	    (u_offset_t)0, NULL, CRED(), NULL);
 
-	resp->stat.stat = nlm4_granted;
-	if (!slreq_unreg && error != 0)
-		resp->stat.stat = nlm4_denied;
+	resp->stat.stat = (error == 0) ?
+		nlm4_granted : nlm4_denied;
 
 out:
 	/*
