@@ -833,7 +833,7 @@ nlm_netbuf_addrs_equal(struct netbuf *nb1, struct netbuf *nb2)
 		return (IN6_ARE_ADDR_EQUAL(&addr1.sin6->sin6_addr,
 		        &addr2.sin6->sin6_addr));
 	default:
-		ASSERT(0);
+		VERIFY(0);
 
 		/* Just to take away compiler warning */
 		return (FALSE);
