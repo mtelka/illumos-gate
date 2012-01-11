@@ -118,32 +118,6 @@ krwlock_t lm_lck;
  */
 static const struct timeval nlm_rpctv_zero = { 0,  0 };
 
-
-/*
- * NLM async RPC operations
- */
-static const rpcproc_t nlm_async_procnums[] = {
-	NLM_TEST_RES,
-	NLM_LOCK_RES,
-	NLM_CANCEL_RES,
-	NLM_UNLOCK_RES,
-	NLM_GRANTED_RES,
-	NLM4_TEST_RES,
-	NLM4_LOCK_RES,
-	NLM4_CANCEL_RES,
-	NLM4_UNLOCK_RES,
-	NLM4_GRANTED_RES,
-};
-
-/*
- * A collection of NLM RPC operations that
- * require to block signals before calling.
- */
-static const rpcproc_t nlm_bs_procnums[] = {
-	NLM_CANCEL,
-	NLM4_CANCEL,
-};
-
 /*
  * List of all Zone globals nlm_globals instences
  * linked together.
@@ -240,7 +214,6 @@ static void nlm_copy_netbuf(struct netbuf *, struct netbuf *);
 static int nlm_netbuf_addrs_cmp(struct netbuf *, struct netbuf *);
 static void nlm_kmem_reclaim(void *);
 static void nlm_pool_shutdown(void);
-static bool_t nlm_procnum_match(rpcproc_t, const rpcproc_t *, int);
 
 /*
  * NLM thread functions
@@ -541,25 +514,23 @@ nlm_clnt_call(CLIENT *clnt, rpcproc_t procnum, xdrproc_t xdr_args,
 
 	/*
 	 * If NLM RPC procnum is one of the NLM _RES procedures
-	 * that are used to reply on asynchronous NLM RPC
+	 * that are used to reply to asynchronous NLM RPC
 	 * (MSG calls), explicitly set RPC timeout to zero.
 	 * Client doesn't send a reply to RES procedures, so
 	 * we don't need to wait anything.
+	 *
+	 * NOTE: we ignore NLM4_*_RES procnums because they are
+	 * equal to NLM_*_RES numbers.
 	 */
-	if (nlm_procnum_match(procnum, nlm_async_procnums,
-		ARRSIZE(nlm_async_procnums)))
+	if (procnum >= NLM_TEST_RES && procnum <= NLM_GRANTED_RES)
 		wait = nlm_rpctv_zero;
 
 	/*
-	 * Check whether we need to block signals
-	 * for given NLM RPC procedure.
+	 * We need to block signals in case of NLM_CANCEL RPC
+	 * in order to prevent interruption of network RPC
+	 * calls.
 	 */
-	if (nlm_procnum_match(procnum, nlm_bs_procnums,
-		ARRSIZE(nlm_bs_procnums))) {
-		/*
-		 * NOTE: we need to disable signals in order
-		 * to prevent interruption of network RPC calls.
-		 */	 
+	if (procnum == NLM_CANCEL) {
 		k_sigset_t newmask;
 
 		sigfillset(&newmask);
@@ -577,19 +548,6 @@ nlm_clnt_call(CLIENT *clnt, rpcproc_t procnum, xdrproc_t xdr_args,
 		sigreplace(&oldmask, (k_sigset_t *)NULL);
 
 	return (stat);
-}
-
-static bool_t
-nlm_procnum_match(rpcproc_t procnum,
-    const rpcproc_t *match_procs, int match_procs_len)
-{
-	int i;
-
-	for (i = 0; i < match_procs_len; i++)
-		if (procnum == match_procs[i])
-			return (TRUE);
-
-	return (FALSE);
 }
 
 /*
