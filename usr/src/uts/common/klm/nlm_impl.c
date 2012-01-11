@@ -1313,6 +1313,7 @@ nlm_create_host(struct nlm_globals *g, char *name,
 
 	TAILQ_INIT(&host->nh_vholds_list);
 	TAILQ_INIT(&host->nh_rpchc);
+	host->nh_lms.ls_host = host;
 
 	return (host);
 }

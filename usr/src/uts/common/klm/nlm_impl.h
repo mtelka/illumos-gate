@@ -269,6 +269,20 @@ enum nlm_rpcb_state {
 #define	NLM_NH_RECLAIM   0x02
 
 /*
+ * lm_sysid structure was used by old (closed source)
+ * klmmod for (at least as it seems) the same purpose
+ * we use nlm_host structure. lm_sysid can not be
+ * simply removed, because it is used by the code
+ * outside of klmmod. So we introduce it hear as
+ * simple "compatibily layer". It's part of nlm_host
+ * structure and it contains a pointer to parent
+ * host.
+ */
+struct lm_sysid {
+	struct nlm_host *ls_host;
+};
+
+/*
  * NLM host object is the most major structure in NLM.
  * It identifies remote client or remote server or both.
  * NLM host object keep a track of all vnodes client/server
@@ -287,6 +301,7 @@ enum nlm_rpcb_state {
  *   nh_netid: netid string identifying type of transport host uses.
  *   nh_knc: host's knetconfig (used by kRPC subsystem).
  *   nh_addr: host's address (either IPv4 or IPv6).
+ *   nh_lms: lm_sysid instance, for compatibility with old klmmod
  *   nh_sysid: unique sysid associated with this host.
  *   nh_state: last seen host's state reported by NSM.
  *   nh_flags: ORed host flags.
@@ -311,6 +326,7 @@ struct nlm_host {
 	char			*nh_netid;
 	struct knetconfig	nh_knc;
 	struct netbuf		nh_addr;
+	struct lm_sysid		nh_lms;
 	sysid_t			nh_sysid;
 	int32_t			nh_state;
 	clock_t			nh_idle_timeout;

@@ -367,11 +367,13 @@ lm_unexport(struct exportinfo *exi)
 void
 lm_cprsuspend(void)
 {
+	/* TODO */
 }
 
 void
 lm_cprresume(void)
 {
+	/* TODO */
 }
 
 /*
@@ -384,10 +386,6 @@ lm_set_nlmid_flk(int *new_sysid)
 		*new_sysid |= (lm_global_nlmid << BITS_IN_SYSID);
 }
 
-/*
- * Called by NFS unmount.  Free the klm netconfig.
- * XXX: Only needed if we store something there.
- */
 void
 lm_free_config(struct knetconfig *knc)
 {
@@ -404,21 +402,48 @@ lm_vp_active(const vnode_t *vp)
 }
 
 /*
+ * NOTE: there's something worth to say about lm_sysid
+ * structure and functions around it (like lm_get_sysid()
+ * and lm_rel_sysid()). Closed source lock manager provided
+ * this structure to the modules outside and had an interface
+ * to obtain and release it. It seems that the structure
+ * was similar to our nlm_host structure. For compatibility
+ * reasons we keep it in the open-source klmmod. It's just
+ * a member of nlm_host structure and has a pointer to
+ * the part host as its only field.
+ *
+ * XXX: may be in future it'd be better to get rid of
+ * lm_sysid and use nlm_host instead (well, qutely
+ * typedefed nlm_host).
+ */
+
+/*
  * Find or create a "sysid" for given knc+addr.
  * name is optional.  Sets nc_changed if the
  * found knc_proto is different from passed.
  * Increments the reference count.
  *
  * Called internally, and in nfs4_find_sysid()
- *
- * XXX: struct lm_sysid is like our struct nlm_host.
  */
 struct lm_sysid *
 lm_get_sysid(struct knetconfig *knc, struct netbuf *addr,
     char *name, bool_t *nc_changed)
 {
-	/* XXX - todo... */
-	return (0);
+	struct nlm_globals *g;
+	const char *netid;
+	struct nlm_host *hostp;
+
+	netid = nlm_knc_to_netid(knc);
+	if (netid == NULL)
+		return (NULL);
+
+	g = zone_getspecific(nlm_zone_key, curzone);
+
+	hostp = nlm_host_findcreate(g, name, netid, addr);
+	if (hostp == NULL)
+		return (NULL);
+
+	return (&hostp->nh_lms);
 }
 
 /*
@@ -427,7 +452,10 @@ lm_get_sysid(struct knetconfig *knc, struct netbuf *addr,
 void
 lm_rel_sysid(struct lm_sysid *sysid)
 {
-	/* XXX - todo... */
+	struct nlm_globals *g;
+
+	g = zone_getspecific(nlm_zone_key, curzone);
+	nlm_host_release(g, sysid->ls_host);
 }
 
 /*
@@ -453,8 +481,7 @@ lm_free_sysidt(sysid_t sysid)
 sysid_t
 lm_sysidt(struct lm_sysid *lms)
 {
-	/* XXX - todo... */
-	return (-1);
+	return (lms->ls_host->nh_sysid);
 }
 
 /*
