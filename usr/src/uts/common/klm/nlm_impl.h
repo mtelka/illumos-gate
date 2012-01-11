@@ -222,7 +222,6 @@ typedef struct nlm_rpc {
 	rpcvers_t	nr_vers;
 	clock_t     nr_ttl_timeout;
 	uint16_t    nr_sn;
-	struct nlm_host *nr_owner;
 	TAILQ_ENTRY(nlm_rpc) nr_link;
 } nlm_rpc_t;
 TAILQ_HEAD(nlm_rpch_list, nlm_rpc);

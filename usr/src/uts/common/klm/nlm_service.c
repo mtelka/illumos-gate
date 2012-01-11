@@ -73,10 +73,11 @@
 
 static void nlm_block(
 	nlm4_lockargs *lockargs,
-	nlm_rpc_t *rpcp,
+	struct nlm_host *host,
 	struct nlm_vnode *nv,
 	struct flock64 *fl,
-	nlm_testargs_cb grant_cb);
+	nlm_testargs_cb grant_cb,
+	rpcvers_t vers);
 
 static void
 nlm_init_flock(struct flock64 *fl, struct nlm4_lock *nl, int sysid)
@@ -268,7 +269,6 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	struct netbuf *addr;
 	char *netid;
 	char *name;
-	nlm_rpc_t *rpcp = NULL;
 	int error, flags;
 	bool_t do_blocking = FALSE;
 	bool_t do_mon_req = FALSE;
@@ -306,30 +306,6 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	    ddi_get_lbolt() < nlm_grace_threshold) {
 		status = nlm4_denied_grace_period;
 		goto doreply;
-	}
-
-	/*
-	 * If we may need to do RPC callback, get the
-	 * RPC client handle now, so we know if we can
-	 * bind to the NLM service on this client.
-	 * The two cases where we need this are:
-	 * 1: _msg_ call needing an RPC callback,
-	 * 2: blocking call needing a later grant.
-	 *
-	 * Note: host object carries transport type.
-	 * One client using multiple transports gets
-	 * separate sysids for each of its transports.
-	 */
-	if (res_cb != NULL || grant_cb != NULL) {
-		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
-		if (error != 0) {
-			/*
-			 * FIXME[DK]: it's not a great idea to do reply without
-			 * RPC handle. It should be fixed.
-			 */
-			status = nlm4_denied;
-			goto doreply;
-		}
 	}
 
 	/*
@@ -413,21 +389,28 @@ doreply:
 			svcerr_systemerr(sr->rq_xprt);
 		}
 	}
-	if (res_cb != NULL && rpcp != NULL) {
-		enum clnt_stat stat;
+	if (res_cb != NULL) {
+		nlm_rpc_t *rpcp;
 
-		/* i.e. nlm_lock_res_1_cb */
-		stat = (*res_cb)(resp, NULL, rpcp->nr_handle);
-		if (stat != RPC_SUCCESS) {
-			if (stat == RPC_PROCUNAVAIL) {
-				nlm_host_invalidate_binding(host);
-			} else {
-				struct rpc_err err;
+		error = nlm_host_get_rpc(host, sr->rq_vers, &rpcp);
+		if (error == 0) {
+			enum clnt_stat stat;
 
-				CLNT_GETERR(rpcp->nr_handle, &err);
-				NLM_ERR("NLM: do_lock CB, stat=%d err=%d\n",
-				    stat, err.re_errno);
+			/* i.e. nlm_lock_res_1_cb */
+			stat = (*res_cb)(resp, NULL, rpcp->nr_handle);
+			if (stat != RPC_SUCCESS) {
+				if (stat == RPC_PROCUNAVAIL) {
+					nlm_host_invalidate_binding(host);
+				} else {
+					struct rpc_err err;
+
+					CLNT_GETERR(rpcp->nr_handle, &err);
+					NLM_ERR("NLM: do_lock CB, stat=%d err=%d\n",
+					    stat, err.re_errno);
+				}
 			}
+
+			nlm_host_rele_rpc(host, rpcp);
 		}
 	}
 
@@ -442,7 +425,7 @@ doreply:
 	if (do_mon_req && grant_cb != NULL)
 		nlm_host_monitor(g, host, argp->state);
 
-	if (do_blocking && rpcp != NULL) {
+	if (do_blocking) {
 		/*
 		 * We need to block on this lock, and when that
 		 * completes, do the granted RPC call. Note that
@@ -451,11 +434,8 @@ doreply:
 		 * to block indefinitely if needed.
 		 */
 		(void) svc_detach_thread(sr->rq_xprt);
-		nlm_block(argp, rpcp, nv, &fl, grant_cb);
+		nlm_block(argp, host, nv, &fl, grant_cb, sr->rq_vers);
 	}
-
-	if (rpcp != NULL)
-		nlm_host_rele_rpc(host, rpcp);
 
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
@@ -472,15 +452,16 @@ doreply:
 static void
 nlm_block(
 	nlm4_lockargs *lockargs,
-	nlm_rpc_t *rpcp,
+	struct nlm_host *host,
 	struct nlm_vnode *nv,
 	struct flock64 *fl,
-	nlm_testargs_cb grant_cb)
+	nlm_testargs_cb grant_cb,
+	rpcvers_t vers)
 {
-	struct nlm_host *host = rpcp->nr_owner;
 	nlm4_testargs args;
 	int error, flags;
 	enum clnt_stat stat;
+	nlm_rpc_t *rpcp;
 
 	struct nlm_async_lock *taf, *af = NULL;
 
@@ -556,6 +537,10 @@ nlm_block(
 		goto out;
 	}
 
+	error = nlm_host_get_rpc(host, vers, &rpcp);
+	if (error != 0)
+		goto out;
+
 	/*
 	 * Do the "granted" call-back to the client.
 	 */
@@ -573,6 +558,8 @@ nlm_block(
 			    stat, err.re_errno);
 		}
 	}
+
+	nlm_host_rele_rpc(host, rpcp);
 
 out:
 	nlm_free_async_lock(af);

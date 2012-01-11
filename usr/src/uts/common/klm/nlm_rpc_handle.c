@@ -193,7 +193,6 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 		mutex_exit(&hostp->nh_lock);
 		rpcp = kmem_zalloc(sizeof (*rpcp), KM_SLEEP);
 		rpcp->nr_vers = vers;
-		rpcp->nr_owner = hostp;
 		mutex_enter(&hostp->nh_lock);
 	}
 
