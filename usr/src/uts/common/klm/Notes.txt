@@ -1,13 +1,15 @@
 NOTES:
 1) It's a bit confusing that we have two modules: klmmod and klmops
 where klmops depends from klmmod
-klmmod is a server code + RPC functions + KLM internals implementation
-klmops is a client code: klmpos.c + nlm_client.c
 It seems pointless to separate klmpos from klmmod. May be it's better
 to join them in one module? Actually I don't see any benefit in separation
 of these two modules, the only thing we get from it is dependency hell.
 
-2) Share reservations on the client are not supported at the moment.
+NOTE: some work to make everything in klmmod was done. Now klmops contains
+only stubs that call klmmod functions. So it'll be quite easy to get rid
+of klmops module.
+
+2) Share reservations on the client side don't support reclamation function.
 The problem with them is that Illumos kernel has no any API that performs
 to know whether there're any share reservations on the system that were
 made by the given sysid. And it's not easy to implement one, because
@@ -72,11 +74,11 @@ with closed source klmmod.
    NSMADDRPROC1_REG/NSMADDRPROC1_UNREG. It seems closed source
    klmmod used them. We need to figure out why and how to use them.
 
-5) Sometimes monitor requests to local statd fail. That happens because
+6) Sometimes monitor requests to local statd fail. That happens because
 SM_MON call handler in local statd can take more time that NLM expects.
 It seems that the problem is somewhere inside selfcheck.c:self_check() function.
 
-6) I think in future it's better to replace TAILQ list implementation taken from
+7) I think in future it's better to replace TAILQ list implementation taken from
    BSD systems with Solaris'es lists just because they are widely used through the code.
    I think it's not neccessary to multiply entities.
 
