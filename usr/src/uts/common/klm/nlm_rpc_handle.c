@@ -126,10 +126,12 @@ update_host_rpcbinding(struct nlm_host *hostp, int vers)
  *     In this case reinitialization isn't required.
  */
 static int
-refresh_nlm_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
+refresh_nlm_rpc(nlm_rpc_t *rpcp)
 {
 	int ret = 0;
+	struct nlm_host *hostp = rpcp->nr_owner;
 
+	ASSERT(rpcp->nr_owner != NULL);
 	if (rpcp->nr_handle == NULL) {
 		ret = clnt_tli_kcreate(&hostp->nh_knc, &hostp->nh_addr,
 		    NLM_PROG, rpcp->nr_vers, 0, 0, CRED(), &rpcp->nr_handle);
@@ -198,18 +200,19 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 		mutex_exit(&hostp->nh_lock);
 		rpcp = kmem_zalloc(sizeof (*rpcp), KM_SLEEP);
 		rpcp->nr_vers = vers;
+		rpcp->nr_owner = hostp;
 		mutex_enter(&hostp->nh_lock);
 	}
 
 	mutex_exit(&hostp->nh_lock);
-	rc = refresh_nlm_rpc(hostp, rpcp);
+	rc = refresh_nlm_rpc(rpcp);
 	if (rc != 0) {
 		/*
 		 * Just put handle back to the cache in hope
 		 * that it will be reinitialized later wihout
 		 * errors by somebody else...
 		 */
-		nlm_host_rele_rpc(hostp, rpcp);
+		nlm_host_rele_rpc(rpcp);
 		return (rc);
 	}
 
@@ -222,15 +225,15 @@ out:
 }
 
 void
-nlm_host_rele_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
+nlm_host_rele_rpc(nlm_rpc_t *rpcp)
 {
+	struct nlm_host *hostp = rpcp->nr_owner;
+
+	ASSERT(rpcp->nr_owner != NULL);
 	rpcp->nr_ttl_timeout = ddi_get_lbolt() +
 		SEC_TO_TICK(NLM_RPC_TTL_PERIOD);
 
 	mutex_enter(&hostp->nh_lock);
-
-	/* keep items in LRU fashion */
 	TAILQ_INSERT_HEAD(&hostp->nh_rpchc, rpcp, nr_link);
 	mutex_exit(&hostp->nh_lock);
 }
-

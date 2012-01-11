@@ -228,7 +228,7 @@ out:
 				    stat, err.re_errno);
 			}
 
-			nlm_host_rele_rpc(host, rpcp);
+			nlm_host_rele_rpc(rpcp);
 		}
 	}
 
@@ -442,7 +442,7 @@ doreply:
 	}
 
 	if (rpcp != NULL)
-		nlm_host_rele_rpc(host, rpcp);
+		nlm_host_rele_rpc(rpcp);
 
 	nlm_vnode_release(host, nv);
 	nlm_host_release(g, host);
@@ -660,7 +660,7 @@ out:
 				    stat, err.re_errno);
 			}
 
-			nlm_host_rele_rpc(host, rpcp);
+			nlm_host_rele_rpc(rpcp);
 		}
 	}
 
@@ -750,7 +750,7 @@ out:
 				    stat, err.re_errno);
 			}
 
-			nlm_host_rele_rpc(host, rpcp);
+			nlm_host_rele_rpc(rpcp);
 		}
 	}
 
@@ -837,7 +837,7 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 				    stat, err.re_errno);
 			}
 
-			nlm_host_rele_rpc(host, rpcp);
+			nlm_host_rele_rpc(rpcp);
 		}
 	}
 

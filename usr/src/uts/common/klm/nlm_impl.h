@@ -222,6 +222,7 @@ typedef struct nlm_rpc {
 	rpcvers_t	nr_vers;
 	clock_t     nr_ttl_timeout;
 	clock_t     nr_refresh_time;
+	struct nlm_host *nr_owner;
 	TAILQ_ENTRY(nlm_rpc) nr_link;
 } nlm_rpc_t;
 TAILQ_HEAD(nlm_rpch_list, nlm_rpc);
@@ -305,7 +306,7 @@ struct nlm_owner_handle {
 };
 
 /*
- * Verious timeouts
+ * Various NLM constants
  */
 
 /*
@@ -329,7 +330,8 @@ struct nlm_owner_handle {
 
 extern int nlm_host_get_rpc(struct nlm_host *hostp,
     int vers, nlm_rpc_t **rpcpp);
-extern void nlm_host_rele_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp);
+extern void nlm_host_rele_rpc(nlm_rpc_t *rpcp);
+
 
 /* nlm_client.c */
 int nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flk,
