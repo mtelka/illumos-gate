@@ -577,19 +577,17 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	struct nlm_vnode *nv = NULL;
 	struct netbuf *addr;
 	char *netid;
-	char *name;
 	int error;
 	struct flock64 fl;
 	struct nlm_async_lock *af;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
-	name = argp->alock.caller_name;
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
 	g = zone_getspecific(nlm_zone_key, curzone);
-	host = nlm_host_find(g, name, netid, addr);
+	host = nlm_host_find(g, netid, addr);
 	if (host == NULL) {
 		resp->stat.stat = nlm4_denied_nolocks;
 		return;
@@ -692,21 +690,17 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	struct nlm_vnode *nv = NULL;
 	struct netbuf *addr;
 	char *netid;
-	char *name;
 	int error, sysid;
 	struct flock64 fl;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
-	name = argp->alock.caller_name;
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
 	g = zone_getspecific(nlm_zone_key, curzone);
-	host = nlm_host_find(g, name, netid, addr);
+	host = nlm_host_find(g, netid, addr);
 	if (host == NULL) {
-		DTRACE_PROBE4(no__host, struct nlm_globals *, g,
-		    char *, name, char *, netid, struct netbuf *, addr);
 		resp->stat.stat = nlm4_denied_nolocks;
 		return;
 	}

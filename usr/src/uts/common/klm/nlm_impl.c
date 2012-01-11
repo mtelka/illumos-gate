@@ -946,17 +946,16 @@ nlm_netbuf_addrs_equal(struct netbuf *nb1, struct netbuf *nb2)
  * If found, increment the ref count.
  */
 static struct nlm_host *
-nlm_host_find_locked(struct nlm_globals *g, char *name,
-    const char *netid, struct netbuf *addr)
+nlm_host_find_locked(struct nlm_globals *g, const char *netid,
+    struct netbuf *addr)
 {
 	struct nlm_host *host;
 
 	ASSERT(MUTEX_HELD(&g->lock));
 
 	TAILQ_FOREACH(host, &g->nlm_hosts, nh_link) {
-		if (0 == strcmp(host->nh_netid, netid) &&
-			nlm_netbuf_addrs_equal(&host->nh_addr, addr) &&
-		    0 == strcmp(host->nh_name, name)) {
+		if (nlm_netbuf_addrs_equal(&host->nh_addr, addr)
+		    && strcmp(host->nh_netid, netid) == 0) {
 			host->nh_refs++;
 			break;
 		}
@@ -968,13 +967,13 @@ nlm_host_find_locked(struct nlm_globals *g, char *name,
  * Find NLM host for the given name and address.
  */
 struct nlm_host *
-nlm_host_find(struct nlm_globals *g, char *name,
-    const char *netid, struct netbuf *addr)
+nlm_host_find(struct nlm_globals *g, const char *netid,
+    struct netbuf *addr)
 {
 	struct nlm_host *hostp;
 
 	mutex_enter(&g->lock);
-	hostp = nlm_host_find_locked(g, name, netid, addr);
+	hostp = nlm_host_find_locked(g, netid, addr);
 	mutex_exit(&g->lock);
 
 	return (hostp);
@@ -998,17 +997,14 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	struct knetconfig knc;
 
 	mutex_enter(&g->lock);
-	host = nlm_host_find_locked(g, name, netid, addr);
+	host = nlm_host_find_locked(g, netid, addr);
 	mutex_exit(&g->lock);
 	if (host != NULL)
 		goto done;
 
 	err = nlm_knetconfig_from_netid(netid, &knc);
-	if (err) {
-		NLM_DEBUG(NLM_LL1, "nlm_host_findcreate: Failed to find netconfig "
-		    "by netid \"%s\". [ERR=%d]\n", netid, err);
+	if (err)
 		return (NULL);
-	}
 
 	/*
 	 * Do allocations (etc.) outside of mutex,
@@ -1016,7 +1012,7 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	 */
 	newhost = nlm_create_host(g, name, netid, &knc, addr);
 	mutex_enter(&g->lock);
-	host = nlm_host_find_locked(g, name, netid, addr);
+	host = nlm_host_find_locked(g, netid, addr);
 	if (host == NULL) {
 		newhost->nh_sysid = nlm_acquire_next_sysid();
 		TAILQ_INSERT_TAIL(&g->nlm_hosts, newhost, nh_link);

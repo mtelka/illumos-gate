@@ -426,35 +426,12 @@ int nlm_build_knetconfig(int nfmly, int nproto,
     /* OUT */ struct knetconfig *out_knc);
 
 
-/*
- * Search for an existing NLM host that matches the given name
- * (typically the caller_name element of an nlm4_lock).  If none is
- * found, create a new host. If 'addr' is non-NULL, record the remote
- * address of the host so that we can call it back for async
- * responses. If 'vers' is greater than zero then record the NLM
- * program version to use to communicate with this client. The host
- * reference count is incremented - the caller must call
- * nlm_host_release when it has finished using it.
- */
-extern struct nlm_host *nlm_find_host_by_name(const char *name,
-    struct netbuf *addr, rpcvers_t vers);
-
-/*
- * Search for an existing NLM host that matches the given remote
- * address. If none is found, create a new host with the requested
- * address and remember 'vers' as the NLM protocol version to use for
- * that host. The host reference count is incremented - the caller
- * must call nlm_host_release when it has finished using it.
- */
-extern struct nlm_host *nlm_find_host_by_addr(struct netbuf *addr,
-    int vers);
-
-struct nlm_host *nlm_host_findcreate(struct nlm_globals *g, char *name,
+extern struct nlm_host *nlm_host_findcreate(struct nlm_globals *g, char *name,
     const char *netid, struct netbuf *addr);
-struct nlm_host * nlm_host_find(struct nlm_globals *g, char *name,
+extern struct nlm_host * nlm_host_find(struct nlm_globals *g,
     const char *netid, struct netbuf *addr);
-
-struct nlm_host *nlm_host_find_by_sysid(struct nlm_globals *g, int sysid);
+extern struct nlm_host *nlm_host_find_by_sysid(struct nlm_globals *g,
+    int sysid);
 
 /*
  * Register this NLM host with the local NSM so that we can be
