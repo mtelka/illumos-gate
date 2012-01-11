@@ -75,7 +75,7 @@ static void nlm_block(
 	struct nlm_host *host,
 	struct nlm_vnode *nv,
 	struct flock64 *fl,
-	nlm_grant_cb grant_cb,
+	nlm_testargs_cb grant_cb,
 	CLIENT *clnt);
 
 static void
@@ -141,7 +141,7 @@ nlm_do_notify2(nlm_sm_status *argp, void *res, struct svc_req *sr)
  */
 void
 nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
-    struct svc_req *sr, nlm_res_cb cb)
+    struct svc_req *sr, nlm_testres_cb cb)
 {
 	struct nlm_host *host;
 	struct nlm_vnode *nv = NULL;
@@ -249,7 +249,7 @@ out:
  */
 void
 nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
-    nlm_reply_cb reply_cb, nlm_lkres_cb res_cb, nlm_grant_cb grant_cb)
+    nlm_reply_cb reply_cb, nlm_res_cb res_cb, nlm_testargs_cb grant_cb)
 {
 	struct flock64 fl;
 	struct nlm_host *host;
@@ -446,7 +446,7 @@ nlm_block(
 	struct nlm_host *host,
 	struct nlm_vnode *nv,
 	struct flock64 *fl,
-	nlm_grant_cb grant_cb,
+	nlm_testargs_cb grant_cb,
 	CLIENT *clnt)
 {
 	nlm4_testargs args;

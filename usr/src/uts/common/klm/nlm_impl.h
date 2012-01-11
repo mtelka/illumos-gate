@@ -62,7 +62,7 @@ struct nlm_host;
 struct vnode;
 
 /*
- * Callback functions for nlm_do_lock()
+ * Callback functions for nlm_do_lock() and others.
  *
  * Calls to nlm_do_lock are unusual, because it needs to handle
  * the reply itself, instead of letting it happen the normal way.
@@ -70,21 +70,21 @@ struct vnode;
  * blocked lock request completes.
  *
  * We pass three callback functions to nlm_do_lock:
- *  nlm_reply_cb: send a normal RPC reply
- *    nlm_res_cb: do a _res (message style) RPC (call)
- *  nlm_grant_cb: do a "granted" RPC call (after blocking)
+ *    nlm_reply_cb: send a normal RPC reply
+ *      nlm_res_cb: do a _res (message style) RPC (call)
+ * nlm_testargs_cb: do a "granted" RPC call (after blocking)
  * Only one of the 1st or 2nd is used.
  * The 3rd is used only for blocking
+ *
+ * We also use callback functions for all the _msg variants
+ * of the NLM svc calls, where the reply is a reverse call.
+ * The nlm_testres_cb is used by the _test_msg svc calls.
+ * The nlm_res_cb type is used by the other _msg calls.
  */
 typedef bool_t (*nlm_reply_cb)(SVCXPRT *, nlm4_res *);
-typedef enum clnt_stat (*nlm_lkres_cb)(nlm4_res *, void *, CLIENT *);
-typedef enum clnt_stat (*nlm_grant_cb)(nlm4_testargs *, void *, CLIENT *);
-
-/*
- * Function pointer for sending a reply via RPC callback
- * from any of the other nlm_xxx_msg functions.
- */
-typedef enum clnt_stat (*nlm_res_cb)(void *, void *, CLIENT *);
+typedef enum clnt_stat (*nlm_res_cb)(nlm4_res *, void *, CLIENT *);
+typedef enum clnt_stat (*nlm_testargs_cb)(nlm4_testargs *, void *, CLIENT *);
+typedef enum clnt_stat (*nlm_testres_cb)(nlm4_testres *, void *, CLIENT *);
 
 /*
  * Could use flock.h flk_nlm_status_t instead, but
@@ -432,14 +432,14 @@ void nlm_do_notify2(nlm_sm_status *, void *, struct svc_req *);
  * otherwise.
  */
 void nlm_do_test(nlm4_testargs *, nlm4_testres *,
-    struct svc_req *, nlm_res_cb);
+    struct svc_req *, nlm_testres_cb);
 
 /*
  * Implementation for lock setting RPCs.
  * See above for callback typedefs.
  */
 void nlm_do_lock(nlm4_lockargs *, nlm4_res *, struct svc_req *,
-    nlm_reply_cb, nlm_lkres_cb, nlm_grant_cb);
+    nlm_reply_cb, nlm_res_cb, nlm_testargs_cb);
 
 /*
  * Implementation for cancelling a pending lock request. If the

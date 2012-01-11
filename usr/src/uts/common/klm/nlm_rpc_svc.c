@@ -269,22 +269,7 @@ nlm_granted_1_svc(struct nlm_testargs *argp, nlm_res *resp,
  * See similar callbacks for other _msg functions below.
  */
 
-/* Callback function */
-static enum clnt_stat
-nlm_test_res_1_cb(void *varg, void *null, CLIENT *clnt)
-{
-	nlm_testres res1;
-	nlm4_testres *res4 = varg;
-
-	res1.cookie = res4->cookie;
-	res1.stat.stat = nlm_convert_to_nlm_stats(res4->stat.stat);
-	if (res1.stat.stat == nlm_denied)
-		nlm_convert_to_nlm_holder(
-		    &res1.stat.nlm_testrply_u.holder,
-		    &res4->stat.nlm4_testrply_u.holder);
-
-	return (nlm_test_res_1(&res1, null, clnt));
-}
+static enum clnt_stat nlm_test_res_1_cb(nlm4_testres *, void *, CLIENT *);
 
 bool_t
 nlm_test_msg_1_svc(struct nlm_testargs *argp, void *resp,
@@ -306,6 +291,21 @@ nlm_test_msg_1_svc(struct nlm_testargs *argp, void *resp,
 
 	/* The _msg_ calls get no reply. */
 	return (FALSE);
+}
+
+static enum clnt_stat
+nlm_test_res_1_cb(nlm4_testres *res4, void *null, CLIENT *clnt)
+{
+	nlm_testres res1;
+
+	res1.cookie = res4->cookie;
+	res1.stat.stat = nlm_convert_to_nlm_stats(res4->stat.stat);
+	if (res1.stat.stat == nlm_denied)
+		nlm_convert_to_nlm_holder(
+		    &res1.stat.nlm_testrply_u.holder,
+		    &res4->stat.nlm4_testrply_u.holder);
+
+	return (nlm_test_res_1(&res1, null, clnt));
 }
 
 /*
@@ -364,17 +364,7 @@ nlm_granted_msg_1_cb(nlm4_testargs *argp, void *null, CLIENT *clnt)
 }
 
 
-/* Callback function */
-static enum clnt_stat
-nlm_cancel_res_1_cb(void *varg, void *null, CLIENT *clnt)
-{
-	nlm_res res1;
-	nlm4_res *res4 = varg;
-
-	nlm_convert_to_nlm_res(&res1, res4);
-
-	return (nlm_cancel_res_1(&res1, null, clnt));
-}
+static enum clnt_stat nlm_cancel_res_1_cb(nlm4_res *, void *, CLIENT *);
 
 bool_t
 nlm_cancel_msg_1_svc(struct nlm_cancargs *argp, void *resp,
@@ -399,17 +389,17 @@ nlm_cancel_msg_1_svc(struct nlm_cancargs *argp, void *resp,
 	return (FALSE);
 }
 
-/* Callback function */
 static enum clnt_stat
-nlm_unlock_res_1_cb(void *varg, void *null, CLIENT *clnt)
+nlm_cancel_res_1_cb(nlm4_res *res4, void *null, CLIENT *clnt)
 {
 	nlm_res res1;
-	nlm4_res *res4 = varg;
 
 	nlm_convert_to_nlm_res(&res1, res4);
-
-	return (nlm_unlock_res_1(&res1, null, clnt));
+	return (nlm_cancel_res_1(&res1, null, clnt));
 }
+
+
+static enum clnt_stat nlm_unlock_res_1_cb(nlm4_res *, void *, CLIENT *);
 
 bool_t
 nlm_unlock_msg_1_svc(struct nlm_unlockargs *argp, void *resp,
@@ -432,17 +422,17 @@ nlm_unlock_msg_1_svc(struct nlm_unlockargs *argp, void *resp,
 	return (FALSE);
 }
 
-/* Callback function */
 static enum clnt_stat
-nlm_granted_res_1_cb(void *varg, void *null, CLIENT *clnt)
+nlm_unlock_res_1_cb(nlm4_res *res4, void *null, CLIENT *clnt)
 {
 	nlm_res res1;
-	nlm4_res *res4 = varg;
 
 	nlm_convert_to_nlm_res(&res1, res4);
-
-	return (nlm_granted_res_1(&res1, null, clnt));
+	return (nlm_unlock_res_1(&res1, null, clnt));
 }
+
+
+static enum clnt_stat nlm_granted_res_1_cb(nlm4_res *, void *, CLIENT *);
 
 bool_t
 nlm_granted_msg_1_svc(struct nlm_testargs *argp, void *resp,
@@ -464,6 +454,15 @@ nlm_granted_msg_1_svc(struct nlm_testargs *argp, void *resp,
 
 	/* The _msg_ calls get no reply. */
 	return (FALSE);
+}
+
+static enum clnt_stat
+nlm_granted_res_1_cb(nlm4_res *res4, void *null, CLIENT *clnt)
+{
+	nlm_res res1;
+
+	nlm_convert_to_nlm_res(&res1, res4);
+	return (nlm_granted_res_1(&res1, null, clnt));
 }
 
 /*
@@ -725,21 +724,13 @@ nlm4_granted_4_svc(nlm4_testargs *argp, nlm4_res *resp, struct svc_req *sr)
 	return (TRUE);
 }
 
-/* Callback function */
-static enum clnt_stat
-nlm4_test_res_4_cb(void *varg, void *null, CLIENT *clnt)
-{
-	nlm4_testres *res4 = varg;
-	return (nlm4_test_res_4(res4, null, clnt));
-}
-
 bool_t
 nlm4_test_msg_4_svc(nlm4_testargs *argp, void *resp, struct svc_req *sr)
 {
 	nlm4_testres res4;
 
 	nlm_do_test(argp, &res4, sr,
-	    nlm4_test_res_4_cb);
+	    nlm4_test_res_4);
 
 	/* NB: We have a result our caller will not free. */
 	xdr_free((xdrproc_t)xdr_nlm4_testres, (void *)&res4);
@@ -773,21 +764,13 @@ nlm4_lock_msg_4_svc(nlm4_lockargs *argp, void *resp,
 	return (FALSE);
 }
 
-/* Callback function */
-static enum clnt_stat
-nlm4_cancel_res_4_cb(void *varg, void *null, CLIENT *clnt)
-{
-	nlm4_res *res4 = varg;
-	return (nlm4_cancel_res_4(res4, null, clnt));
-}
-
 bool_t
 nlm4_cancel_msg_4_svc(nlm4_cancargs *argp, void *resp, struct svc_req *sr)
 {
 	nlm4_res res4;
 
 	nlm_do_cancel(argp, &res4, sr,
-	    nlm4_cancel_res_4_cb);
+	    nlm4_cancel_res_4);
 
 	/* NB: We have a result our caller will not free. */
 	xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res4);
@@ -795,14 +778,6 @@ nlm4_cancel_msg_4_svc(nlm4_cancargs *argp, void *resp, struct svc_req *sr)
 
 	/* The _msg_ calls get no reply. */
 	return (FALSE);
-}
-
-/* Callback function */
-static enum clnt_stat
-nlm4_unlock_res_4_cb(void *varg, void *null, CLIENT *clnt)
-{
-	nlm4_res *res4 = varg;
-	return (nlm4_unlock_res_4(res4, null, clnt));
 }
 
 bool_t
@@ -811,7 +786,7 @@ nlm4_unlock_msg_4_svc(nlm4_unlockargs *argp, void *resp, struct svc_req *sr)
 	nlm4_res res4;
 
 	nlm_do_unlock(argp, &res4, sr,
-	    nlm4_unlock_res_4_cb);
+	    nlm4_unlock_res_4);
 
 	/* NB: We have a result our caller will not free. */
 	xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res4);
@@ -821,21 +796,13 @@ nlm4_unlock_msg_4_svc(nlm4_unlockargs *argp, void *resp, struct svc_req *sr)
 	return (FALSE);
 }
 
-/* Callback function */
-static enum clnt_stat
-nlm4_granted_res_4_cb(void *varg, void *null, CLIENT *clnt)
-{
-	nlm4_res *res4 = varg;
-	return (nlm4_granted_res_4(res4, null, clnt));
-}
-
 bool_t
 nlm4_granted_msg_4_svc(nlm4_testargs *argp, void *resp, struct svc_req *sr)
 {
 	nlm4_res res4;
 
 	nlm_do_granted(argp, &res4, sr,
-	    nlm4_granted_res_4_cb);
+	    nlm4_granted_res_4);
 
 	/* NB: We have a result our caller will not free. */
 	xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res4);
