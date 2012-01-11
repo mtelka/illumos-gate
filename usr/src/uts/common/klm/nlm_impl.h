@@ -221,7 +221,7 @@ typedef struct nlm_rpc {
 	CLIENT		*nr_handle;
 	rpcvers_t	nr_vers;
 	clock_t     nr_ttl_timeout;
-	uint16_t    nr_sn;
+	int         nr_sn;
 	TAILQ_ENTRY(nlm_rpc) nr_link;
 } nlm_rpc_t;
 TAILQ_HEAD(nlm_rpch_list, nlm_rpc);
@@ -229,7 +229,7 @@ TAILQ_HEAD(nlm_rpch_list, nlm_rpc);
 enum nlm_rpcb_state {
 	NRPCB_NEED_UPDATE = 0,
 	NRPCB_UPDATE_INPROGRESS,
-	NRPCB_UPDATED,
+	NRPCB_UPDATED
 };
 
 struct nlm_host {
