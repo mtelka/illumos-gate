@@ -34,7 +34,6 @@ SYMBOL_SCOPE {
 		lm_global_nlmid;
 		lm_has_sleep;
 		lm_rel_sysid;
-		lm_remove_file_locks;
 		lm_safelock;
 		lm_safemap;
 		lm_set_nlmid_flk;
@@ -43,9 +42,7 @@ SYMBOL_SCOPE {
 		lm_sysidt;
 		lm_unexport;
 		lm_vp_active;
-		nlm_client_recovery;
 		nlm_frlock;
-		nlm_set_recovery_cb;
 		nlm_shrlock;
 
 	local:

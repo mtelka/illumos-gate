@@ -48,14 +48,12 @@ static struct modlinkage modlinkage = {
 int
 _init()
 {
-	nlm_set_recovery_cb(nlm_client_recovery);
 	return (mod_install(&modlinkage));
 }
 
 int
 _fini()
 {
-	/* nlm_set_recovery_cb(NULL); */
 	/* Don't unload. */
 	return (EBUSY);
 }

@@ -34,6 +34,7 @@ SYMBOL_SCOPE {
 		lm_nlm_dispatch;
 		lm_nlm_reclaim;
 		lm_register_lock_locally;
+		lm_remove_file_locks;
 
 	local:
 		*;

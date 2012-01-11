@@ -78,6 +78,9 @@ static int nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
     struct netobj *fhp, struct flk_callback *flcb,
     int vers, bool_t do_block);
 
+static int nlm_reclaim_lock(struct nlm_host *, vnode_t *,
+    struct flock64 *, int32_t);
+
 static void nlm_init_lock(struct nlm4_lock *lock,
 	const struct flock64 *fl, struct netobj *fh,
 	struct nlm_owner_handle *oh);
@@ -94,6 +97,7 @@ static int nlm_call_cancel(struct nlm4_lockargs *largs,
 
 static int nlm_local_getlk(vnode_t *vp, struct flock64 *fl, int flags);
 static int nlm_local_setlk(vnode_t *vp, struct flock64 *fl, int flags);
+static void nlm_local_cancelk(vnode_t *, struct flock64 *);
 
 static void nlm_init_share(struct nlm4_share *share,
 	const struct shrlock *sl, struct netobj *fh,
@@ -197,6 +201,77 @@ nlm_feedback(int type, int proc, void *arg)
 #endif	/* XXX not yet */
 
 /* **************************************************************** */
+
+/*
+ * Reclaim locks/shares acquired by the client side
+ * on the given server represented by hostp.
+ * The function is called from a dedicated thread
+ * when server reports us that it's entered grace
+ * period.
+ */
+void
+nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
+{
+	int32_t state;
+	int error, sysid;
+	struct locklist *llp;
+	bool_t restart;
+
+	sysid = nlm_host_get_sysid(hostp) | NLM_SYSID_CLIENT;
+	do {
+		error = 0;
+		restart = FALSE;
+		state = nlm_host_get_state(hostp);
+
+		DTRACE_PROBE3(reclaim__start, struct nlm_globals *, g,
+		    struct nlm_host *, hostp, int, state);
+
+		/*
+		 * Sleeping locks can not be reclaimed,
+		 * so the only thing we can do is to cancel
+		 * them.
+		 */
+		nlm_host_cancel_slocks(g, hostp);
+
+		/*
+		 * Try to reclaim all active locks we have
+		 */
+		llp = flk_get_active_locks(sysid, NOPID);
+		while (llp != NULL) {
+			error = nlm_reclaim_lock(hostp, llp->ll_vp,
+			    &llp->ll_flock, state);
+
+			if (error == 0) {
+				continue;
+			} else if (error == ERESTART) {
+				restart = FALSE;
+				break;
+			} else {
+				/*
+				 * Critical error occurred, the lock
+				 * can not be recovered, just take it away.
+				 */
+				nlm_local_cancelk(llp->ll_vp, &llp->ll_flock);
+			}
+		}
+
+		flk_free_locklist(llp);
+		if (restart) {
+			/*
+			 * Lock reclamation fucntion reported us that
+			 * the server state was changed (again), so
+			 * try to repeat the whole reclamation process.
+			 */
+			continue;
+		}
+
+		DTRACE_PROBE1(reclaim__end, int, error);
+
+		/*
+		 * TODO: recover share reservations
+		 */
+	} while (state != nlm_host_get_state(hostp));
+}
 
 /*
  * nlm_frlock --
@@ -485,36 +560,23 @@ nlm_has_sleep(const vnode_t *vp)
  * client has gone away.
  */
 
-/*
- * Just to complicate the terminology, "reclaim" is also
- * something we do during "recovery", where we learn that
- * a server has restarted (and is in it's "grace period")
- * so we need to "reclaim" (retransmit) all our locks.
- */
-
-struct nlm_recovery_context {
-	struct nlm_host	*nr_host;	/* host we are recovering */
-	int		nr_state;	/* remote NSM state for recovery */
-};
-
 static int
-nlm_client_recover_lock(struct vnode *vp, struct flock64 *fl, void *arg)
+nlm_reclaim_lock(struct nlm_host *hostp, vnode_t *vp,
+    struct flock64 *flp, int32_t orig_state)
 {
-	struct nlm_recovery_context *nr = arg;
 	mntinfo_t *mi = VTOMI(vp);
 	struct netobj lm_fh;
-	int error, state, vers, xflags;
+	int error, state;
+	rpcvers_t vers;
 
-#if 0	/* XXX: don't think we need to bother with this. */
 	/*
 	 * If the remote NSM state changes during recovery, the host
 	 * must have rebooted a second time. In that case, we must
 	 * restart the recovery.
 	 */
-	state = nlm_host_get_state(nr->nr_host);
-	if (nr->nr_state != state)
+	state = nlm_host_get_state(hostp);
+	if (state != orig_state)
 		return (ERESTART);
-#endif
 
 	/*
 	 * Too bad the NFS code doesn't just carry the FH
@@ -527,6 +589,7 @@ nlm_client_recover_lock(struct vnode *vp, struct flock64 *fl, void *arg)
 		lm_fh.n_len = VTOFH3(vp)->fh3_length;
 		lm_fh.n_bytes = (char *)&(VTOFH3(vp)->fh3_u.data);
 		break;
+
 	case NFS_VERSION:
 		/* See nfs_frlock() */
 		vers = NLM_VERS;
@@ -537,52 +600,8 @@ nlm_client_recover_lock(struct vnode *vp, struct flock64 *fl, void *arg)
 		return (ENOSYS);
 	}
 
-	xflags = NLM_X_RECLAIM;
-	error = nlm_call_lock(vp, fl, nr->nr_host, &lm_fh,
-	    NULL, vers, xflags);
-
-	/*
-	 * If we could not reclaim the lock, send SIGLOST
-	 * to the process that thinks it holds the lock.
-	 */
-	if (error != 0) {
-		proc_t  *p;
-
-		mutex_enter(&pidlock);
-		p = prfind(fl->l_pid);
-		if (p)
-			psignal(p, SIGLOST);
-		mutex_exit(&pidlock);
-	}
-
-	return (error);
-}
-
-/*
- * See nlm_impl.c: nlm_host_notify()
- *
- * XXX: Need to set a callback function pointer for this,
- * because of klmops -> klmmod one-way dependency.
- * XXX: Do that in klmops.c:_init().
- */
-void
-nlm_client_recovery(struct nlm_host *host)
-{
-	struct nlm_recovery_context nr;
-	int sysid, error;
-	locklist_t *llp_head, *llp;
-
-	sysid = NLM_SYSID_CLIENT | nlm_host_get_sysid(host);
-
-	nr.nr_host = host;
-	nr.nr_state = nlm_host_get_state(host);
-
-	llp_head = flk_get_active_locks(sysid, NOPID);
-	for (llp = llp_head; llp; llp = llp->ll_next) {
-		nlm_client_recover_lock(llp->ll_vp, &llp->ll_flock, &nr);
-	}
-	flk_free_locklist(llp_head);
-	/* XXX: Deal with ERESTART? (see above) */
+	return (nlm_call_lock(vp, flp, hostp, &lm_fh,
+	        NULL, vers, NLM_X_RECLAIM));
 }
 
 /*
@@ -634,6 +653,31 @@ nlm_local_setlk(vnode_t *vp, struct flock64 *fl, int flags)
 {
 	VERIFY(fl->l_whence == SEEK_SET);
 	return (reclock(vp, fl, SETFLCK | SLPFLCK, flags, 0, NULL));
+}
+
+/*
+ * Cancel local lock and send send SIGLOST signal
+ * to the lock owner.
+ *
+ * NOTE: modifies flp
+ */
+static void
+nlm_local_cancelk(vnode_t *vp, struct flock64 *flp)
+{
+	proc_t *p;
+
+	flp->l_type = F_UNLCK;
+	(void) nlm_local_setlk(vp, flp, FREAD | FWRITE);
+
+	/*
+	 * Notify lock owner that the lock was lost.
+	 */
+	mutex_enter(&pidlock);
+	p = prfind(flp->l_pid);
+	if (p != NULL)
+		psignal(p, SIGLOST);
+
+	mutex_exit(&pidlock);
 }
 
 /*

@@ -117,15 +117,26 @@ static struct nlm_globals_list nlm_zones_list;
  * be accessed very careful. Preferable way is to use atomic
  * operations.
  */
-static volatile uint32_t nlm_next_sysid = 0;	/* (g) */
-
-static recovery_cb nlm_recovery_func = NULL;	/* (c) */
+static volatile uint32_t nlm_next_sysid = 0;
 
 /*
  * NLM kmem caches
  */
 static struct kmem_cache *nlm_hosts_cache = NULL;
 static struct kmem_cache *nlm_vhold_cache = NULL;
+
+/*
+ * NLM misc. function
+ */
+static void nlm_copy_netbuf(struct netbuf *, struct netbuf *);
+static int nlm_netbuf_addrs_cmp(struct netbuf *, struct netbuf *);
+static void nlm_kmem_reclaim(void *);
+
+/*
+ * NLM thread functions
+ */
+static void nlm_hosts_gc(struct nlm_globals *);
+static void nlm_reclaimer(struct nlm_host *);
 
 /*
  * NLM NSM functions
@@ -149,22 +160,17 @@ static bool_t nlm_vhold_busy(struct nlm_host *hostp, struct nlm_vhold *nvp);
 /*
  * NLM host functions
  */
-static void nlm_copy_netbuf(struct netbuf *dst, struct netbuf *src);
 static int nlm_host_ctor(void *datap, void *cdrarg, int kmflags);
 static void nlm_host_dtor(void *datap, void *cdrarg);
-static void nlm_reclaim(void *cdrarg);
 static void nlm_host_destroy(struct nlm_host *hostp);
 static struct nlm_host *nlm_create_host(struct nlm_globals *g,
     char *name, const char *netid,
     struct knetconfig *knc, struct netbuf *naddr);
-static int nlm_netbuf_addrs_cmp(struct netbuf *nb1, struct netbuf *nb2);
 static struct nlm_host *nlm_host_find_locked(struct nlm_globals *g,
     const char *netid, struct netbuf *naddr, avl_index_t *wherep);
-static void nlm_hosts_gc(struct nlm_globals *g);
 static void nlm_host_unregister(struct nlm_globals *g, struct nlm_host *hostp);
 static void nlm_host_gc_vholds(struct nlm_host *hostp);
 static bool_t nlm_host_has_locks(struct nlm_host *hostp);
-
 
 /*
  * NLM client/server sleeping locks functions
@@ -212,7 +218,7 @@ nlm_init(void)
 {
 	nlm_hosts_cache = kmem_cache_create("nlm_host_cache",
 	    sizeof (struct nlm_host), 0, nlm_host_ctor, nlm_host_dtor,
-	    nlm_reclaim, NULL, NULL, 0);
+	    nlm_kmem_reclaim, NULL, NULL, 0);
 
 	nlm_vhold_cache = kmem_cache_create("nlm_vhold_cache",
 	    sizeof (struct nlm_vhold), 0, nlm_vhold_ctor, nlm_vhold_dtor,
@@ -239,7 +245,7 @@ nlm_globals_unregister(struct nlm_globals *g)
 }
 
 static void
-nlm_reclaim(void *cdrarg)
+nlm_kmem_reclaim(void *cdrarg)
 {
 	struct nlm_globals *g;
 
@@ -374,6 +380,31 @@ nlm_gc(struct nlm_globals *g)
 	mutex_exit(&g->lock);
 
 	cv_broadcast(&g->nlm_gc_finish_cv);
+	zthread_exit();
+}
+
+/*
+ * Thread reclaim locks/shares acquired by the client side
+ * on the given server represented by hostp.
+ */
+static void
+nlm_reclaimer(struct nlm_host *hostp)
+{
+	struct nlm_globals *g;
+
+	g = zone_getspecific(nlm_zone_key, curzone);
+	nlm_reclaim_client(g, hostp);
+
+	mutex_enter(&hostp->nh_lock);
+	hostp->nh_flags &= ~NLM_NH_RECLAIM;
+	mutex_exit(&hostp->nh_lock);
+
+	/*
+	 * Host was explicitly referenced before
+	 * nlm_reclaim() was called, release it
+	 * here.
+	 */
+	nlm_host_release(g, hostp);
 	zthread_exit();
 }
 
@@ -837,39 +868,6 @@ nlm_host_destroy(struct nlm_host *hostp)
 	kmem_cache_free(nlm_hosts_cache, hostp);
 }
 
-void
-nlm_set_recovery_cb(recovery_cb func)
-{
-	nlm_recovery_func = func;
-}
-
-
-/*
- * Thread start callback for client lock recovery
- */
-static void
-nlm_client_recovery_start(void *arg)
-{
-	struct nlm_globals *g;
-	struct nlm_host *host = (struct nlm_host *)arg;
-
-	NLM_DEBUG(NLM_LL2, "NLM: client lock recovery for %s started\n",
-	    host->nh_name);
-
-	/* nlm_client_recovery(host); */
-	if (nlm_recovery_func != NULL)
-		(*nlm_recovery_func)(host);
-
-	NLM_DEBUG(NLM_LL2, "NLM: client lock recovery for %s completed\n",
-	    host->nh_name);
-
-	g = zone_getspecific(nlm_zone_key, curzone);
-	/* Note: refcnt was incremented before this thread started. */
-	nlm_host_release(g, host);
-
-	/* XXX kthread_exit(); */
-}
-
 /*
  * Cleanup SERVER-side state after a client restarts,
  * or becomes unresponsive, or whatever.
@@ -924,25 +922,31 @@ nlm_host_notify_server(struct nlm_host *hostp, int32_t state)
  */
 
 void
-nlm_host_notify_client(struct nlm_host *host, int32_t state)
+nlm_host_notify_client(struct nlm_host *hostp, int32_t state)
 {
+	mutex_enter(&hostp->nh_lock);
+	if (hostp->nh_state == state ||
+	    hostp->nh_flags & NLM_NH_RECLAIM) {
+		/*
+		 * Either host's state is up to date or
+		 * host is already in recovery.
+		 */
+		mutex_exit(&hostp->nh_lock);
+		return;
+	}
+
+	hostp->nh_state = state;
+	hostp->nh_flags |= NLM_NH_RECLAIM;
 
 	/*
-	 * XXX: Walk list of locks...
-	 *   where we own it, and on system H,
-	 *      count++
-	 *
-	 * See: flk_get_active_locks(sysid, NOPID);
+	 * Host will be released by the recovery thread,
+	 * thus we need to increment refcount.
+	 */
+	hostp->nh_refs++;
+	mutex_exit(&hostp->nh_lock);
 
-XXX More porting work.  We only want there to ever be one recovery
-thread running for each host.  So, we can let the host object carry
-state about the recovery thread running, if any, etc.
-
-So, here:  (a) check if there's a recovery thread yet, and if not,
-mark that one is starting.  (b) get the list of locks for this sysid.
-if no locks, mark recovery complete now and don't bother starting the
-recovery thread.  If there are some locks, store that list in the host
-object and start the recovery thread.  mark recovery as 'running'. */
+	(void) zthread_create(NULL, 0, nlm_reclaimer,
+	    hostp, 0, minclsyspri);
 }
 
 /*
@@ -976,6 +980,25 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	TAILQ_INIT(&host->nh_rpchc);
 
 	return (host);
+}
+
+/*
+ * Cancel all client side sleeping locks owned by given host.
+ */
+void
+nlm_host_cancel_slocks(struct nlm_globals *g, struct nlm_host *hostp)
+{
+	nlm_slock_clnt_t *nscp;
+
+	mutex_enter(&g->lock);
+	while ((nscp = TAILQ_FIRST(&g->nlm_clnt_slocks)) != NULL) {
+		if (nscp->nsc_host == hostp) {
+			nscp->nsc_state = NLM_WS_CANCELLED;
+			cv_broadcast(&nscp->nsc_cond);
+		}
+	}
+
+	mutex_exit(&g->lock);
 }
 
 /*

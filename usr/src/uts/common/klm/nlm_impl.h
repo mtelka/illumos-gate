@@ -352,7 +352,7 @@ TAILQ_HEAD(nlm_host_list, nlm_host);
  * NLM host flags
  */
 #define NLM_NH_MONITORED   0x01
-#define NLM_NH_RECOVERY    0x02
+#define NLM_NH_RECLAIM     0x02
 
 
 /*
@@ -447,6 +447,7 @@ int nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 int nlm_safemap(const vnode_t *vp);
 int nlm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr);
 int nlm_has_sleep(const vnode_t *vp);
+void nlm_reclaim_client(struct nlm_globals *, struct nlm_host *);
 
 
 /* nlm_rpc_clnt.c */
@@ -514,6 +515,7 @@ extern struct nlm_host * nlm_host_find(struct nlm_globals *g,
     const char *netid, struct netbuf *addr);
 extern struct nlm_host *nlm_host_find_by_sysid(struct nlm_globals *g,
     int sysid);
+void nlm_host_cancel_slocks(struct nlm_globals *, struct nlm_host *);
 
 /*
  * Register this NLM host with the local NSM so that we can be
@@ -623,13 +625,6 @@ void nlm_do_unshare(nlm4_shareargs *, nlm4_shareres *, struct svc_req *);
  * Free all locks associated with the hostname argp->name.
  */
 void nlm_do_free_all(nlm4_notify *, void *, struct svc_req *);
-
-/*
- * Recover client lock state after a server reboot.
- */
-typedef void (*recovery_cb)(struct nlm_host *);
-extern void nlm_client_recovery(struct nlm_host *);
-void nlm_set_recovery_cb(recovery_cb);
 
 /*
  * Interface from NFS client code to the NLM.
