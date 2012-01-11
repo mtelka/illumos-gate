@@ -160,34 +160,39 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 	int rc;
 
 	mutex_enter(&hostp->nh_lock);
-	DTRACE_PROBE2(nlm_host_get_rpc, struct nlm_host *, hostp,
-	    int, vers);
 
 	/*
-	 * Check if some other thread updates RPC binding.
-	 * If so, wait until RPC binding update operation is finished.
-	 * NOTE: we can't host->nh_addr unitl binding is fresh, because
+	 * Check if RPC binding is not fresh.
+	 * If so, wait until RPC binding update operation is finished or
+	 * update it if there is no thread that already doing update.
+	 * NOTE: we can't use host->nh_addr unitl binding is fresh, because
 	 * it may raise an error in code that uses RPC handle returned
 	 * by nlm_host_get_rpc().
 	 */
-	while (hostp->nh_rpcb_state == NRPCB_UPDATE_INPROGRESS) {
-		rc = cv_wait_sig(&hostp->nh_rpcb_cv, &hostp->nh_lock);
-		if (rc == 0) {
-			mutex_exit(&hostp->nh_lock);
-			return (EINTR);
-		}
-	}
+	while (hostp->nh_rpcb_state != NRPCB_UPDATED) {
+		if (hostp->nh_rpcb_state == NRPCB_UPDATE_INPROGRESS) {
+			rc = cv_wait_sig(&hostp->nh_rpcb_cv, &hostp->nh_lock);
+			if (rc == 0) {
+				mutex_exit(&hostp->nh_lock);
+				return (EINTR);
+			}
 
-	/*
-	 * Check if RPC binding was marked for update.
-	 * If so, start RPC binding update operation.
-	 * NOTE: the operation can be by only one thread at time.
-	 */
-	if (hostp->nh_rpcb_state == NRPCB_NEED_UPDATE) {
-		rc = update_host_rpcbinding(hostp, vers);
-		if (rc < 0) {
-			mutex_exit(&hostp->nh_lock);
-			return (ENOENT);
+			continue;
+		}
+
+		/*
+		 * Check if RPC binding was marked for update.
+		 * If so, start RPC binding update operation.
+		 * NOTE: the operation can be by only one thread at time.
+		 */
+		if (hostp->nh_rpcb_state == NRPCB_NEED_UPDATE) {
+			rc = update_host_rpcbinding(hostp, vers);
+			if (rc < 0) {
+				mutex_exit(&hostp->nh_lock);
+				return (ENOENT);
+			}
+
+			break;
 		}
 	}
 
@@ -217,7 +222,7 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 	}
 
 out:
-	DTRACE_PROBE2(nlm_host_get_rpc__end, struct nlm_host *, hostp,
+	DTRACE_PROBE2(end, struct nlm_host *, hostp,
 	    nlm_rpc_t *, rpcp);
 
 	*rpcpp = rpcp;
