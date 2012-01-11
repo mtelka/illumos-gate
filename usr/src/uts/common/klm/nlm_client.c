@@ -935,7 +935,7 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
 			continue;
 		}
 
-		DTRACE_PROBE1(unlock__rloop_end, enum nlm_stats, res.stat.stat);
+		DTRACE_PROBE1(unlock__rloop_end, enum nlm4_stats, res.stat.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
 		if (res.stat.stat == nlm4_denied_grace_period) {
 			/*
@@ -1020,7 +1020,7 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 			continue;
 		}
 
-		DTRACE_PROBE1(test__rloop_end, enum nlm_stats, res.stat.stat);
+		DTRACE_PROBE1(test__rloop_end, enum nlm4_stats, res.stat.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_testres, (void *)&res);
 		if (res.stat.stat == nlm4_denied_grace_period) {
 			/*
@@ -1244,59 +1244,46 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 	struct nlm4_shareargs args;
 	struct nlm4_shareres res;
 	struct nlm_owner_handle oh;
-	uint32_t xid;
-	nlm_rpc_t *rpc;
-	mntinfo_t *mi = VTOMI(vp);
 	struct nlm_globals *g;
-	enum clnt_stat stat;
-	clock_t retry;
-	int error;
-
-	int retries = 3;	/* XXX */
+	int error, retries;
 
 	bzero(&args, sizeof (args));
-	bzero(&res, sizeof (res));
-
 	g = zone_getspecific(nlm_zone_key, curzone);
 
 	nlm_init_share(&args.share, shr, fh, &oh);
 	args.reclaim = reclaim;
-
-	/* Update what args.oh points to. */
 	oh.oh_sysid = nlm_host_get_sysid(host);
 
-	retry = SEC_TO_TICK(5);
-	for (;;) {
-		error = nlm_host_get_rpc(host, vers, &rpc);
+	for (retries = 0; retries < NLM_CLNT_MAX_RETRIES; retries++) {
+		uint32_t xid;
+		nlm_rpc_t *rpcp;
+		enum clnt_stat stat;
+
+		error = nlm_host_get_rpc(host, vers, &rpcp);
 		if (error != 0)
-			return (ENOLCK); /* XXX retry? */
+			return (ENOLCK);
 
-
-		/* XXX: Get XID from RPC handle? */
 		xid = atomic_inc_32_nv(&nlm_xid);
+		DTRACE_PROBE3(share__rloop_start, nlm_rpc_t *, rpcp,
+		    int, retries, uint32_t, xid);
+
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_share_rpc(&args, &res, rpc->nr_handle, vers);
-		nlm_host_rele_rpc(host, rpc);
+		bzero(&res, sizeof (res));
+		stat = nlm_share_rpc(&args, &res, rpcp->nr_handle, vers);
+		nlm_host_rele_rpc(host, rpcp);
 
 		if (stat != RPC_SUCCESS) {
 			if (stat == RPC_PROCUNAVAIL)
 				nlm_host_invalidate_binding(host);
 
-			if (retries) {
-				retries--;
-				continue;
-			}
-
-			return (EINVAL);
+			error = EINVAL;
+			continue;
 		}
 
-		/*
-		 * Free res.cookie.
-		 */
+		DTRACE_PROBE1(share__rloop_end, enum nlm4_stat, res.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_shareres, (void *)&res);
-
 		if (res.stat == nlm4_denied_grace_period) {
 			/*
 			 * The server has recently rebooted and is
@@ -1304,16 +1291,20 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 			 * their shares. Wait for a few seconds and try
 			 * again.
 			 */
-			error = delay_sig(retry);
-			if (error)
+			error = delay_sig(SEC_TO_TICK(5));
+			if (error != 0)
 				return (error);
-			retry = 2 * retry;
-			if (retry > SEC_TO_TICK(30))
-				retry = SEC_TO_TICK(30);
+
+			error = EAGAIN;
 			continue;
 		}
 
 		break;
+	}
+
+	if (retries >= NLM_CLNT_MAX_RETRIES) {
+		ASSERT(error != 0);
+		return (error);
 	}
 
 	switch (res.stat) {
@@ -1346,49 +1337,41 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 	struct nlm4_shareargs args;
 	struct nlm4_shareres res;
 	struct nlm_owner_handle oh;
-	uint32_t xid;
-	nlm_rpc_t *rpc;
-	mntinfo_t *mi = VTOMI(vp);
-	enum clnt_stat stat;
-	int error;
-
-	int retries = 3;	/* XXX */
+	int error, retries;
 
 	bzero(&args, sizeof (args));
-	bzero(&res, sizeof (res));
-
 	nlm_init_share(&args.share, shr, fh, &oh);
-
-	/* Update what args.oh points to. */
 	oh.oh_sysid = nlm_host_get_sysid(host);
 
-	for (;;) {
-		error = nlm_host_get_rpc(host, vers, &rpc);
+	for (retries = 0; retries < NLM_CLNT_MAX_RETRIES; retries++) {
+		uint32_t xid;
+		nlm_rpc_t *rpcp;
+		enum clnt_stat stat;
+
+		error = nlm_host_get_rpc(host, vers, &rpcp);
 		if (error != 0)
-			return (ENOLCK); /* XXX retry? */
+			return (ENOLCK);
 
 		xid = atomic_inc_32_nv(&nlm_xid);
+		DTRACE_PROBE3(unshare__rloop_start, nlm_rpc_t *, rpcp,
+		    int, retries, uint32_t, xid);
+
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
-		stat = nlm_unshare_rpc(&args, &res, rpc->nr_handle, vers);
-		nlm_host_rele_rpc(host, rpc);
+		bzero(&res, sizeof (res));
+		stat = nlm_unshare_rpc(&args, &res, rpcp->nr_handle, vers);
+		nlm_host_rele_rpc(host, rpcp);
 
 		if (stat != RPC_SUCCESS) {
 			if (stat == RPC_PROCUNAVAIL)
 				nlm_host_invalidate_binding(host);
 
-			if (retries) {
-				retries--;
-				continue;
-			}
-
-			return (EINVAL);
+			error = EINVAL;
+			continue;
 		}
 
-		/*
-		 * Free res.cookie.
-		 */
+		DTRACE_PROBE1(unshare__rloop_end, enum nlm4_stat, res.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
 
 		if (res.stat == nlm4_denied_grace_period) {
@@ -1399,12 +1382,19 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 			 * again.
 			 */
 			error = delay_sig(SEC_TO_TICK(5));
-			if (error)
+			if (error != 0)
 				return (error);
+
+			error = EAGAIN;
 			continue;
 		}
 
 		break;
+	}
+
+	if (retries >= NLM_CLNT_MAX_RETRIES) {
+		ASSERT(error != 0);
+		return (error);
 	}
 
 	switch (res.stat) {
