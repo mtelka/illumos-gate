@@ -140,6 +140,7 @@ _init()
 	zone_key_create(&flock_zone_key, flk_zone_init, NULL, flk_zone_fini);
 	lm_sysid_init();
 
+	nlm_hosts_init();
 	nlm_vnodes_init();
 	nlm_rpc_cache_init();
 

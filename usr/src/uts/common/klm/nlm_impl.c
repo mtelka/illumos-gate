@@ -122,6 +122,7 @@ static recovery_cb nlm_recovery_func = NULL;	/* (c) */
 /*
  * NLM kmem caches
  */
+static struct kmem_cache *nlm_hosts_cache = NULL;
 static struct kmem_cache *nlm_vnode_cache = NULL;
 
 /*
@@ -143,6 +144,15 @@ static int nlm_vnode_cmp(const void *, const void *);
  * NLM host functions
  */
 static void nlm_free_idle_hosts(struct nlm_globals *g);
+static int nlm_host_ctor(void *datap, void *cdrarg, int kmflags);
+static void nlm_host_dtor(void *datap, void *cdrarg);
+static void nlm_host_destroy(struct nlm_host *hostp);
+static struct nlm_host *nlm_create_host(struct nlm_globals *g,
+    char *name, const char *netid,
+    struct knetconfig *knc, nlm_addr_t *naddr);
+static int nlm_netbuf_addrs_cmp(nlm_addr_t *na1, nlm_addr_t *na2);
+static struct nlm_host *nlm_host_find_locked(struct nlm_globals *g,
+    const char *netid, nlm_addr_t *naddr, avl_index_t *wherep);
 
 /*
  * Acquire the next sysid for remote locks not handled by the NLM.
@@ -726,6 +736,33 @@ nlm_destroy_client_locks(struct nlm_host *host)
 	}
 }
 
+/*********************************************************************
+ * NLM vnode functions
+ */
+
+void
+nlm_hosts_init(void)
+{
+	nlm_hosts_cache = kmem_cache_create("nlm_host_cache",
+	    sizeof (struct nlm_host), 0, nlm_host_ctor, nlm_host_dtor,
+	    NULL, NULL, NULL, 0);
+}
+
+static int
+nlm_host_ctor(void *datap, void *cdrarg, int kmflags)
+{
+	struct nlm_host *hostp = (struct nlm_host *)datap;
+
+	bzero(hostp, sizeof (*hostp));
+	return (0);
+}
+
+static void
+nlm_host_dtor(void *datap, void *cdrarg)
+{
+	struct nlm_host *hostp = (struct nlm_host *)datap;
+	ASSERT(hostp->nh_refs == 0);
+}
 
 /*
  * Free resources used by a host. This is called after the reference
@@ -750,7 +787,7 @@ nlm_host_destroy(struct nlm_host *hostp)
 	mutex_destroy(&hostp->nh_lock);
 	cv_destroy(&hostp->nh_rpcb_cv);
 
-	kmem_free(hostp, sizeof (*hostp));
+	kmem_cache_free(nlm_hosts_cache, hostp);
 }
 
 void
@@ -889,7 +926,8 @@ nlm_create_host(struct nlm_globals *g, char *name,
 {
 	struct nlm_host *host;
 
-	host = kmem_zalloc(sizeof (*host), KM_SLEEP);
+	host = kmem_cache_alloc(nlm_hosts_cache, KM_SLEEP);
+
 	mutex_init(&host->nh_lock, NULL, MUTEX_DEFAULT, NULL);
 	cv_init(&host->nh_rpcb_cv, NULL, CV_DEFAULT, NULL);
 	host->nh_refs = 1;
