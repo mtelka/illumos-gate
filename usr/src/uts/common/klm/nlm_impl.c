@@ -917,6 +917,11 @@ nlm_host_destroy(struct nlm_host *hostp)
  * this function is called with newstate set to zero
  * which allows us to cancel any pending async locks
  * and clear the locking state.
+ *
+ * When "state" is 0, we don't update host's state,
+ * but cleanup all remote locks on the host.
+ * It's useful to call this function for resources
+ * cleanup.
  */
 void
 nlm_host_notify_server(struct nlm_host *hostp, int32_t state)
@@ -927,12 +932,15 @@ nlm_host_notify_server(struct nlm_host *hostp, int32_t state)
 
 	TAILQ_INIT(&slreqs2free);
 	mutex_enter(&hostp->nh_lock);
-	if (state != 0 && hostp->nh_state == state) {
-		/* Already up to date */
-		mutex_exit(&hostp->nh_lock);
+	if (state != 0) {
+		if (hostp->nh_state == state) {
+			/* Already up to date */
+			mutex_exit(&hostp->nh_lock);
+		}
+
+		hostp->nh_state = state;
 	}
 
-	hostp->nh_state = state;
 	TAILQ_FOREACH(nvp, &hostp->nh_vholds_list, nv_link) {
 
 		/* cleanup sleeping requests at first */
