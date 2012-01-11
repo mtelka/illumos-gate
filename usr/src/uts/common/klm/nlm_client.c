@@ -791,26 +791,15 @@ out:
 /*
  * Do NLM_CANCEL call.
  * Helper for nlm_call_lock() error recovery.
- *
- * FIXME[DK]: make nlm_call_cancel() execute in separate thread.
- * nlm_call_cancel() is called from only one place - nlm_call_lock() -
- * when waiting lock was canceled by some reaseon. Before calling
- * nlm_call_cancel(), nlm_call_lock() blocks all signals in calling thread.
- * It makes imposible to interrupt it while nlm_call_cancel() is in progress.
- * I think it's not very good especially when we have temporary network problems,
- * in this case calling thread can block on a quite long time and no one can
- * kill it.
  */
 static int
 nlm_call_cancel(struct nlm4_lockargs *largs,
-	struct nlm_host *host, int vers)
+	struct nlm_host *hostp, int vers)
 {
 	nlm4_cancargs cargs;
 	struct nlm4_res res;
 	uint32_t xid;
-	nlm_rpc_t *rpc;
-	enum clnt_stat stat;
-	int error;
+	int error, retries;
 
 	bzero(&cargs, sizeof (cargs));
 	bzero(&res, sizeof (res));
@@ -823,55 +812,55 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 	cargs.exclusive	= largs->exclusive;
 	cargs.alock	= largs->alock;
 
-	do {
-		error = nlm_host_get_rpc(host, vers, &rpc);
+	for (retries = 0; retries < NLM_CLNT_MAX_RETRIES; retries++) {
+		nlm_rpc_t *rpcp;
+		enum clnt_stat stat;
+
+		error = nlm_host_get_rpc(hostp, vers, &rpcp);
 		if (error != 0)
-			/* XXX retry? */
 			return (ENOLCK);
 
-		stat = nlm_cancel_rpc(&cargs, &res, rpc->nr_handle, vers);
-		nlm_host_rele_rpc(host, rpc);
+		DTRACE_PROBE2(cancel__rloop_start, nlm_rpc_t *, rpcp,
+		    int, retries);
 
+		stat = nlm_cancel_rpc(&cargs, &res, rpcp->nr_handle, vers);
+		nlm_host_rele_rpc(hostp, rpcp);
+
+		DTRACE_PROBE1(cancel__rloop_end, enum clnt_stat, stat);
 		if (stat != RPC_SUCCESS) {
 			if (stat == RPC_PROCUNAVAIL)
-				nlm_host_invalidate_binding(host);
+				nlm_host_invalidate_binding(hostp);
 
-			/*
-			 * We need to cope with temporary network partitions
-			 * as well as server reboots. This means we have to
-			 * keep trying to cancel until the server is back.
-			 */
 			delay(SEC_TO_TICK(10));
+			error = EAGAIN;
+			continue;
 		}
-	} while (stat != RPC_SUCCESS);
 
-	/*
-	 * Free res.cookie.
-	 */
-	xdr_free((xdrproc_t)xdr_nlm4_res,
-	    (void *)&res);
+		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
+		break;
+	}
 
+	if (retries >= NLM_CLNT_MAX_RETRIES) {
+		ASSERT(error != 0);
+		return (error);
+	}
+
+	DTRACE_PROBE1(cancel__done, enum nlm4_stats, res.stat.stat);
 	switch (res.stat.stat) {
+	/*
+	 * There was nothing to cancel. We are going to go ahead
+	 * and assume we got the lock.
+	 */
 	case nlm_denied:
-		/*
-		 * There was nothing to cancel. We are going to go ahead
-		 * and assume we got the lock.
-		 */
-		error = 0;
-		break;
-
+	 /*
+	  * The server has recently rebooted.  Treat this as a
+	  * successful cancellation.
+	  */
 	case nlm4_denied_grace_period:
-		/*
-		 * The server has recently rebooted.  Treat this as a
-		 * successful cancellation.
-		 */
-		error = 0;
-		break;
-
+	 /*
+	  * We managed to cancel.
+	  */
 	case nlm4_granted:
-		/*
-		 * We managed to cancel.
-		 */
 		error = 0;
 		break;
 
@@ -883,6 +872,7 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 		error = EIO;
 		break;
 	}
+
 	return (error);
 }
 
