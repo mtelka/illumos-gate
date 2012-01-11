@@ -331,6 +331,11 @@ struct nlm_owner_handle {
 #define NLM_RPC_RETRIES 5
 
 /*
+ * NLM internal functions for initialization.
+ */
+void nlm_rpc_cache_init(void);
+
+/*
  * RPC handles cache: nlm_rpc_handle.c
  */
 

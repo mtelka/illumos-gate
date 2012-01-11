@@ -43,6 +43,11 @@
 
 #include "nlm_impl.h"
 
+static struct kmem_cache *nlm_rpch_cache = NULL;
+
+static int nlm_rpch_ctor(void *, void *, int);
+static void nlm_rpch_dtor(void *, void *);
+
 static nlm_rpc_t *
 get_nlm_rpc_fromcache(struct nlm_host *hostp, int vers)
 {
@@ -192,7 +197,7 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 		 * cache. No luck, just create a new one.
 		 */
 		mutex_exit(&hostp->nh_lock);
-		rpcp = kmem_zalloc(sizeof (*rpcp), KM_SLEEP);
+		rpcp = kmem_cache_alloc(nlm_rpch_cache, KM_SLEEP);
 		rpcp->nr_vers = vers;
 		mutex_enter(&hostp->nh_lock);
 	}
@@ -250,4 +255,28 @@ nlm_host_invalidate_binding(struct nlm_host *hostp)
 	mutex_enter(&hostp->nh_lock);
 	hostp->nh_rpcb_state = NRPCB_NEED_UPDATE;
 	mutex_exit(&hostp->nh_lock);
+}
+
+void
+nlm_rpc_cache_init(void)
+{
+	nlm_rpch_cache = kmem_cache_create("nlm_rpch_cache",
+	    sizeof (nlm_rpc_t), 0, nlm_rpch_ctor, nlm_rpch_dtor,
+	    NULL, NULL, NULL, 0);
+}
+
+static int
+nlm_rpch_ctor(void *datap, void *cdrarg, int kmflags)
+{
+	nlm_rpc_t *rpcp = (nlm_rpc_t *)datap;
+
+	bzero(rpcp, sizeof (*rpcp));
+	return (0);
+}
+
+void
+nlm_rpch_dtor(void *datap, void *cdrarg)
+{
+	nlm_rpc_t *rpcp = (nlm_rpc_t *)datap;
+	ASSERT(rpcp->nr_handle == NULL);
 }

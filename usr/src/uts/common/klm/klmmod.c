@@ -126,6 +126,8 @@ _init()
 	zone_key_create(&flock_zone_key, flk_zone_init, NULL, flk_zone_fini);
 	lm_sysid_init();
 
+	nlm_rpc_cache_init();
+
 	retval = mod_install(&modlinkage);
 	if (retval == 0)
 		return (0);
