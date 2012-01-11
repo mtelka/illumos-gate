@@ -113,6 +113,31 @@ static struct kmem_cache *nlm_hosts_cache = NULL;
 static struct kmem_cache *nlm_vhold_cache = NULL;
 
 /*
+ * RPC service registrations for LOOPBACK,
+ * allowed to call the real nlm_prog_2.
+ * None of the others are used locally.
+ */
+static SVC_CALLOUT nlm_svcs_lo[] = {
+	{ NLM_PROG, 2, 2, nlm_prog_2 } /* NLM_SM */
+};
+static SVC_CALLOUT_TABLE nlm_sct_lo = {
+	sizeof (nlm_svcs_lo) / sizeof (nlm_svcs_lo[0]),
+	FALSE,
+	nlm_svcs_lo
+};
+
+static SVC_CALLOUT nlm_svcs_in[] = {
+	{ NLM_PROG, 4, 4, nlm_prog_4 },	/* NLM4_VERS */
+	{ NLM_PROG, 1, 3, nlm_prog_3 }	/* NLM_VERS - NLM_VERSX */
+};
+
+static SVC_CALLOUT_TABLE nlm_sct_in = {
+	sizeof (nlm_svcs_in) / sizeof (nlm_svcs_in[0]),
+	FALSE,
+	nlm_svcs_in
+};
+
+/*
  * NLM misc. function
  */
 static void nlm_copy_netbuf(struct netbuf *, struct netbuf *);
@@ -898,14 +923,8 @@ nlm_host_notify_server(struct nlm_host *hostp, int32_t state)
 
 	TAILQ_INIT(&slreqs2free);
 	mutex_enter(&hostp->nh_lock);
-	if (state != 0) {
-		if (hostp->nh_state == state) {
-			/* Already up to date */
-			mutex_exit(&hostp->nh_lock);
-		}
-
+	if (state != 0)
 		hostp->nh_state = state;
-	}
 
 	TAILQ_FOREACH(nvp, &hostp->nh_vholds_list, nv_link) {
 
@@ -955,8 +974,8 @@ void
 nlm_host_notify_client(struct nlm_host *hostp, int32_t state)
 {
 	mutex_enter(&hostp->nh_lock);
-	if (hostp->nh_state == state ||
-	    hostp->nh_flags & NLM_NH_RECLAIM) {
+	hostp->nh_state = state;
+	if (hostp->nh_flags & NLM_NH_RECLAIM) {
 		/*
 		 * Either host's state is up to date or
 		 * host is already in recovery.
@@ -965,7 +984,6 @@ nlm_host_notify_client(struct nlm_host *hostp, int32_t state)
 		return;
 	}
 
-	hostp->nh_state = state;
 	hostp->nh_flags |= NLM_NH_RECLAIM;
 
 	/*
@@ -1770,48 +1788,6 @@ nlm_slreq_find_locked(struct nlm_host *hostp, struct nlm_vhold *nvp,
 	return (slr);
 }
 
-/* ******************************************************************* */
-
-/*
- * Syscall interface with userland.
- * Bind RPC service endpoints.
- *
- * Local-only transports get a different set of programs than
- * network transports.  The local transport is used by statd
- * to call us back with host monitoring events using NLM_SM
- * (version==2) but for safety, don't let remote callers use
- * any calls in that program.
- */
-
-/*
- * RPC service registrations for LOOPBACK,
- * allowed to call the real nlm_prog_2.
- * None of the others are used locally.
- */
-static SVC_CALLOUT nlm_svcs_lo[] = {
-	{ NLM_PROG, 2, 2, nlm_prog_2 }, /* NLM_SM */
-};
-static SVC_CALLOUT_TABLE nlm_sct_lo = {
-	sizeof (nlm_svcs_lo) / sizeof (nlm_svcs_lo[0]),
-	FALSE,	/* dynamically allocated? */
-	nlm_svcs_lo	/* table above */
-};
-
-/*
- * RPC service registration for inet transports.
- * Note that the version 2 (NLM_SM) entries are
- * all NULL (noproc) in these dispatchers.
- */
-static SVC_CALLOUT nlm_svcs_in[] = {
-	{ NLM_PROG, 4, 4, nlm_prog_4 },	/* NLM4_VERS */
-	{ NLM_PROG, 1, 3, nlm_prog_3 },	/* NLM_VERS - NLM_VERSX */
-};
-static SVC_CALLOUT_TABLE nlm_sct_in = {
-	sizeof (nlm_svcs_in) / sizeof (nlm_svcs_in[0]),
-	FALSE,	/* dynamically allocated? */
-	nlm_svcs_in	/* table above */
-};
-
 /*
  * Called by klmmod.c when lockd adds a network endpoint
  * on which we should begin RPC services.
@@ -1820,8 +1796,8 @@ int
 nlm_svc_add_ep(struct nlm_globals *g, struct file *fp,
     const char *netid, struct knetconfig *knc)
 {
-	SVCMASTERXPRT *xprt = NULL;
 	SVC_CALLOUT_TABLE *sct;
+	SVCMASTERXPRT *xprt = NULL;
 
 	if (0 == strcmp(knc->knc_protofmly, NC_LOOPBACK))
 		sct = &nlm_sct_lo;
@@ -1869,6 +1845,7 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 	 * NLM started, so that statd can report other hosts
 	 * about NLM state change.
 	 */
+
 	stat = nlm_nsm_simu_crash(&g->nlm_nsm);
 	if (stat != RPC_SUCCESS) {
 		NLM_ERR("Failed to connect to local statd "

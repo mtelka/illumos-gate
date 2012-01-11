@@ -183,7 +183,7 @@ extern void	record_name(char *name, int op);
 extern void	sm_crash(void);
 extern void	statd_init();
 extern void	merge_hosts(void);
-extern CLIENT	*create_client(char *, int, int, struct timeval *);
+extern CLIENT	*create_client(char *, int, int, const char *, struct timeval *);
 extern char	*xmalloc(unsigned);
 
 /*

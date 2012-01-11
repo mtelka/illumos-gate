@@ -372,7 +372,7 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	struct flock64 fl;
 	struct nlm_host *host;
 	struct netbuf *addr;
-	struct nlm_vhold *nvp;
+	struct nlm_vhold *nvp = NULL;
 	char *netid;
 	char *name;
 	int error, flags;
@@ -643,7 +643,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	struct nlm_globals *g;
 	struct nlm_host *host;
 	struct netbuf *addr;
-	struct nlm_vhold *nvp;
+	struct nlm_vhold *nvp = NULL;
 	char *netid;
 	int error;
 	bool_t slreq_unreg = FALSE;
@@ -976,7 +976,7 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	struct nlm_globals *g;
 	struct nlm_host *host;
 	struct netbuf *addr;
-	struct nlm_vhold *nvp;
+	struct nlm_vhold *nvp = NULL;
 	char *netid;
 	char *name;
 	int error;

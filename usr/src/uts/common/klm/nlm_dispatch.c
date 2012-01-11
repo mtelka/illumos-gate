@@ -164,17 +164,17 @@ nlm_prog_2_table[] = {
 	(xdrproc_t)xdr_void,
 	0 },
 
-	{ /* 17: NLM_SM_NOTIFY1 */
-	RPCGEN_ACTION(nlm_sm_notify1_2_svc),
-	(xdrproc_t)xdr_nlm_sm_status,
-	(xdrproc_t)xdr_void,
-	0 },
+       { /* 17: NLM_SM_NOTIFY1 */
+       RPCGEN_ACTION(nlm_sm_notify1_2_svc),
+       (xdrproc_t)xdr_nlm_sm_status,
+       (xdrproc_t)xdr_void,
+       0 },
 
-	{ /* 18: NLM_SM_NOTIFY2 */
-	RPCGEN_ACTION(nlm_sm_notify2_2_svc),
-	(xdrproc_t)xdr_nlm_sm_status,
-	(xdrproc_t)xdr_void,
-	0 },
+       { /* 18: NLM_SM_NOTIFY2 */
+       RPCGEN_ACTION(nlm_sm_notify2_2_svc),
+       (xdrproc_t)xdr_nlm_sm_status,
+       (xdrproc_t)xdr_void,
+       0 },
 };
 
 /*

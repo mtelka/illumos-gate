@@ -116,11 +116,11 @@ static	char	*MyName;
  * initialization. (It uses it to talk to statd.)
  */
 static  NETSELDECL(defaultproviders)[] = {
-	"/dev/ticlts",
-	"/dev/tcp6",
+	"/dev/ticotsord",
 	"/dev/tcp",
-	"/dev/udp6",
 	"/dev/udp",
+	"/dev/tcp6",
+	"/dev/udp6",
 	NULL
 };
 

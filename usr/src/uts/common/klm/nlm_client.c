@@ -238,11 +238,8 @@ nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flkp,
 	case F_SETLKW:
 		error = nlm_frlock_setlk(hostp, vp, flkp, flags,
 		    offset, fhp, flcb, vers, (cmd == F_SETLKW));
-		if (error == 0) {
-			/* Start monitoring the host */
+		if (error == 0)
 			nlm_host_monitor(g, hostp, 0);
-		}
-
 		break;
 
 	default:

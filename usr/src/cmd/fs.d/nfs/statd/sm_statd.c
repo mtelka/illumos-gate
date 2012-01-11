@@ -592,7 +592,7 @@ statd_call_statd(name)
 	tottimeout.tv_usec = 0;
 
 	if ((clnt = create_client(name_or_addr, SM_PROG, SM_VERS,
-	    &tottimeout)) == (CLIENT *) NULL) {
+	    "netpath", &tottimeout)) == (CLIENT *) NULL) {
 		return (-1);
 	}
 

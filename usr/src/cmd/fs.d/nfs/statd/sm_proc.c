@@ -771,7 +771,7 @@ statd_call_lockd(monp, state)
 	tottimeout.tv_usec = 0;
 
 	if ((clnt = create_client(my_idp->my_name, my_idp->my_prog,
-		my_idp->my_vers, &tottimeout)) == (CLIENT *) NULL) {
+	            my_idp->my_vers, "local", &tottimeout)) == (CLIENT *) NULL) {
 			return (-1);
 	}
 
@@ -798,10 +798,11 @@ statd_call_lockd(monp, state)
  * Client handle created.
  */
 CLIENT *
-create_client(host, prognum, versnum, utimeout)
+create_client(host, prognum, versnum, nettype, utimeout)
 	char	*host;
 	int	prognum;
 	int	versnum;
+	const char *nettype;
 	struct timeval	*utimeout;
 {
 	int		fd;
@@ -810,7 +811,7 @@ create_client(host, prognum, versnum, utimeout)
 	struct t_info	tinfo;
 
 	if ((client = clnt_create_timed(host, prognum, versnum,
-			"netpath", utimeout)) == NULL) {
+			nettype, utimeout)) == NULL) {
 		return (NULL);
 	}
 	(void) CLNT_CONTROL(client, CLGET_FD, (caddr_t)&fd);
