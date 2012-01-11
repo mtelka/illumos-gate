@@ -2190,7 +2190,6 @@ nlm_svc_stopping(struct nlm_globals *g)
 
 	ASSERT(TAILQ_EMPTY(&g->nlm_slocks));
 
-	(void) nlm_nsm_unmon_all(&g->nlm_nsm);
 	nlm_nsm_fini(&g->nlm_nsm);
 	g->lockd_pid = 0;
 	g->run_status = NLM_ST_DOWN;
