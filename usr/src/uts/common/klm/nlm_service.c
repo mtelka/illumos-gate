@@ -1055,7 +1055,12 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	error = VOP_SHRLOCK(nvp->nv_vp, F_SHARE, &shr,
 	    FREAD | FWRITE, CRED(), NULL);
 
-	resp->stat = error ? nlm4_denied : nlm4_granted;
+	if (error == 0) {
+		resp->stat = nlm4_granted;
+		nlm_host_monitor(g, host, 0);
+	} else {
+		resp->stat = nlm4_denied;
+	}
 
 out:
 	DTRACE_PROBE3(share__end, struct nlm_globals *, g,
