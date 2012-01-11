@@ -9,28 +9,14 @@ NOTE: some work to make everything in klmmod was done. Now klmops contains
 only stubs that call klmmod functions. So it'll be quite easy to get rid
 of klmops module.
 
-2) Share reservations on the client side don't support reclamation function.
-The problem with them is that Illumos kernel has no any API that performs
-to know whether there're any share reservations on the system that were
-made by the given sysid. And it's not easy to implement one, because
-share reservations are maintained as a per-vnode linked lists, so to
-answer the question wheter any vnode has any share reservations by given
-sysid, we would have to iterate through all vnodes on the system. It's
-not good at all. 
-Probably the appropriate way to solve this problem is to maintain list
-of share reservations inside NLM, particularly hold them in nlm_host
-structure. The maintaining of this list will be a bit tricky, we'll have
-to handle UNSHARE operation properly, in almost the same way del_share()
-does. It's not a "clean" solution, but it'll work.
-
-3) For now some essentials parameters of NLM such as grace period time
+2) For now some essentials parameters of NLM such as grace period time
 or retransmission timeout can be configured at compile time only.
 lockd user-space daemon passes these parameters to kernel space.
 For this moment there's no way to configure these parameters inside
 lockd, so they are set statically. May be in future it'll be possible
 to configure them via SMF.
 
-4) There's an interesting pitfall in NLM/NSM notification mechanism.
+3) There's an interesting pitfall in NLM/NSM notification mechanism.
 When new lock appears either on the client or on the server side, NLM
 starts to monitor the remote host so that if it'll reboot, local statd
 will tell us about that. To start monitor remote host, NLM sends its hostname
@@ -70,15 +56,15 @@ can be corrected by:
 NOTE: I noticed that the same problem exist on BSD, linux and on Solaris 
 with closed source klmmod.
 
-5) There're two private calls to local statd: 
+4) There're two private calls to local statd: 
    NSMADDRPROC1_REG/NSMADDRPROC1_UNREG. It seems closed source
    klmmod used them. We need to figure out why and how to use them.
 
-6) Sometimes monitor requests to local statd fail. That happens because
+5) Sometimes monitor requests to local statd fail. That happens because
 SM_MON call handler in local statd can take more time that NLM expects.
 It seems that the problem is somewhere inside selfcheck.c:self_check() function.
 
-7) I think in future it's better to replace TAILQ list implementation taken from
+6) I think in future it's better to replace TAILQ list implementation taken from
    BSD systems with Solaris'es lists just because they are widely used through the code.
    I think it's not neccessary to multiply entities.
 
