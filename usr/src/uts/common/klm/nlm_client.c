@@ -762,6 +762,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 			sigreplace(&newmask, &oldmask);
 			nlm_call_cancel(&args, hostp, vers);
 			sigreplace(&oldmask, (k_sigset_t *)NULL);
+			break;
 		} else {
 			/*
 			 * Timeout happened, resend the lock request to
