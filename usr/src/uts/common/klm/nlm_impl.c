@@ -109,8 +109,6 @@ static volatile uint32_t nlm_next_sysid = 0;	/* (g) */
 
 static recovery_cb nlm_recovery_func = NULL;	/* (c) */
 
-void nlm_cancel_wait_locks(struct nlm_host *);
-
 /*
  * Returns true if given sysid has active or sleeping locks
  */
@@ -690,7 +688,6 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	host->nh_state = 0;
 	host->nh_monstate = NLM_UNMONITORED;
 
-	TAILQ_INIT(&host->nh_waiting);
 	TAILQ_INIT(&host->nh_vnodes);
 	TAILQ_INIT(&host->nh_pending);
 
@@ -1040,6 +1037,7 @@ nlm_host_get_state(struct nlm_host *host)
  */
 void *
 nlm_register_wait_lock(
+	struct nlm_globals *g,
 	struct nlm_host *host,
 	struct nlm4_lock *lock,
 	struct vnode *vp)
@@ -1049,19 +1047,18 @@ nlm_register_wait_lock(
 
 	ASSERT(lock->oh.n_len == sizeof (*oh));
 	oh = (void *) lock->oh.n_bytes;
-
 	nw = kmem_zalloc(sizeof (*nw), KM_SLEEP);
 	cv_init(&nw->nw_cond, NULL, CV_DEFAULT, NULL);
 	nw->nw_lock = *lock;
 	nlm_copy_netobj(&nw->nw_fh, &nw->nw_lock.fh);
 	nw->nw_state = NLM_WS_BLOCKED;
 	nw->nw_sysid = oh->oh_sysid;
-	nw->nw_host = host;	/* no hold - caller has it */
+	nw->nw_host = host;
 	nw->nw_vp = vp;
 
-	mutex_enter(&host->nh_lock);
-	TAILQ_INSERT_TAIL(&host->nh_waiting, nw, nw_link);
-	mutex_exit(&host->nh_lock);
+	mutex_enter(&g->lock);
+	TAILQ_INSERT_TAIL(&g->nlm_wlocks, nw, nw_link);
+	mutex_exit(&g->lock);
 
 	return (nw);
 }
@@ -1070,7 +1067,7 @@ nlm_register_wait_lock(
  * Destroy nlm_waiting_lock structure instance
  */
 static void
-nlm_destroy_waiting_lock(struct nlm_waiting_lock *nw)
+nlm_destroy_wait_lock(struct nlm_waiting_lock *nw)
 {
 	kmem_free(nw->nw_fh.n_bytes, nw->nw_fh.n_len);
 	cv_destroy(&nw->nw_cond);
@@ -1081,22 +1078,22 @@ nlm_destroy_waiting_lock(struct nlm_waiting_lock *nw)
  * Remove this lock from the wait list.
  */
 void
-nlm_deregister_wait_lock(struct nlm_host *host, void *handle)
+nlm_deregister_wait_lock(struct nlm_globals *g, void *handle)
 {
 	struct nlm_waiting_lock *nw = handle;
 
-	mutex_enter(&host->nh_lock);
-	TAILQ_REMOVE(&host->nh_waiting, nw, nw_link);
-	mutex_exit(&host->nh_lock);
+	mutex_enter(&g->lock);
+	TAILQ_REMOVE(&g->nlm_wlocks, nw, nw_link);
+	mutex_exit(&g->lock);
 
-	nlm_destroy_waiting_lock(nw);
+	nlm_destroy_wait_lock(nw);
 }
 
 /*
  * Wait for a lock, then remove from the wait list.
  */
 int
-nlm_wait_lock(void *handle, int timo)
+nlm_wait_lock(struct nlm_globals *g, void *handle, int timo)
 {
 	struct nlm_waiting_lock *nw = handle;
 	struct nlm_host *host = nw->nw_host;
@@ -1107,13 +1104,13 @@ nlm_wait_lock(void *handle, int timo)
 	 * If the granted message arrived before we got here,
 	 * nw->nw_state will be GRANTED - in that case, don't sleep.
 	 */
-	mutex_enter(&host->nh_lock);
+	mutex_enter(&g->lock);
 	error = 0;
 	if (nw->nw_state == NLM_WS_BLOCKED) {
 		when = ddi_get_lbolt() + SEC_TO_TICK(timo);
-		rc = cv_timedwait_sig(&nw->nw_cond, &host->nh_lock, when);
+		rc = cv_timedwait_sig(&nw->nw_cond, &g->lock, when);
 	}
-	TAILQ_REMOVE(&host->nh_waiting, nw, nw_link);
+	TAILQ_REMOVE(&g->nlm_wlocks, nw, nw_link);
 	if (rc <= 0) {
 		/* Timeout or interrupt. */
 		error = (rc == 0) ? EINTR : ETIME;
@@ -1136,19 +1133,24 @@ nlm_wait_lock(void *handle, int timo)
 			error = EINTR;
 	}
 
-	mutex_exit(&host->nh_lock);
-	nlm_destroy_waiting_lock(nw);
+	mutex_exit(&g->lock);
+	nlm_destroy_wait_lock(nw);
 	return (error);
 }
 
-void
-nlm_cancel_wait_locks(struct nlm_host *host)
+/*
+ * Cancel all wait locks registered on the moment
+ * function is called.
+ * NOTE: nlm_cancel_all_wait_locks must be called
+ * with g->lock acquired.
+ */
+static void
+nlm_cancel_all_wait_locks(struct nlm_globals *g)
 {
 	struct nlm_waiting_lock *nw;
 
-	ASSERT(MUTEX_HELD(&host->nh_lock));
-
-	TAILQ_FOREACH(nw, &host->nh_waiting, nw_link) {
+	ASSERT(MUTEX_HELD(&g->lock));
+	TAILQ_FOREACH(nw, &g->nlm_wlocks, nw_link) {
 		nw->nw_state = NLM_WS_CANCELLED;
 		cv_broadcast(&nw->nw_cond);
 	}
@@ -1352,13 +1354,14 @@ Wait for threads using them to leave...
 	 * sockets until the last RPC client handle is released.
 	 */
 	mutex_enter(&g->lock);
+	nlm_cancel_all_wait_locks(g);
+
 	/* TAILQ_FOREACH_SAFE */
 	host = TAILQ_FIRST(&g->nlm_hosts);
 	while (host != NULL) {
 		nhost = TAILQ_NEXT(host, nh_link);
 		mutex_exit(&g->lock);
 		nlm_host_notify_server(host, 0);
-		nlm_cancel_wait_locks(host);
 		/* nlm_host_release(host)	* XXX wrong... */
 		mutex_enter(&g->lock);
 		host = nhost;

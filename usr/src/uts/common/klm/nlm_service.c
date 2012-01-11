@@ -786,9 +786,10 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 
 	resp->stat.stat = nlm4_denied;
 
-	mutex_enter(&host->nh_lock);
-	TAILQ_FOREACH(nw, &host->nh_waiting, nw_link) {
-		if (nw->nw_state != NLM_WS_BLOCKED)
+	mutex_enter(&g->lock);
+	TAILQ_FOREACH(nw, &g->nlm_wlocks, nw_link) {
+		if ((nw->nw_state != NLM_WS_BLOCKED) ||
+		    (nw->nw_host != host))
 			continue;
 		if (oh->oh_sysid == nw->nw_sysid &&
 		    argp->alock.svid == nw->nw_lock.svid &&
@@ -803,7 +804,7 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 			break;
 		}
 	}
-	mutex_exit(&host->nh_lock);
+	mutex_exit(&g->lock);
 
 	/*
 	 * If we have a callback funtion, use that to

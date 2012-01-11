@@ -93,6 +93,7 @@ lm_zone_init(zoneid_t zoneid)
 
 	g = kmem_zalloc(sizeof (*g), KM_SLEEP);
 	TAILQ_INIT(&g->nlm_hosts);
+	TAILQ_INIT(&g->nlm_wlocks);
 
 	g->lockd_pid = 0;
 	g->run_status = NLM_ST_DOWN;
@@ -517,11 +518,10 @@ lm_safemap(const vnode_t *vp)
 int
 lm_has_sleep(const vnode_t *vp)
 {
-	/*
-	 * TODO[DK]: check for sleeping locks,
-	 * if any return TRUE.
-	 */
-	return (0);
+	int has_sleep;
+
+	has_sleep = nlm_has_sleep(vp);
+	return (has_sleep);
 }
 
 /*

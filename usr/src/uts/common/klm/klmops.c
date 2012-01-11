@@ -174,31 +174,3 @@ lm_nlm4_reclaim(struct vnode *vp, struct flock64 *flkp)
 {
 }
 
-/*
- * Called by nfs_lockcompletion to check whether it's "safe"
- * to map the file (and cache it's data).  Walks the list of
- * file locks looking for any that are not "whole file".
- */
-int
-lm_safemap(const vnode_t *vp)
-{
-	int safe;
-
-	safe = nlm_safemap(vp);
-	return (safe);
-}
-
-/*
- * Called by nfs_map() for the MANDLOCK case.
- * Return non-zero if the file has any locks with a
- * blocked request (sleep).
- */
-int
-lm_has_sleep(const vnode_t *vp)
-{
-	/*
-	 * TODO[DK]: check for sleeping locks,
-	 * if any return TRUE.
-	 */
-	return (0);
-}

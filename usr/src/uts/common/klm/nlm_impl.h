@@ -236,7 +236,6 @@ struct nlm_host {
 	int		nh_state;	/* (s) last seen NSM state of host */
 	enum nlm_host_state nh_monstate; /* (l) local NSM monitoring state */
 	time_t		nh_idle_timeout; /* (s) Time at which host is idle */
-	struct nlm_waiting_lock_list nh_waiting; /* (l) client-side waits */
 	struct nlm_vnode_list nh_vnodes;	/* (l) active vnodes */
 	struct nlm_async_lock_list nh_pending; /* (l) server-side waits */
 };
@@ -274,6 +273,7 @@ struct nlm_globals {
 	struct nlm_nsm *nlm_nsm; /* An RPC client handle that can be used to communicate
 		                        with the local NSM. */
 	struct nlm_host_list nlm_hosts; /* (l) NLM hosts */
+	struct nlm_waiting_lock_list nlm_wlocks; /* (l) client-side waiting locks */
 	/* options from lockd */
 	int cn_idle_tmo;
 	int grace_period;
@@ -311,6 +311,7 @@ int nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	int flag, struct netobj *fh, int vers);
 int nlm_safemap(const vnode_t *vp);
 int nlm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr);
+int nlm_has_sleep(const vnode_t *vp);
 
 
 /* nlm_rpc_clnt.c */
@@ -443,14 +444,14 @@ void nlm_vnode_release(struct nlm_host *host, struct nlm_vnode *nv);
  * the handle this function returns, otherwise nlm_wait_lock. Both
  * will remove the entry from the waiting list.
  */
-extern void *nlm_register_wait_lock(struct nlm_host *host,
-    struct nlm4_lock *lock, struct vnode *vp);
+extern void *nlm_register_wait_lock(struct nlm_globals *g,
+    struct nlm_host *host, struct nlm4_lock *lock, struct vnode *vp);
 
 /*
  * Deregister a blocking lock request. Call this if the lock succeeded
  * without blocking.
  */
-extern void nlm_deregister_wait_lock(struct nlm_host *host, void *handle);
+extern void nlm_deregister_wait_lock(struct nlm_globals *g, void *handle);
 
 /*
  * Wait for a granted callback for a blocked lock request, waiting at
@@ -460,7 +461,7 @@ extern void nlm_deregister_wait_lock(struct nlm_host *host, void *handle);
  * the server. In both cases, the request is removed from the waiting
  * list.
  */
-extern int nlm_wait_lock(void *handle, int timo);
+extern int nlm_wait_lock(struct nlm_globals *g, void *handle, int timo);
 
 int nlm_cancel_async_lock(struct nlm_async_lock *af);
 void nlm_free_async_lock(struct nlm_async_lock *af);

@@ -420,9 +420,11 @@ int
 nlm_safemap(const vnode_t *vp)
 {
 	struct locklist *ll, *ll_next;
+	struct nlm_waiting_lock *nw;
+	struct nlm_globals *g;
 	int safe = 1;
 
-	/* TODO[DK]: check sleeping locks as well */
+	/* Check active locks at first */
 	ll = flk_active_locks_for_vp(vp);
 	while (ll) {
 		if ((ll->ll_flock.l_start != 0) ||
@@ -434,8 +436,36 @@ nlm_safemap(const vnode_t *vp)
 		kmem_free(ll, sizeof (*ll));
 		ll = ll_next;
 	}
+	if (!safe)
+		return (safe);
 
+	/* Then check sleeping locks if any */
+	g = zone_getspecific(nlm_zone_key, curzone);
+	mutex_enter(&g->lock);
+	TAILQ_FOREACH(nw, &g->nlm_wlocks, nw_link) {
+		if ((nw->nw_lock.l_offset != 0) ||
+		    (nw->nw_lock.l_len != 0)) {
+			safe = 0;
+			break;
+		}
+	}
+
+	mutex_exit(&g->lock);
 	return (safe);
+}
+
+int
+nlm_has_sleep(const vnode_t *vp)
+{
+	struct nlm_globals *g;
+	int empty;
+
+	g = zone_getspecific(nlm_zone_key, curzone);
+	mutex_enter(&g->lock);
+	empty = TAILQ_EMPTY(&g->nlm_wlocks);
+	mutex_exit(&g->lock);
+
+	return (!empty);
 }
 
 /*
@@ -609,6 +639,10 @@ nlm_local_setlk(vnode_t *vp, struct flock64 *fl, int flags)
 /*
  * Do NLM_LOCK call.
  * Was: nlm_setlock()
+ *
+ * NOTE: nlm_call_lock() function should care about locking/unlocking
+ * of rnode->r_lkserlock which should be released before nlm_call_lock()
+ * sleeps on waiting lock and acquired when it wakes up.
  */
 static int
 nlm_call_lock(vnode_t *vp, struct flock64 *fl,
@@ -621,12 +655,13 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 	uint32_t xid;
 	CLIENT *client;
 	mntinfo_t *mi = VTOMI(vp);
+	rnode_t *rn = VTOR(vp);
 	struct nlm_globals *g;
 	void *wait_handle = NULL;
 	enum clnt_stat stat;
 	clock_t retry;
 	int block, exclusive;
-	int error;
+	int error, intr = INTR(vp);
 
 	int retries = 3;	/* XXX */
 
@@ -635,6 +670,8 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 
 	block = (xflags & NLM_X_BLOCKING) ? TRUE : FALSE;
 	exclusive = (fl->l_type == F_WRLCK);
+	if (fl->l_type == F_UNLCK)
+		intr = 0;
 
 	g = zone_getspecific(nlm_zone_key, curzone);
 	error = nlm_init_lock(&args.alock, fl, fh, &oh);
@@ -655,10 +692,11 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 		client = nlm_host_get_rpc(host, vers, FALSE);
 		if (!client)
 			return (ENOLCK); /* XXX retry? */
-
-		if (block)
-			wait_handle = nlm_register_wait_lock(
-			    host, &args.alock, vp);
+		if (block) {
+			wait_handle = nlm_register_wait_lock(g, host,
+			    &args.alock, vp);
+			nfs_rw_exit(&rn->r_lkserlock);
+		}
 
 		xid = atomic_inc_32_nv(&nlm_xid);
 		args.cookie.n_len = sizeof (xid);
@@ -670,9 +708,10 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 
 		if (stat != RPC_SUCCESS) {
 			if (block) {
-				nlm_deregister_wait_lock(
-				    host, wait_handle);
+				nlm_deregister_wait_lock(g, wait_handle);
 				wait_handle = NULL;
+				nfs_rw_enter_sig(&rn->r_lkserlock,
+				    RW_WRITER, intr);
 			}
 			if (retries) {
 				retries--;
@@ -686,11 +725,6 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 		 */
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
 
-		if (block && res.stat.stat != nlm4_blocked) {
-			nlm_deregister_wait_lock(
-			    host, wait_handle);
-			wait_handle = NULL;
-		}
 		if (res.stat.stat == nlm4_denied_grace_period) {
 			/*
 			 * The server has recently rebooted and is
@@ -698,6 +732,13 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 			 * their locks. Wait for a few seconds and try
 			 * again.
 			 */
+			if (block) {
+				nlm_deregister_wait_lock(g, wait_handle);
+				wait_handle = NULL;
+				nfs_rw_enter_sig(&rn->r_lkserlock,
+				    RW_WRITER, intr);
+			}
+
 			error = delay_sig(retry);
 			if (error)
 				return (error);
@@ -707,49 +748,65 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 			continue;
 		}
 
-		if (block && res.stat.stat == nlm4_blocked) {
-			/*
-			 * The server should call us back with a
-			 * granted message when the lock succeeds.
-			 * In order to deal with broken servers,
-			 * lost granted messages, or server reboots,
-			 * we will also re-try every few seconds.
-			 *
-			 * Note: We're supposed to call these
-			 * flk_invoke_callbacks when blocking.
-			 */
+		error = nlm_map_status(res.stat.stat);
 
-			flk_invoke_callbacks(flcb, FLK_BEFORE_SLEEP);
-			error = nlm_wait_lock(wait_handle, retry);
-			flk_invoke_callbacks(flcb, FLK_AFTER_SLEEP);
-
-			/* nlm_wait_lock destroys wait_handle */
-			wait_handle = NULL;
-
-			if (error == ETIME) {
-				retry = 2 * retry;
-				if (retry > SEC_TO_TICK(30))
-					retry = SEC_TO_TICK(30);
-				continue;
+		/*
+		 * If we deal with non-blocking lock or with blocking locks
+		 * that wasn't blocked (by some reason), our work is finished.
+		 */
+		if (!block || res.stat.stat != nlm4_blocked) {
+			if (block) {
+				nlm_deregister_wait_lock(g, wait_handle);
+				wait_handle = NULL;
+				nfs_rw_enter_sig(&rn->r_lkserlock,
+				    RW_WRITER, intr);
 			}
-			if (error) {
-				/*
-				 * We need to call the server to
-				 * cancel our lock request.
-				 * Note: intr may be pending,
-				 * so block them here.
-				 */
-				k_sigset_t oldmask, newmask;
-				sigfillset(&newmask);
-				sigreplace(&newmask, &oldmask);
-				nlm_call_cancel(&args, host, vers);
-				sigreplace(&oldmask, (k_sigset_t *)NULL);
-			}
+
 			break;
 		}
-		error = nlm_map_status(res.stat.stat);
+
+		/*
+		 * The server should call us back with a
+		 * granted message when the lock succeeds.
+		 * In order to deal with broken servers,
+		 * lost granted messages, or server reboots,
+		 * we will also re-try every few seconds.
+		 *
+		 * Note: We're supposed to call these
+		 * flk_invoke_callbacks when blocking.
+		 */
+
+		flk_invoke_callbacks(flcb, FLK_BEFORE_SLEEP);
+		error = nlm_wait_lock(g, wait_handle, retry);
+		flk_invoke_callbacks(flcb, FLK_AFTER_SLEEP);
+		nfs_rw_enter_sig(&rn->r_lkserlock, RW_WRITER, intr);
+
+		/* nlm_wait_lock destroys wait_handle */
+		wait_handle = NULL;
+
+		if (error == ETIME) {
+			retry = 2 * retry;
+			if (retry > SEC_TO_TICK(30))
+				retry = SEC_TO_TICK(30);
+			continue;
+		}
+		if (error) {
+			/*
+			 * We need to call the server to
+			 * cancel our lock request.
+			 * Note: intr may be pending,
+			 * so block them here.
+			 */
+			k_sigset_t oldmask, newmask;
+			sigfillset(&newmask);
+			sigreplace(&newmask, &oldmask);
+			nlm_call_cancel(&args, host, vers);
+			sigreplace(&oldmask, (k_sigset_t *)NULL);
+		}
+
 		break;
 	}
+
 	ASSERT(wait_handle == NULL);
 	return (error);
 }
