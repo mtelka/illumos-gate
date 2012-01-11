@@ -156,7 +156,6 @@ nlm_lock_1_svc(nlm_lockargs *argp, nlm_res *resp,
 	nlm4_lockargs args4;
 	nlm4_res res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
@@ -194,7 +193,6 @@ nlm_granted_1_cb(nlm4_testargs *argp, void *null, CLIENT *clnt)
 	nlm_res res1;
 	int rv;
 
-	bzero(&args1, sizeof (args1));
 	bzero(&res1, sizeof (res1));
 
 	args1.cookie = argp->cookie;
@@ -217,7 +215,6 @@ nlm_cancel_1_svc(struct nlm_cancargs *argp, nlm_res *resp,
 	nlm4_cancargs args4;
 	nlm4_res res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
@@ -239,7 +236,6 @@ nlm_unlock_1_svc(struct nlm_unlockargs *argp, nlm_res *resp,
 	nlm4_unlockargs args4;
 	nlm4_res res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
@@ -259,7 +255,6 @@ nlm_granted_1_svc(struct nlm_testargs *argp, nlm_res *resp,
 	nlm4_testargs args4;
 	nlm4_res res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
@@ -296,7 +291,6 @@ nlm_test_msg_1_svc(struct nlm_testargs *argp, void *resp,
 	nlm4_testargs args4;
 	nlm4_testres res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
@@ -342,7 +336,6 @@ nlm_lock_msg_1_svc(nlm_lockargs *argp, void *resp,
 	nlm4_lockargs args4;
 	nlm4_res res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
@@ -397,7 +390,6 @@ nlm_cancel_msg_1_svc(struct nlm_cancargs *argp, void *resp,
 	nlm4_cancargs args4;
 	nlm4_res res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
@@ -435,7 +427,6 @@ nlm_unlock_msg_1_svc(struct nlm_unlockargs *argp, void *resp,
 	nlm4_unlockargs args4;
 	nlm4_res res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
@@ -471,7 +462,6 @@ nlm_granted_msg_1_svc(struct nlm_testargs *argp, void *resp,
 	nlm4_testargs args4;
 	nlm4_res res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
@@ -595,7 +585,6 @@ nlm_share_3_svc(nlm_shareargs *argp, nlm_shareres *resp,
 	nlm4_shareargs args4;
 	nlm4_shareres res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
@@ -618,7 +607,6 @@ nlm_unshare_3_svc(nlm_shareargs *argp, nlm_shareres *resp,
 	nlm4_shareargs args4;
 	nlm4_shareres res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
@@ -640,7 +628,6 @@ nlm_nm_lock_3_svc(nlm_lockargs *argp, nlm_res *resp, struct svc_req *sr)
 	nlm4_lockargs args4;
 	nlm4_res res4;
 
-	bzero(&args4, sizeof (args4));
 	bzero(&res4, sizeof (res4));
 
 	args4.cookie = argp->cookie;
