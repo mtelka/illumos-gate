@@ -414,6 +414,17 @@ out:
 	return (error);
 }
 
+/*
+ * The function determines whether the lock "fl" can
+ * be safely upplied to the file vnode "vp" corresponds to.
+ * The lock can be "safely" applied if all the conditions
+ * above are held:
+ *  - It's not a mandatory lock
+ *  - The vnode wasn't mapped by anyone
+ *  - The vnode was mapped, but it hasn't any locks on it.
+ *  - The vnode was mapped and all locks it has occupies
+ *    the whole file.
+ */
 int
 nlm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
 {
@@ -426,7 +437,7 @@ nlm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
 
 	va.va_mask = AT_MODE;
 	err = nfs3getattr(vp, &va, cr);
-	if (err)
+	if (err != 0)
 		return (0);
 
 	/* NLM4 doesn't allow mandatory file locking */
