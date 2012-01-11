@@ -107,6 +107,7 @@ lm_zone_init(zoneid_t zoneid)
 	g->lockd_pid = 0;
 	g->run_status = NLM_ST_DOWN;
 
+	nlm_globals_register(g);
 	return (g);
 }
 
@@ -120,6 +121,7 @@ lm_zone_fini(zoneid_t zoneid, void *data)
 	mod_hash_destroy_idhash(g->nlm_hosts_hash);
 	mutex_destroy(&g->lock);
 
+	nlm_globals_unregister(g);
 	kmem_free(g, sizeof (*g));
 }
 
@@ -139,10 +141,7 @@ _init()
 	/* Per-zone lockmgr data.  See: os/flock.c */
 	zone_key_create(&flock_zone_key, flk_zone_init, NULL, flk_zone_fini);
 	lm_sysid_init();
-
-	nlm_hosts_init();
-	nlm_vnodes_init();
-	nlm_rpc_cache_init();
+	nlm_init();
 
 	retval = mod_install(&modlinkage);
 	if (retval == 0)

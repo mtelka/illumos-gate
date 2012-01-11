@@ -281,7 +281,7 @@ nlm_host_invalidate_binding(struct nlm_host *hostp)
 }
 
 void
-nlm_rpc_cache_init(void)
+nlm_rpc_init(void)
 {
 	nlm_rpch_cache = kmem_cache_create("nlm_rpch_cache",
 	    sizeof (nlm_rpc_t), 0, nlm_rpch_ctor, nlm_rpch_dtor,

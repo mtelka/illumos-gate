@@ -333,7 +333,9 @@ struct nlm_globals {
 	int cn_idle_tmo;
 	int grace_period;
 	int retrans_tmo;
+	TAILQ_ENTRY(nlm_globals) nlm_link;
 };
+TAILQ_HEAD(nlm_globals_list, nlm_globals);
 
 
 /*
@@ -354,12 +356,18 @@ struct nlm_owner_handle {
 #define NLM_RPC_RETRIES 5
 
 /*
+ * Klmmod global mutex
+ */
+extern kmutex_t lm_lck;
+
+/*
  * NLM internal functions for initialization.
  */
-void nlm_hosts_init(void);
-void nlm_vnodes_init(void);
-void nlm_rpc_cache_init(void);
+void nlm_init(void);
+void nlm_rpc_init(void);
 void nlm_rpc_cache_destroy(struct nlm_host *hostp);
+void nlm_globals_register(struct nlm_globals *g);
+void nlm_globals_unregister(struct nlm_globals *g);
 
 /*
  * RPC handles cache: nlm_rpc_handle.c
@@ -595,6 +603,5 @@ void nlm_set_recovery_cb(recovery_cb);
 struct vop_advlock_args;
 struct vop_reclaim_args;
 extern int nlm_advlock(struct vop_advlock_args *ap);
-extern int nlm_reclaim(struct vop_reclaim_args *ap);
 
 #endif	/* _NLM_NLM_H_ */

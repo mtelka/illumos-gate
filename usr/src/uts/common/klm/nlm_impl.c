@@ -104,6 +104,12 @@
 clock_t nlm_grace_threshold;
 
 /*
+ * List of all Zone globals nlm_globals instences
+ * linked together.
+ */
+static struct nlm_globals_list nlm_zones_list;
+
+/*
  * A zero timeval for sending async RPC messages.
  */
 struct timeval nlm_zero_tv = { 0, 0 };
@@ -146,6 +152,7 @@ static int nlm_vnode_cmp(const void *, const void *);
 static void nlm_free_idle_hosts(struct nlm_globals *g);
 static int nlm_host_ctor(void *datap, void *cdrarg, int kmflags);
 static void nlm_host_dtor(void *datap, void *cdrarg);
+static void nlm_reclaim(void *cdrarg);
 static void nlm_host_destroy(struct nlm_host *hostp);
 static struct nlm_host *nlm_create_host(struct nlm_globals *g,
     char *name, const char *netid,
@@ -181,6 +188,55 @@ nlm_acquire_next_sysid(void)
 	}
 
 	return next_sysid;
+}
+
+/*********************************************************************
+ * NLM initialization functions.
+ */
+void
+nlm_init(void)
+{
+	nlm_hosts_cache = kmem_cache_create("nlm_host_cache",
+	    sizeof (struct nlm_host), 0, nlm_host_ctor, nlm_host_dtor,
+	    nlm_reclaim, NULL, NULL, 0);
+
+	nlm_vnode_cache = kmem_cache_create("nlm_vnode_cache",
+	    sizeof (struct nlm_vnode), 0, nlm_vnode_ctor, nlm_vnode_dtor,
+	    NULL, NULL, NULL, 0);
+
+	nlm_rpc_init();
+	TAILQ_INIT(&nlm_zones_list);
+}
+
+void
+nlm_globals_register(struct nlm_globals *g)
+{
+	mutex_enter(&lm_lck);
+	TAILQ_INSERT_TAIL(&nlm_zones_list, g, nlm_link);
+	mutex_exit(&lm_lck);
+}
+
+void
+nlm_globals_unregister(struct nlm_globals *g)
+{
+	mutex_enter(&lm_lck);
+	TAILQ_REMOVE(&nlm_zones_list, g, nlm_link);
+	mutex_exit(&lm_lck);
+}
+
+static void
+nlm_reclaim(void *cdrarg)
+{
+	struct nlm_globals *g;
+
+	mutex_enter(&lm_lck);
+	TAILQ_FOREACH(g, &nlm_zones_list, nlm_link) {
+		mutex_exit(&lm_lck);
+		nlm_free_idle_hosts(g);
+		mutex_enter(&lm_lck);
+	}
+
+	mutex_exit(&lm_lck);
 }
 
 /*********************************************************************
@@ -342,14 +398,6 @@ nlm_svc_release_nsm(struct nlm_nsm *nsm)
 /*********************************************************************
  * NLM vnode functions
  */
-
-void
-nlm_vnodes_init(void)
-{
-	nlm_vnode_cache = kmem_cache_create("nlm_vnode_cache",
-	    sizeof (struct nlm_vnode), 0, nlm_vnode_ctor, nlm_vnode_dtor,
-	    NULL, NULL, NULL, 0);
-}
 
 static int
 nlm_vnode_cmp(const void *p1, const void *p2)
@@ -739,14 +787,6 @@ nlm_destroy_client_locks(struct nlm_host *host)
 /*********************************************************************
  * NLM vnode functions
  */
-
-void
-nlm_hosts_init(void)
-{
-	nlm_hosts_cache = kmem_cache_create("nlm_host_cache",
-	    sizeof (struct nlm_host), 0, nlm_host_ctor, nlm_host_dtor,
-	    NULL, NULL, NULL, 0);
-}
 
 static int
 nlm_host_ctor(void *datap, void *cdrarg, int kmflags)
