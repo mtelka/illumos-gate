@@ -1343,8 +1343,6 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 		 * detect host reboots.
 		 */
 		host->nh_state = state;
-		DTRACE_PROBE3(first__state, struct nlm_globals *, g,
-		    struct nlm_host *, host, int, state);
 	}
 
 	mutex_enter(&host->nh_lock);
@@ -1355,9 +1353,6 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 
 	host->nh_monstate = NLM_MONITORED;
 	mutex_exit(&host->nh_lock);
-
-	DTRACE_PROBE2(do__monitor, struct nlm_globals *, g,
-	    struct nlm_host *, host);
 
 	/*
 	 * Tell statd how to call us with status updates for
