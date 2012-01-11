@@ -155,7 +155,6 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 	int error, sysid;
 	struct flock64 fl;
 
-	bzero(resp, sizeof (*resp));
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
 	name = argp->alock.caller_name;
@@ -274,7 +273,6 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	bool_t do_mon_req = FALSE;
 	enum nlm4_stats status;
 
-	bzero(resp, sizeof (*resp));
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
 	name = argp->alock.caller_name;
@@ -584,7 +582,6 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	struct flock64 fl;
 	struct nlm_async_lock *af;
 
-	bzero(resp, sizeof (*resp));
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
 	name = argp->alock.caller_name;
@@ -699,7 +696,6 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	int error, sysid;
 	struct flock64 fl;
 
-	bzero(resp, sizeof (*resp));
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
 	name = argp->alock.caller_name;
@@ -805,7 +801,6 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 	struct nlm_host *host;
 	struct nlm_waiting_lock *nw;
 
-	bzero(resp, sizeof (*resp));
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
 	g = zone_getspecific(nlm_zone_key, curzone);
@@ -964,7 +959,6 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	int error, flags, sysid;
 	struct shrlock shr;
 
-	bzero(resp, sizeof (*resp));
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
 	name = argp->share.caller_name;
@@ -1024,7 +1018,6 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	int error, flags, sysid;
 	struct shrlock shr;
 
-	bzero(resp, sizeof (*resp));
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
 	name = argp->share.caller_name;
