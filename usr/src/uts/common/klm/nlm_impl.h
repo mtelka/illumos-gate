@@ -316,9 +316,9 @@ enum nlm_rpcb_state {
  *   nh_refs: reference counter. Identifies how many threads
  *            uses this host object.
  *   nh_link: a list node for keeping host in zone-global list.
- *   nh_tree: an AVL tree node for keeping host in zone-global tree.
- *            Host can be looked up in the tree by <netid, address>
- *            pair.
+ *   nh_by_addr: an AVL tree node for keeping host in zone-global tree.
+ *              Host can be looked up in the tree by <netid, address>
+ *              pair.
  *   nh_name: host name.
  *   nh_netid: netid string identifying type of transport host uses.
  *   nh_knc: host's knetconfig (used by kRPC subsystem).
@@ -342,7 +342,7 @@ struct nlm_host {
 	kmutex_t                   nh_lock;
 	volatile uint_t            nh_refs;
 	TAILQ_ENTRY(nlm_host) nh_link;
-	avl_node_t                 nh_tree;
+	avl_node_t                 nh_by_addr;
 	char                      *nh_name;
 	char                      *nh_netid;
 	struct knetconfig          nh_knc;

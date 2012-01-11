@@ -95,7 +95,7 @@ lm_zone_init(zoneid_t zoneid)
 
 	avl_create(&g->nlm_hosts_tree, nlm_host_cmp,
 	    sizeof (struct nlm_host),
-	    offsetof(struct nlm_host, nh_tree));
+	    offsetof(struct nlm_host, nh_by_addr));
 
 	g->nlm_hosts_hash = mod_hash_create_idhash("nlm_host_by_sysid",
 	    64, mod_hash_null_valdtor);
