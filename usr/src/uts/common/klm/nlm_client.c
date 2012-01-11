@@ -64,6 +64,13 @@
 #define	NLM_X_RECLAIM	1
 #define	NLM_X_BLOCKING	2
 
+/*
+ * Max. number of retries nlm_call_cancel() does
+ * when NLM server is in grace period or doesn't
+ * respond correctly.
+ */
+#define	NLM_CANCEL_NRETRS 5
+
 static volatile uint32_t nlm_xid = 1;
 
 static int nlm_init_fh_by_vp(vnode_t *, struct netobj *, rpcvers_t *);
@@ -840,7 +847,7 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 {
 	nlm4_cancargs cargs;
 	uint32_t xid;
-	int error;
+	int error, retries;
 
 	bzero(&cargs, sizeof (cargs));
 
@@ -851,7 +858,16 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
 	cargs.exclusive	= largs->exclusive;
 	cargs.alock	= largs->alock;
 
-	for (;;) {
+	/*
+	 * Unlike all other nlm_call_* functions, nlm_call_cancel
+	 * doesn't spin forever until it gets reasonable response
+	 * from NLM server. It makes limited number of retries and
+	 * if server doesn't send a reasonable reply, it returns an
+	 * error. It behaves like that because it's called from nlm_call_lock
+	 * with blocked signals and thus it can not be interrupted from
+	 * user space.
+	 */
+	for (retries = 0; retries < NLM_CANCEL_NRETRS; retries++) {
 		nlm_rpc_t *rpcp;
 		enum clnt_stat stat;
 		struct nlm4_res res;
