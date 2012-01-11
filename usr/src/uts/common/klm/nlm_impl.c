@@ -545,6 +545,7 @@ nlm_vhold_findcreate(struct nlm_host *hostp, vnode_t *vp)
 		nvp->nv_flags = NLM_NH_JUSTBORN;
 		VN_HOLD(nvp->nv_vp);
 		avl_insert(&hostp->nh_vholds, nvp, where);
+		TAILQ_INSERT_TAIL(&hostp->nh_vholds_list, nvp, nv_link);
 	}
 
 	mutex_exit(&hostp->nh_lock);
@@ -662,6 +663,7 @@ nlm_vhold_release(struct nlm_host *hostp,
 	 * it holds.
 	 */
 	avl_remove(&hostp->nh_vholds, nvp);
+	TAILQ_REMOVE(&hostp->nh_vholds_list, nvp, nv_link);
 	mutex_exit(&hostp->nh_lock);
 
 	VN_RELE(nvp->nv_vp);
@@ -727,11 +729,9 @@ nlm_destroy_client_locks(struct nlm_host *host)
 	fl.l_sysid = host->nh_sysid;
 	flags = F_REMOTELOCK | FREAD | FWRITE;
 
-	nvp = avl_first(&host->nh_vholds);
-	while (nvp != NULL) {
+	TAILQ_FOREACH(nvp, &host->nh_vholds_list, nv_link) {
 		(void) VOP_FRLOCK(nvp->nv_vp, F_SETLK, &fl,
 		    flags, 0, NULL, CRED(), NULL);
-		nvp = AVL_NEXT(&host->nh_vholds, nvp);
 	}
 }
 
@@ -776,6 +776,7 @@ nlm_host_destroy(struct nlm_host *hostp)
 	ASSERT(hostp->nh_name != NULL);
 	ASSERT(hostp->nh_netid != NULL);
 	ASSERT(TAILQ_EMPTY(&hostp->nh_srv_slocks));
+	ASSERT(TAILQ_EMPTY(&hostp->nh_vholds_list));
 
 	strfree(hostp->nh_name);
 	strfree(hostp->nh_netid);
@@ -923,6 +924,7 @@ nlm_create_host(struct nlm_globals *g, char *name,
 	    sizeof (struct nlm_vhold),
 	    offsetof(struct nlm_vhold, nv_tree));
 
+	TAILQ_INIT(&host->nh_vholds_list);
 	TAILQ_INIT(&host->nh_srv_slocks);
 	TAILQ_INIT(&host->nh_rpchc);
 

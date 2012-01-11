@@ -182,14 +182,17 @@ enum {
  *                    taken by given host. If there're no such locks,
  *                    nlm_vhold will be freed and vnode it holds will
  *                    be released.
- *   nv_tree - AVL tree node.
+ *   nv_tree - AVL tree node
+ *   nv_link - list node to store vholds in host's nh_vnodes_list
  */
 struct nlm_vhold {
 	vnode_t    *nv_vp;
 	uint_t      nv_refs;
 	uint8_t     nv_flags;
 	avl_node_t  nv_tree;
+	TAILQ_ENTRY(nlm_vhold) nv_link;
 };
+TAILQ_HEAD(nlm_vhold_list, nlm_vhold);
 
 enum nlm_wait_state {
 	NLM_WS_UNKNOWN = 0,
@@ -335,7 +338,8 @@ enum nlm_rpcb_state {
  *   nh_idle_timeout: host idle timeout. When expired host is freed.
  *   nh_rpchc: host's RPC handles cache.
  *   nh_vholds: an AVL tree containing a tack of all vnodes given
- *              host has any locks on.
+ *              host has any locks on. (used for lookup)
+ *   nh_vholds: a linked list of all vholds host owns. (used for iteration)
  *   nh_srv_slocks: a list of all server side sleeping locks made
  *                  by given host object.
  */
@@ -358,6 +362,7 @@ struct nlm_host {
 	time_t                     nh_idle_timeout;
 	struct nlm_rpch_list       nh_rpchc;
 	avl_tree_t                 nh_vholds;
+	struct nlm_vhold_list      nh_vholds_list;
 	struct nlm_slock_srv_list  nh_srv_slocks;
 };
 TAILQ_HEAD(nlm_host_list, nlm_host);
