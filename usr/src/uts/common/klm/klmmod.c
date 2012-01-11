@@ -233,7 +233,7 @@ lm_svc(struct lm_svc_args *args)
 	}
 
 	knc.knc_rdev = args->n_rdev;
-	netid = nlm_netid_from_knetconfig(&knc);
+	netid = nlm_knc_to_netid(&knc);
 	if (!netid)
 		return (EINVAL);
 
@@ -262,7 +262,6 @@ lm_svc(struct lm_svc_args *args)
 	 * so we piggy back initializations on that call.
 	 */
 	if (g->run_status == NLM_ST_DOWN) {
-		nlm_netconfigs_init(); /* Initialize knetconfig/netid table */
 		g->run_status = NLM_ST_STARTING;
 		g->lockd_pid = curproc->p_pid;
 

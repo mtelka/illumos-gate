@@ -465,10 +465,9 @@ void nlm_prog_4(struct svc_req *rqstp, SVCXPRT *transp);
 /*
  * Functions for working with knetconfigs (nlm_netconfig.c)
  */
-void nlm_netconfigs_init(void);
-int nlm_knetconfig_from_netid(const char *, struct knetconfig *);
-const char *nlm_netid_from_knetconfig(struct knetconfig *);
-int nlm_build_knetconfig(int, int, struct knetconfig *);
+const char *nlm_knc_to_netid(struct knetconfig *);
+int nlm_knc_from_netid(const char *, struct knetconfig *);
+void nlm_knc_activate(struct knetconfig *);
 
 /*
  * NLM host functions (nlm_impl.c)

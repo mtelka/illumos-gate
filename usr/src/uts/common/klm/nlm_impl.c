@@ -72,6 +72,14 @@
 
 #include "nlm_impl.h"
 
+struct nlm_knc {
+	struct knetconfig	n_knc;
+	const char		*n_netid;
+};
+
+#define	NLM_KNCS \
+	(sizeof (nlm_netconfigs) / sizeof (nlm_netconfigs[0]))
+
 /*
  * Number of attempts NLM tries to obtain RPC binding
  * of local statd.
@@ -147,6 +155,49 @@ static SVC_CALLOUT_TABLE nlm_sct_in = {
 	sizeof (nlm_svcs_in) / sizeof (nlm_svcs_in[0]),
 	FALSE,
 	nlm_svcs_in
+};
+
+/*
+ * Static table of all netid/knetconfig network
+ * lock manager can work with. nlm_netconfigs table
+ * is used when we need to get valid knetconfig by
+ * netid and vice versa.
+ *
+ * Knetconfigs are activated either by the call from
+ * user-space lockd daemon (server side) or by taking
+ * knetconfig from NFS mountinfo (client side)
+ */
+static struct nlm_knc nlm_netconfigs[] = {
+	/* UDP */
+	{
+		{ NC_TPI_CLTS, NC_INET, NC_UDP, NODEV },
+		"udp",
+	},
+	/* TCP */
+	{
+		{ NC_TPI_COTS_ORD, NC_INET, NC_TCP, NODEV },
+		"tcp",
+	},
+	/* UDP over IPv6 */
+	{
+		{ NC_TPI_CLTS, NC_INET6, NC_UDP, NODEV },
+		"udp6",
+	},
+	/* TCP over IPv6 */
+	{
+		{ NC_TPI_COTS_ORD, NC_INET6, NC_TCP, NODEV },
+		"tcp6",
+	},
+	/* ticlts (loopback over UDP) */
+	{
+		{ NC_TPI_CLTS, NC_LOOPBACK, NC_NOPROTO, NODEV },
+		"ticlts",
+	},
+	/* ticotsord (loopback over TCP) */
+	{
+		{ NC_TPI_COTS_ORD, NC_LOOPBACK, NC_NOPROTO, NODEV },
+		"ticotsord",
+	},
 };
 
 krwlock_t lm_lck;
@@ -392,6 +443,84 @@ nlm_sysid_free(sysid_t sysid)
 	rw_enter(&lm_lck, RW_WRITER);
 	ASSERT(BT_TEST(nlm_sysid_bmap, sysid));
 	BT_CLEAR(nlm_sysid_bmap, sysid);
+	rw_exit(&lm_lck);
+}
+
+/*
+ * Get netid string correspondig to the
+ * given knetconfig.
+ */
+const char *
+nlm_knc_to_netid(struct knetconfig *knc)
+{
+	int i;
+	const char *netid = NULL;
+
+	rw_enter(&lm_lck, RW_READER);
+	for (i = 0; i < NLM_KNCS; i++) {
+		struct knetconfig *knc_iter;
+
+		knc_iter = &nlm_netconfigs[i].n_knc;
+		if (knc_iter->knc_semantics == knc->knc_semantics &&
+		    strcmp(knc_iter->knc_protofmly,
+		        knc->knc_protofmly) == 0) {
+			netid = nlm_netconfigs[i].n_netid;
+			break;
+		}
+	}
+
+	rw_exit(&lm_lck);
+	return (netid);
+}
+
+/*
+ * Get a knetconfig corresponding to the given netid.
+ * If there's no knetconfig for this netid, ENOENT
+ * is returned.
+ */
+int
+nlm_knc_from_netid(const char *netid, struct knetconfig *knc)
+{
+	int i, ret;
+
+	ret = ENOENT;
+	for (i = 0; i < NLM_KNCS; i++) {
+		struct nlm_knc *nknc;
+
+		nknc = &nlm_netconfigs[i];
+		if (strcmp(netid, nknc->n_netid) == 0 &&
+		    nknc->n_knc.knc_rdev != NODEV) {
+			*knc = nknc->n_knc;
+			ret = 0;
+			break;
+		}
+	}
+
+	return (ret);
+}
+
+void
+nlm_knc_activate(struct knetconfig *knc)
+{
+	int i;
+
+	rw_enter(&lm_lck, RW_WRITER);
+	for (i = 0; i < NLM_KNCS; i++) {
+		struct knetconfig *knc_iter;
+
+		knc_iter = &nlm_netconfigs[i].n_knc;
+		if (knc_iter->knc_rdev != NODEV)
+			continue;
+
+		if (knc_iter->knc_semantics == knc->knc_semantics &&
+		    strcmp(knc_iter->knc_protofmly,
+		        knc->knc_protofmly) == 0 &&
+		    strcmp(knc_iter->knc_proto, knc->knc_proto) == 0) {
+			knc_iter->knc_rdev = knc->knc_rdev;
+			break;
+		}
+	}
+
 	rw_exit(&lm_lck);
 }
 
@@ -1460,8 +1589,8 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	if (host != NULL)
 		return (host);
 
-	err = nlm_knetconfig_from_netid(netid, &knc);
-	if (err)
+	err = nlm_knc_from_netid(netid, &knc);
+	if (err != 0)
 		return (NULL);
 	/*
 	 * Do allocations (etc.) outside of mutex,
@@ -1921,14 +2050,20 @@ nlm_svc_add_ep(struct nlm_globals *g, struct file *fp,
 {
 	SVC_CALLOUT_TABLE *sct;
 	SVCMASTERXPRT *xprt = NULL;
+	int error;
 
 	if (0 == strcmp(knc->knc_protofmly, NC_LOOPBACK))
 		sct = &nlm_sct_lo;
 	else
 		sct = &nlm_sct_in;
 
-	return (svc_tli_kcreate(fp, 0, (char *)netid, NULL, &xprt,
-	    sct, NULL, NLM_SVCPOOL_ID, FALSE));
+	error = svc_tli_kcreate(fp, 0, (char *)netid, NULL, &xprt,
+	    sct, NULL, NLM_SVCPOOL_ID, FALSE);
+	if (error != 0)
+		return (error);
+
+	nlm_knc_activate(knc);
+	return (0);
 }
 
 /*
