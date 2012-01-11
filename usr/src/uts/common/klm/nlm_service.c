@@ -275,13 +275,19 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 		resp->stat.stat = nlm4_granted;
 	} else {
 		struct nlm4_holder *lh;
+		struct nlm_owner_handle oh;
+
 		resp->stat.stat = nlm4_denied;
 		lh = &resp->stat.nlm4_testrply_u.holder;
 		lh->exclusive = (fl.l_type == F_WRLCK);
 		lh->svid = fl.l_pid;
-		/* Leave OH zero. XXX: sysid? */
+		lh->oh.n_len = sizeof (oh);
+		lh->oh.n_bytes = (void *)&oh;
 		lh->l_offset = fl.l_start;
 		lh->l_len = fl.l_len;
+
+		bzero(&oh, sizeof (oh));
+		oh.oh_sysid = fl.l_sysid;
 	}
 
 out:
