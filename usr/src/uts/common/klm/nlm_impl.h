@@ -147,6 +147,9 @@ extern clock_t nlm_grace_threshold;
 #define	NLM_ERR(...)	\
 	cmn_err(CE_NOTE, __VA_ARGS__)
 
+#define NLM_WARN(...) \
+	cmn_err(CE_WARN, __VA_ARGS__)
+
 /*
  * List of vnodes in use by some client.  We (the server) keep
  * these active (with VN_HOLD) on behalf of the client so the
@@ -306,6 +309,8 @@ int nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flk,
 	struct netobj *fh, struct flk_callback *flcb, int vers);
 int nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	int flag, struct netobj *fh, int vers);
+int nlm_safemap(const vnode_t *vp);
+
 
 /* nlm_rpc_clnt.c */
 enum clnt_stat

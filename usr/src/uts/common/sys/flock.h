@@ -229,6 +229,7 @@ void	cleanlocks(struct vnode *, pid_t, int);
 locklist_t *flk_get_sleeping_locks(int sysid, pid_t pid);
 locklist_t *flk_get_active_locks(int sysid, pid_t pid);
 locklist_t *flk_active_locks_for_vp(const struct vnode *vp);
+locklist_t *flk_sleeping_locks_for_vp(const vnode_t *vp);
 locklist_t *flk_active_nbmand_locks_for_vp(const struct vnode *vp);
 locklist_t *flk_active_nbmand_locks(pid_t pid);
 void	flk_free_locklist(locklist_t *);

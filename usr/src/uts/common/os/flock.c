@@ -3400,6 +3400,13 @@ flk_active_locks_for_vp(const vnode_t *vp)
 		    ALL_ZONES));
 }
 
+locklist_t *
+flk_sleeping_locks_for_vp(const vnode_t *vp)
+{
+	return (get_lock_list(FLK_SLEEPING_STATE, 0, 0, B_FALSE, NOPID, vp,
+		    ALL_ZONES));
+}
+
 /*
  * Another interface to get_lock_list.  This one returns all the active
  * nbmand locks for a given vnode.  Again, see get_lock_list for details.

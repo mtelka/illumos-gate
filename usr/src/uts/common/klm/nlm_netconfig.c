@@ -21,6 +21,8 @@ struct nlm_netconfig {
 	const char *netid;
 };
 
+static bool_t nlm_netconfigs_initialized = FALSE;
+
 /*
  * Static table of all netid/knetconfig network
  * lock manager can work with. nlm_netconfigs table
@@ -69,7 +71,7 @@ static struct nlm_netconfig nlm_netconfigs[] = {
 };
 
 #define NLM_NUM_NETCONFIGS \
-	(sizeof(nlm_netconfigs) / sizeof(nlm_netconfigs[0]))
+	(sizeof (nlm_netconfigs) / sizeof (nlm_netconfigs[0]))
 
 /*
  * Initialize NLM netconfigs table.
@@ -77,12 +79,16 @@ static struct nlm_netconfig nlm_netconfigs[] = {
 void
 nlm_netconfigs_init(void)
 {
-	int i;
+	if (!nlm_netconfigs_initialized) {
+		int i;
 
-	for (i = 0; i < NLM_NUM_NETCONFIGS; i++) {
-		nlm_netconfigs[i].knc.knc_rdev =
-			makedevice(clone_major,
-			    ddi_name_to_major((char *)nlm_netconfigs[i].netid));
+		for (i = 0; i < NLM_NUM_NETCONFIGS; i++) {
+			nlm_netconfigs[i].knc.knc_rdev =
+				makedevice(clone_major,
+				    ddi_name_to_major((char *)nlm_netconfigs[i].netid));
+		}
+
+		nlm_netconfigs_initialized = TRUE;
 	}
 }
 
@@ -127,46 +133,4 @@ nlm_netid_from_knetconfig(struct knetconfig *knc)
 	}
 
 	return (NULL);
-}
-
-/*
- * nlm_build_knetconfig fills knetconfig structure
- * using given protocol family and protocol specifications.
- */
-int
-nlm_build_knetconfig(int nfmly, int nproto,
-    /* OUT */ struct knetconfig *out_knc)
-{
-	switch (nproto) {
-	case LM_TCP:
-		out_knc->knc_semantics = NC_TPI_COTS_ORD;
-		out_knc->knc_proto = NC_TCP;
-		break;
-	case LM_UDP:
-		out_knc->knc_semantics = NC_TPI_CLTS;
-		out_knc->knc_proto = NC_UDP;
-		break;
-	default:
-		NLM_ERR("nlm_build_knetconfig: Unknown lm_proto=0x%x\n", nproto);
-		return (EINVAL);
-	}
-
-	switch (nfmly) {
-	case LM_INET:
-		out_knc->knc_protofmly = NC_INET;
-		break;
-	case LM_INET6:
-		out_knc->knc_protofmly = NC_INET6;
-		break;
-	case LM_LOOPBACK:
-		out_knc->knc_protofmly = NC_LOOPBACK;
-		/* Override what we set above. */
-		out_knc->knc_proto = NC_NOPROTO;
-		break;
-	default:
-		NLM_ERR("nlm_build_knetconfig: Unknown lm_fmly=0x%x\n", nfmly);
-		return (EINVAL);
-	}
-
-	return (0);
 }

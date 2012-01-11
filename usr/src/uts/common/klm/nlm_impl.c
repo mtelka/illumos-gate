@@ -64,7 +64,6 @@
 #include <rpcsvc/sm_inter.h>
 
 #include <nfs/nfs.h>
-#include <nfs/nfssys.h>
 #include <nfs/nfs_clnt.h>
 #include <nfs/export.h>
 #include <nfs/rnode.h>
@@ -106,7 +105,7 @@ struct timeval nlm_zero_tv = { 0, 0 };
  * be accessed very careful. Preferable way is to use atomic
  * operations.
  */
-static volatile uint16_t nlm_next_sysid = 0;	/* (g) */
+static volatile uint32_t nlm_next_sysid = 0;	/* (g) */
 
 static recovery_cb nlm_recovery_func = NULL;	/* (c) */
 
@@ -127,11 +126,11 @@ void nlm_cancel_wait_locks(struct nlm_host *);
  *  1) sysid #0 is used for local locks, then we don't want
  *     any host has this sysid. nlm_acquire_next_sysid never
  *     returns sysid #0.
- *  2) os/flock.c code expects that 32bit sysid consists from 2
- *     parts: 1st 16bit block - sysid itself, second 16bit block -
+ *  2) os/flock.c code expects that sysid consists from 2
+ *     parts: 1st N bits block - sysid itself, second M bits block -
  *     NLM id (i.e. clusternode id). We don't deal with clustering,
  *     so the sysid nlm_acquire_next_sysid returns won't be greater
- *     than 2^16 - 1.
+ *     than SYSIDMASK.
  */
 static int
 nlm_acquire_next_sysid(void)
@@ -139,8 +138,8 @@ nlm_acquire_next_sysid(void)
 	int next_sysid;
 
 	for (;;) {
-		next_sysid = (int)atomic_inc_16_nv(&nlm_next_sysid);
-		if (next_sysid != 0)
+		next_sysid = (int)atomic_inc_32_nv(&nlm_next_sysid);
+		if ((next_sysid != 0) && (next_sysid <= SYSIDMASK))
 			break;
 	}
 
@@ -862,7 +861,7 @@ nlm_host_release(struct nlm_globals *g, struct nlm_host *host)
 		    SEC_TO_TICK(NLM_IDLE_TIMEOUT);
 	}
 
-	nlm_check_idle();
+	nlm_check_idle(); /* XXX */
 }
 
 /*
@@ -1155,6 +1154,38 @@ nlm_cancel_wait_locks(struct nlm_host *host)
 	}
 }
 
+static int
+nlm_has_unsafe_locks(struct locklist *ll)
+{
+	struct locklist *ll_next;
+	int has_ulks = 0;
+
+	while (ll) {
+		if ((ll->ll_flock.l_start != 0) ||
+		    (ll->ll_flock.l_len != 0))
+			has_ulks = 0;
+
+		ll_next = ll->ll_next;
+		VN_RELE(ll->ll_vp);
+		kmem_free(ll, sizeof (*ll));
+		ll =ll_next;
+	}
+
+	return (has_ulks);
+}
+
+int
+nlm_safemap(const vnode_t *vp)
+{
+	struct locklist *ll;
+
+	ll = flk_active_locks_for_vp(vp);
+	if (nlm_has_unsafe_locks(ll))
+		return (0);
+
+	ll = flk_sleeping_locks_for_vp(vp);
+	return (nlm_has_unsafe_locks(ll) == 0);
+}
 
 /* ******************************************************************* */
 

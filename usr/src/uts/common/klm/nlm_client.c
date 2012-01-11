@@ -1003,7 +1003,40 @@ nlm_init_lock(struct nlm4_lock *lock,
 	return (0);
 }
 
+static int
+nlm_locklist_has_unsafe_locks(struct locklist *ll)
+{
+	struct locklist *ll_next;
+	int has = 0;
+
+	while (ll) {
+		if ((ll->ll_flock.l_start != 0) ||
+		    (ll->ll_flock.l_len != 0))
+			has = 1;
+
+		ll_next = ll->ll_next;
+		VN_RELE(ll->ll_vp);
+		kmem_free(ll, sizeof (*ll));
+		ll =ll_next;
+	}
+
+	return has;
+}
+
 /* ************************************************************** */
+
+int
+nlm_safemap(const vnode_t *vp)
+{
+	struct locklist *ll;
+
+	ll = flk_active_locks_for_vp(vp);
+	if (nlm_locklist_has_unsafe_locks(ll))
+		return (0);
+
+	ll = flk_sleeping_locks_for_vp(vp);
+	return !nlm_locklist_has_unsafe_locks(ll);
+}
 
 int
 nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
