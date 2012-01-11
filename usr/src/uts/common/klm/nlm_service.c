@@ -224,7 +224,7 @@ nlm_do_notify1(nlm_sm_status *argp, void *res, struct svc_req *sr)
 	DTRACE_PROBE2(nsm__notify, uint16_t, sysid,
 	    int, argp->state);
 
-	host = nlm_host_find_by_sysid(g, (int32_t)sysid);
+	host = nlm_host_find_by_sysid(g, (sysid_t)sysid);
 	if (host == NULL)
 		return;
 
@@ -291,7 +291,7 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 		goto out;
 	}
 
-	nlm_init_flock(&fl, &argp->alock, host->nh_sysid);
+	nlm_init_flock(&fl, &argp->alock, nlm_host_get_sysid(host));
 	fl.l_type = (argp->exclusive) ? F_WRLCK : F_RDLCK;
 
 	/* BSD: VOP_ADVLOCK(nv->nv_vp, NULL, F_GETLK, &fl, F_REMOTE); */
@@ -431,7 +431,7 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	 * This also let's us find out now about some
 	 * possible errors like EROFS, etc.
 	 */
-	nlm_init_flock(&fl, &argp->alock, host->nh_sysid);
+	nlm_init_flock(&fl, &argp->alock, nlm_host_get_sysid(host));
 	fl.l_type = (argp->exclusive) ? F_WRLCK : F_RDLCK;
 
 	flags = F_REMOTELOCK | FREAD | FWRITE;
@@ -674,7 +674,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 		goto out;
 	}
 
-	nlm_init_flock(&fl, &argp->alock, host->nh_sysid);
+	nlm_init_flock(&fl, &argp->alock, nlm_host_get_sysid(host));
 	fl.l_type = (argp->exclusive) ? F_WRLCK : F_RDLCK;
 	if (nlm_slreq_unregister(host, nvp, &fl) == 0)
 		slreq_unreg = TRUE;
@@ -742,7 +742,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	struct netbuf *addr;
 	vnode_t *vp = NULL;
 	char *netid;
-	int error, sysid;
+	int error;
 	bool_t nvp_check_locks = FALSE;
 	struct flock64 fl;
 
@@ -772,7 +772,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 		goto out;
 	}
 
-	nlm_init_flock(&fl, &argp->alock, host->nh_sysid);
+	nlm_init_flock(&fl, &argp->alock, nlm_host_get_sysid(host));
 	fl.l_type = F_UNLCK;
 
 	/* BSD: VOP_ADVLOCK(nv->nv_vp, NULL, F_UNLCK, &fl, F_REMOTE); */
@@ -959,7 +959,7 @@ nlm_init_shrlock(struct shrlock *shr,
 		break;
 	}
 
-	shr->s_sysid = host->nh_sysid;
+	shr->s_sysid = nlm_host_get_sysid(host);
 	shr->s_pid = 0;
 	shr->s_own_len = nshare->oh.n_len;
 	shr->s_owner   = nshare->oh.n_bytes;

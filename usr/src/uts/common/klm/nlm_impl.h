@@ -56,12 +56,6 @@
 #define	SEEK_END	2
 #endif
 
-/*
- * This value is added to host system IDs when recording NFS client
- * locks in the local lock manager.
- */
-#define	NLM_SYSID_CLIENT	0x1000000
-
 struct nlm_host;
 struct vnode;
 
@@ -317,7 +311,7 @@ struct nlm_host {
 	char			*nh_netid;
 	struct knetconfig	nh_knc;
 	struct netbuf		nh_addr;
-	int32_t			nh_sysid;
+	sysid_t			nh_sysid;
 	int32_t			nh_state;
 	clock_t			nh_idle_timeout;
 	uint8_t			nh_flags;
@@ -388,7 +382,7 @@ TAILQ_HEAD(nlm_globals_list, nlm_globals);
  * problem diagnosis.  (Observability is good).
  */
 struct nlm_owner_handle {
-	int oh_sysid;		/* of remote host */
+	sysid_t oh_sysid;		/* of remote host */
 };
 
 /*
@@ -476,7 +470,7 @@ struct nlm_host *nlm_host_findcreate(struct nlm_globals *, char *,
     const char *, struct netbuf *);
 struct nlm_host *nlm_host_find(struct nlm_globals *,
     const char *, struct netbuf *);
-struct nlm_host *nlm_host_find_by_sysid(struct nlm_globals *, int);
+struct nlm_host *nlm_host_find_by_sysid(struct nlm_globals *, sysid_t);
 void nlm_host_release(struct nlm_globals *, struct nlm_host *);
 
 void nlm_host_monitor(struct nlm_globals *, struct nlm_host *, int);

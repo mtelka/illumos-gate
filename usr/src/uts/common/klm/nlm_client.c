@@ -56,6 +56,7 @@
 #include <nfs/nfs_clnt.h>
 #include <nfs/export.h>
 #include <nfs/rnode.h>
+#include <nfs/lm.h>
 
 #include "nlm_impl.h"
 
@@ -122,7 +123,7 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
 	struct locklist *llp_head, *llp;
 	bool_t restart;
 
-	sysid = nlm_host_get_sysid(hostp) | NLM_SYSID_CLIENT;
+	sysid = nlm_host_get_sysid(hostp) | LM_SYSID_CLIENT;
 	do {
 		error = 0;
 		restart = FALSE;
@@ -321,7 +322,7 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 	 * Fill in l_sysid for the local locking calls.
 	 * Also, let's not trust the caller's l_pid.
 	 */
-	flkp->l_sysid = NLM_SYSID_CLIENT | nlm_host_get_sysid(hostp);
+	flkp->l_sysid = nlm_host_get_sysid(hostp) | LM_SYSID_CLIENT;
 	flkp->l_pid = curproc->p_pid;
 
 	if (flkp->l_type == F_UNLCK) {
@@ -381,10 +382,9 @@ nlm_client_cancel_all(struct nlm_globals *g, struct nlm_host *hostp)
 	struct locklist *llp_head, *llp;
 	struct netobj lm_fh;
 	rpcvers_t vers;
-	int32_t sysid;
-	int error;
+	int error, sysid;
 
-	sysid = nlm_host_get_sysid(hostp) | NLM_SYSID_CLIENT;
+	sysid = nlm_host_get_sysid(hostp) | LM_SYSID_CLIENT;
 	nlm_host_cancel_slocks(g, hostp);
 
 	llp_head = llp = flk_get_active_locks(sysid, NOPID);
@@ -646,7 +646,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	args.cookie.n_len = sizeof (xid);
 	args.cookie.n_bytes = (char *)&xid;
 
-	oh.oh_sysid = nlm_host_get_sysid(hostp);
+	oh.oh_sysid = hostp->nh_sysid;
 	xid = atomic_inc_32_nv(&nlm_xid);
 
 	if (xflags & NLM_X_BLOCKING) {
@@ -881,7 +881,7 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
 	bzero(&args, sizeof (args));
 	nlm_init_lock(&args.alock, flp, fhp, &oh);
 
-	oh.oh_sysid = nlm_host_get_sysid(hostp);
+	oh.oh_sysid = hostp->nh_sysid;
 	xid = atomic_inc_32_nv(&nlm_xid);
 	args.cookie.n_len = sizeof (xid);
 	args.cookie.n_bytes = (char *)&xid;
@@ -951,7 +951,7 @@ nlm_call_test(struct vnode *vp, struct flock64 *flp,
 	nlm_init_lock(&args.alock, flp, fhp, &oh);
 
 	args.exclusive = (flp->l_type == F_WRLCK);
-	oh.oh_sysid = nlm_host_get_sysid(hostp);
+	oh.oh_sysid = hostp->nh_sysid;
 	xid = atomic_inc_32_nv(&nlm_xid);
 	args.cookie.n_len = sizeof (xid);
 	args.cookie.n_bytes = (char *)&xid;
@@ -1089,7 +1089,7 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	 * Also, let's not trust the caller's l_pid.
 	 */
 	shlk = *shr;
-	shlk.s_sysid = NLM_SYSID_CLIENT | nlm_host_get_sysid(host);
+	shlk.s_sysid = nlm_host_get_sysid(host) | LM_SYSID_CLIENT;
 	shlk.s_pid = curproc->p_pid;
 
 	if (cmd == F_UNSHARE) {
@@ -1182,7 +1182,7 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 	nlm_init_share(&args.share, shr, fh, &oh);
 
 	args.reclaim = reclaim;
-	oh.oh_sysid = nlm_host_get_sysid(host);
+	oh.oh_sysid = host->nh_sysid;
 	xid = atomic_inc_32_nv(&nlm_xid);
 	args.cookie.n_len = sizeof (xid);
 	args.cookie.n_bytes = (char *)&xid;
@@ -1264,7 +1264,7 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 	bzero(&args, sizeof (args));
 	nlm_init_share(&args.share, shr, fh, &oh);
 
-	oh.oh_sysid = nlm_host_get_sysid(host);
+	oh.oh_sysid = host->nh_sysid;
 	xid = atomic_inc_32_nv(&nlm_xid);
 	args.cookie.n_len = sizeof (xid);
 	args.cookie.n_bytes = (char *)&xid;
