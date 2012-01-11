@@ -1344,15 +1344,14 @@ nlm_host_unmonitor(struct nlm_globals *g, struct nlm_host *host)
 
 		CLNT_GETERR(nsm->handle, &err);
 		nlm_svc_release_nsm(nsm);
-		NLM_ERR("NLM: Failed to contact statd, "
-		    "stat=%d error=%d\n",
+		NLM_WARN("NLM: Failed to contact statd, stat=%d error=%d\n",
 		    stat, err.re_errno);
-
 		return;
 	}
 
 	nlm_svc_release_nsm(nsm);
-	/* XXX: save res.state ? */
+	DTRACE_PROBE2(unmon__done, struct nlm_host *, host,
+	    int, res.state);
 	host->nh_monstate = NLM_UNMONITORED;
 }
 
@@ -1377,8 +1376,8 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 		 * detect host reboots.
 		 */
 		host->nh_state = state;
-		NLM_DEBUG(NLM_LL2, "NLM: host %s (sysid %d) has NSM state %d\n",
-		    host->nh_name, host->nh_sysid, state);
+		DTRACE_PROBE3(first__state, struct nlm_globals *, g,
+		    struct nlm_host *, host, int, state);
 	}
 
 	mutex_enter(&host->nh_lock);
@@ -1390,8 +1389,8 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 	host->nh_monstate = NLM_MONITORED;
 	mutex_exit(&host->nh_lock);
 
-	NLM_DEBUG(NLM_LL2, "NLM: monitoring %s (sysid %d)\n",
-	    host->nh_name, host->nh_sysid);
+	DTRACE_PROBE2(do__monitor, struct nlm_globals *, g,
+	    struct nlm_host *, host);
 
 	/*
 	 * Tell statd how to call us with status updates for
@@ -1417,15 +1416,14 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 
 		CLNT_GETERR(nsm->handle, &err);
 		nlm_svc_release_nsm(nsm);
-		NLM_ERR("Failed to contact local NSM, stat=%d, error=%d\n",
+		NLM_WARN("Failed to contact local NSM, stat=%d, error=%d\n",
 		    stat, err.re_errno);
 		return;
 	}
 
 	nlm_svc_release_nsm(nsm);
 	if (res.res_stat == stat_fail) {
-		NLM_ERR("Local NSM refuses to monitor %s\n",
-		    host->nh_name);
+		NLM_WARN("Local NSM refuses to monitor %s\n", host->nh_name);
 		mutex_enter(&host->nh_lock);
 		host->nh_monstate = NLM_MONITOR_FAILED;
 		mutex_exit(&host->nh_lock);
