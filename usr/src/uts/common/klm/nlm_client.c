@@ -436,6 +436,13 @@ nlm_safelock(vnode_t *vp, const struct flock64 *fl, cred_t *cr)
 	return (1);
 }
 
+/*
+ * The function determines whether it's safe to map
+ * a file correspoding to vnode vp.
+ * The mapping is considered to be "safe" if file
+ * either has no any locks on it or all locks it
+ * has occupy the whole file.
+ */
 int
 nlm_safemap(const vnode_t *vp)
 {
@@ -447,8 +454,9 @@ nlm_safemap(const vnode_t *vp)
 	/* Check active locks at first */
 	ll = flk_active_locks_for_vp(vp);
 	while (ll) {
-		if ((ll->ll_flock.l_start != 0) ||
-		    (ll->ll_flock.l_len != 0))
+		if ((ll->ll_vp == vp) &&
+		    ((ll->ll_flock.l_start != 0) ||
+		     (ll->ll_flock.l_len != 0)))
 			safe = 0;
 
 		ll_next = ll->ll_next;
@@ -463,8 +471,9 @@ nlm_safemap(const vnode_t *vp)
 	g = zone_getspecific(nlm_zone_key, curzone);
 	mutex_enter(&g->lock);
 	TAILQ_FOREACH(nscp, &g->nlm_clnt_slocks, nsc_link) {
-		if ((nscp->nsc_lock.l_offset != 0) ||
-		    (nscp->nsc_lock.l_len != 0)) {
+		if (nscp->nsc_vp == vp &&
+			((nscp->nsc_lock.l_offset != 0) ||
+			 (nscp->nsc_lock.l_len != 0))) {
 			safe = 0;
 			break;
 		}
