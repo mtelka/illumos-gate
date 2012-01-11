@@ -494,7 +494,7 @@ extern void nlm_deregister_wait_lock(struct nlm_globals *g, void *handle);
  * the server. In both cases, the request is removed from the waiting
  * list.
  */
-extern int nlm_wait_lock(struct nlm_globals *g, void *handle, int timo);
+extern int nlm_wait_lock(struct nlm_globals *g, void *handle);
 
 int nlm_cancel_async_lock(struct nlm_async_lock *af);
 void nlm_free_async_lock(struct nlm_async_lock *af);

@@ -1280,27 +1280,38 @@ nlm_deregister_wait_lock(struct nlm_globals *g, void *handle)
  * Wait for a lock, then remove from the wait list.
  */
 int
-nlm_wait_lock(struct nlm_globals *g, void *handle, int timo)
+nlm_wait_lock(struct nlm_globals *g, void *handle)
 {
 	struct nlm_waiting_lock *nw = handle;
 	struct nlm_host *host = nw->nw_host;
-	clock_t when;
-	int error, rc;
+	int error = 0;
 
 	/*
 	 * If the granted message arrived before we got here,
 	 * nw->nw_state will be GRANTED - in that case, don't sleep.
 	 */
 	mutex_enter(&g->lock);
-	error = 0;
 	if (nw->nw_state == NLM_WS_BLOCKED) {
-		when = ddi_get_lbolt() + SEC_TO_TICK(timo);
-		rc = cv_timedwait_sig(&nw->nw_cond, &g->lock, when);
+		int rc;
+
+		rc = cv_wait_sig(&nw->nw_cond, &g->lock);
+		if (rc == 0)
+			error = EINTR;
 	}
+
 	TAILQ_REMOVE(&g->nlm_wlocks, nw, nw_link);
-	if (rc <= 0) {
-		/* Timeout or interrupt. */
-		error = (rc == 0) ? EINTR : ETIME;
+	mutex_exit(&g->lock);
+
+	if (error == 0) { /* Got cv_signal */
+		/*
+		 * The granted message may arrive after the
+		 * interrupt/timeout but before we manage to lock the
+		 * mutex. Detect this by examining nw_lock.
+		 */
+		if (nw->nw_state == NLM_WS_CANCELLED)
+			error = EINTR;
+
+	} else { /* Was interrupted */
 		/*
 		 * The granted message may arrive after the
 		 * interrupt/timeout but before we manage to lock the
@@ -1308,19 +1319,8 @@ nlm_wait_lock(struct nlm_globals *g, void *handle, int timo)
 		 */
 		if (nw->nw_state == NLM_WS_GRANTED)
 			error = 0;
-	} else {
-		/* Got cv_signal. */
-		error = 0;
-		/*
-		 * If nlm_cancel_wait is called, then error will be
-		 * zero but nw_state will be NLM_WS_CANCELLED.
-		 * We translate this into EINTR.
-		 */
-		if (nw->nw_state == NLM_WS_CANCELLED)
-			error = EINTR;
 	}
 
-	mutex_exit(&g->lock);
 	nlm_destroy_wait_lock(nw);
 	return (error);
 }
