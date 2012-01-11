@@ -404,6 +404,12 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	}
 
 	/*
+	 * Check whether we missed host shutdown event
+	 */
+	if (nlm_host_get_state(host) != argp->state)
+		nlm_host_notify_server(host, argp->state);
+
+	/*
 	 * Get holded vnode when on lock operation.
 	 * Only lock() and share() need vhold objects.
 	 */

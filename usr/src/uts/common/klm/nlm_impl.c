@@ -874,18 +874,39 @@ nlm_client_recovery_start(void *arg)
  * Cleanup SERVER-side state after a client restarts,
  * or becomes unresponsive, or whatever.
  *
- * This is called by the local NFS statd when we receive a
- * host state change notification.  (also nlm_svc_stopping)
- * XXX: Does NFS statd call us only after host restart?
- *
- * We unlock any active locks owned by the host. When rpc.lockd is
- * shutting down, this function is called with newstate set to zero
- * which allows us to cancel any pending async locks and clear the
- * locking state.
+ * We unlock any active locks owned by the host.
+ * When rpc.lockd is shutting down,
+ * this function is called with newstate set to zero
+ * which allows us to cancel any pending async locks
+ * and clear the locking state.
  */
 void
-nlm_host_notify_server(struct nlm_host *host, int32_t state)
+nlm_host_notify_server(struct nlm_host *hostp, int32_t state)
 {
+	struct nlm_vhold *nvp;
+	nlm_slock_srv_t *nssp;
+
+	mutex_enter(&hostp->nh_lock);
+	if (state != 0 && hostp->nh_state == state) {
+		/* Already up to date */
+		mutex_exit(&hostp->nh_lock);
+	}
+
+	hostp->nh_state = state;
+
+	/* Remove sleeping lock requests if any */
+	while ((nssp = TAILQ_FIRST(&hostp->nh_srv_slocks)))
+		TAILQ_REMOVE(&hostp->nh_srv_slocks, nssp, nss_link);
+
+	/* And cleanup active locks and shares */
+	TAILQ_FOREACH(nvp, &hostp->nh_vholds_list, nv_link) {
+		mutex_exit(&hostp->nh_lock);
+		cleanlocks(nvp->nv_vp, IGN_PID, hostp->nh_sysid);
+		cleanshares_by_sysid(nvp->nv_vp, hostp->nh_sysid);
+		mutex_enter(&hostp->nh_lock);
+	}
+
+	mutex_exit(&hostp->nh_lock);
 }
 
 /*
@@ -1438,10 +1459,10 @@ nlm_host_get_sysid(struct nlm_host *host)
 }
 
 int
-nlm_host_get_state(struct nlm_host *host)
+nlm_host_get_state(struct nlm_host *hostp)
 {
 
-	return (host->nh_state);
+	return (hostp->nh_state);
 }
 
 /*********************************************************************

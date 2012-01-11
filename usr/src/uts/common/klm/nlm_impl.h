@@ -534,12 +534,12 @@ void nlm_host_notify_client(struct nlm_host *host, int32_t state);
 /*
  * Return the system ID for a host.
  */
-extern int nlm_host_get_sysid(struct nlm_host *host);
+int nlm_host_get_sysid(struct nlm_host *host);
+int nlm_host_get_state(struct nlm_host *host);
 
 /*
  * Return the remote NSM state value for a host.
  */
-extern int nlm_host_get_state(struct nlm_host *host);
 struct nlm_vhold *nlm_vhold_get(struct nlm_host *hostp, vnode_t *vp);
 void nlm_vhold_release(struct nlm_host *hostp, struct nlm_vhold *nvp);
 

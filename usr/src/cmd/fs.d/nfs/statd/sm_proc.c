@@ -715,7 +715,6 @@ thr_send_notice(void *arg)
 	moninfo_t *minfop;
 
 	minfop = (moninfo_t *)arg;
-
 	if (statd_call_lockd(&minfop->id, minfop->state) == -1) {
 		if (debug && minfop->id.mon_id.mon_name)
 			(void) printf(
