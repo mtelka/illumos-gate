@@ -706,6 +706,15 @@ nlm_call_lock(vnode_t *vp, struct flock64 *fl,
 /*
  * Do NLM_CANCEL call.
  * Helper for nlm_call_lock() error recovery.
+ *
+ * FIXME[DK]: make nlm_call_cancel() execute in separate thread.
+ * nlm_call_cancel() is called from only one place - nlm_call_lock() -
+ * when waiting lock was canceled by some reaseon. Before calling
+ * nlm_call_cancel(), nlm_call_lock() blocks all signals in calling thread.
+ * It makes imposible to interrupt it while nlm_call_cancel() is in progress.
+ * I think it's not very good especially when we have temporary network problems,
+ * in this case calling thread can block on a quite long time and no one can
+ * kill it.
  */
 static int
 nlm_call_cancel(struct nlm4_lockargs *largs,

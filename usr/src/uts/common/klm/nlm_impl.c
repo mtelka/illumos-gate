@@ -1068,6 +1068,17 @@ nlm_register_wait_lock(
 }
 
 /*
+ * Destroy nlm_waiting_lock structure instance
+ */
+static void
+nlm_destroy_waiting_lock(struct nlm_waiting_lock *nw)
+{
+	kmem_free(nw->nw_fh.n_bytes, nw->nw_fh.n_len);
+	cv_destroy(&nw->nw_cond);
+	kmem_free(nw, sizeof (*nw));
+}
+
+/*
  * Remove this lock from the wait list.
  */
 void
@@ -1079,9 +1090,7 @@ nlm_deregister_wait_lock(struct nlm_host *host, void *handle)
 	TAILQ_REMOVE(&host->nh_waiting, nw, nw_link);
 	mutex_exit(&host->nh_lock);
 
-	kmem_free(nw->nw_fh.n_bytes, nw->nw_fh.n_len);
-	cv_destroy(&nw->nw_cond);
-	kmem_free(nw, sizeof (*nw));
+	nlm_destroy_waiting_lock(nw);
 }
 
 /*
@@ -1127,10 +1136,9 @@ nlm_wait_lock(void *handle, int timo)
 		if (nw->nw_state == NLM_WS_CANCELLED)
 			error = EINTR;
 	}
+
 	mutex_exit(&host->nh_lock);
-
-	kmem_free(nw, sizeof (*nw));
-
+	nlm_destroy_waiting_lock(nw);
 	return (error);
 }
 
