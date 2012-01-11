@@ -232,7 +232,7 @@ out:
 				}
 			}
 
-			nlm_host_rele_rpc(rpcp);
+			nlm_host_rele_rpc(host, rpcp);
 		}
 	}
 
@@ -455,7 +455,7 @@ doreply:
 	}
 
 	if (rpcp != NULL)
-		nlm_host_rele_rpc(rpcp);
+		nlm_host_rele_rpc(host, rpcp);
 
 	DTRACE_PROBE3(end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
@@ -683,7 +683,7 @@ out:
 				}
 			}
 
-			nlm_host_rele_rpc(rpcp);
+			nlm_host_rele_rpc(host, rpcp);
 		}
 	}
 
@@ -782,7 +782,7 @@ out:
 				}
 			}
 
-			nlm_host_rele_rpc(rpcp);
+			nlm_host_rele_rpc(host, rpcp);
 		}
 	}
 
@@ -875,7 +875,7 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 				}
 			}
 
-			nlm_host_rele_rpc(rpcp);
+			nlm_host_rele_rpc(host, rpcp);
 		}
 	}
 

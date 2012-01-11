@@ -210,7 +210,7 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 			 * that it will be reinitialized later wihout
 			 * errors by somebody else...
 			 */
-			nlm_host_rele_rpc(rpcp);
+			nlm_host_rele_rpc(hostp, rpcp);
 			mutex_exit(&hostp->nh_lock);
 			return (rc);
 		}
@@ -225,11 +225,8 @@ nlm_host_get_rpc(struct nlm_host *hostp, int vers, nlm_rpc_t **rpcpp)
 }
 
 void
-nlm_host_rele_rpc(nlm_rpc_t *rpcp)
+nlm_host_rele_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
 {
-	struct nlm_host *hostp = rpcp->nr_owner;
-
-	ASSERT(rpcp->nr_owner != NULL);
 	rpcp->nr_ttl_timeout = ddi_get_lbolt() +
 		SEC_TO_TICK(NLM_RPC_TTL_PERIOD);
 
