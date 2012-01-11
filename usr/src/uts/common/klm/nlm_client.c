@@ -108,8 +108,7 @@ static int nlm_local_setlk(vnode_t *, struct flock64 *, int);
 static void nlm_local_cancelk(vnode_t *, struct flock64 *);
 
 static void nlm_init_share(struct nlm4_share *,
-    const struct shrlock *, struct netobj *,
-    struct nlm_owner_handle *);
+    const struct shrlock *, struct netobj *);
 
 static int nlm_call_share(vnode_t *, struct shrlock *,
     struct nlm_host *, struct netobj *, int, int);
@@ -1228,7 +1227,6 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 	int vers, int reclaim)
 {
 	struct nlm4_shareargs args;
-	struct nlm_owner_handle oh;
 	struct nlm_globals *g;
 	enum nlm4_stats nlm_err;
 	uint32_t xid;
@@ -1236,10 +1234,9 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
 
 	bzero(&args, sizeof (args));
 	g = zone_getspecific(nlm_zone_key, curzone);
-	nlm_init_share(&args.share, shr, fh, &oh);
+	nlm_init_share(&args.share, shr, fh);
 
 	args.reclaim = reclaim;
-	oh.oh_sysid = host->nh_sysid;
 	xid = atomic_inc_32_nv(&nlm_xid);
 	args.cookie.n_len = sizeof (xid);
 	args.cookie.n_bytes = (char *)&xid;
@@ -1311,15 +1308,13 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 	struct nlm_host *host, struct netobj *fh, int vers)
 {
 	struct nlm4_shareargs args;
-	struct nlm_owner_handle oh;
 	enum nlm4_stats nlm_err;
 	uint32_t xid;
 	int error;
 
 	bzero(&args, sizeof (args));
-	nlm_init_share(&args.share, shr, fh, &oh);
+	nlm_init_share(&args.share, shr, fh);
 
-	oh.oh_sysid = host->nh_sysid;
 	xid = atomic_inc_32_nv(&nlm_xid);
 	args.cookie.n_len = sizeof (xid);
 	args.cookie.n_bytes = (char *)&xid;
@@ -1379,18 +1374,16 @@ nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
 
 static void
 nlm_init_share(struct nlm4_share *args,
-	const struct shrlock *shr, struct netobj *fh,
-	struct nlm_owner_handle *oh)
+	const struct shrlock *shr, struct netobj *fh)
 {
 
 	bzero(args, sizeof (*args));
-	bzero(oh, sizeof (*oh));
 
 	args->caller_name = uts_nodename();
 	args->fh.n_len = fh->n_len;
 	args->fh.n_bytes = fh->n_bytes;
-	args->oh.n_len = sizeof (*oh);
-	args->oh.n_bytes = (void *)oh;
+	args->oh.n_len = shr->s_own_len;
+	args->oh.n_bytes = (void *)shr->s_owner;
 
 	switch (shr->s_deny) {
 	default:
