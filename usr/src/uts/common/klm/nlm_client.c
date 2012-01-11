@@ -680,6 +680,9 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		}
 
 		xid = atomic_inc_32_nv(&nlm_xid);
+		DTRACE_PROBE3(lock__rloop_start, nlm_rpc_t *, rpcp,
+		    int, retries, uint32_t, xid);
+
 		args.cookie.n_len = sizeof (xid);
 		args.cookie.n_bytes = (char *)&xid;
 
@@ -695,6 +698,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 			continue;
 		}
 
+		DTRACE_PROBE1(lock__rloop_end, enum nlm4_stats, res.stat.stat);
 		xdr_free((xdrproc_t)xdr_nlm4_res, (void *)&res);
 		if (res.stat.stat == nlm4_denied_grace_period) {
 			/*
@@ -770,6 +774,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		 */
 		k_sigset_t oldmask, newmask;
 
+		DTRACE_PROBE1(cancel__lock, int, error);
 		sigfillset(&newmask);
 		sigreplace(&newmask, &oldmask);
 		nlm_call_cancel(&args, hostp, vers);
