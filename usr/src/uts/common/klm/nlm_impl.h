@@ -61,6 +61,34 @@ struct vnode;
 struct exportinfo;
 
 /*
+ * How to read the code: probably the best point to start
+ * it the nlm_host structure that is sort of most major
+ * structure in klmmod. nlm_host is closely tied with all
+ * other NLM structures.
+ *
+ * There're three major locks we use inside NLM:
+ * 1) Global read-write lock (lm_lck) that is used to
+ *    protect operations with sysid allocation and
+ *    management of zone globals structures for each
+ *    zone.
+ * 2) Zone global lock: (nlm_globals->lock) is a mutex
+ *    used to protect all operations inside particular
+ *    zone.
+ * 3) Host's lock: (nlm_host->nh_lock) is per-host mutex
+ *    used to protect host's internal fields and all
+ *    operations with the given host.
+ *
+ * Locks order _must_ obey the following scheme:
+ *  lm_lck then nlm_globals->lock then nlm_host->nh_lock
+ *
+ * Locks:
+ * (g)          locked by lm_lck
+ * (z)          locked by nlm_globals->lock
+ * (l)		locked by host->nh_lock
+ * (c)		const until freeing
+ */
+
+/*
  * Callback functions for nlm_do_lock() and others.
  *
  * Calls to nlm_do_lock are unusual, because it needs to handle
@@ -84,26 +112,6 @@ typedef bool_t (*nlm_reply_cb)(SVCXPRT *, nlm4_res *);
 typedef enum clnt_stat (*nlm_res_cb)(nlm4_res *, void *, CLIENT *);
 typedef enum clnt_stat (*nlm_testargs_cb)(nlm4_testargs *, void *, CLIENT *);
 typedef enum clnt_stat (*nlm_testres_cb)(nlm4_testres *, void *, CLIENT *);
-
-/*
- * Could use flock.h flk_nlm_status_t instead, but
- * prefer our own enum with initial zero...
- */
-typedef enum {
-	NLM_ST_DOWN = 0,
-	NLM_ST_STOPPING,
-	NLM_ST_UP,
-	NLM_ST_STARTING
-} nlm_run_status_t;
-
-/*
- * Locks:
- * (l)		locked by nh_lock
- * (s)		only accessed via server RPC which is single threaded
- * (g)		locked by nlm_globals->lock
- * (c)		const until freeing
- * (a)		modified using atomic ops
- */
 
 /*
  * NLM sleeping lock request.
@@ -166,10 +174,10 @@ TAILQ_HEAD(nlm_slreq_list, nlm_slreq);
  *   nv_link: list node to store vholds in host's nh_vnodes_list
  */
 struct nlm_vhold {
-	vnode_t			*nv_vp;
-	int			nv_refcnt;
-	struct nlm_slreq_list	nv_slreqs;
-	TAILQ_ENTRY(nlm_vhold)	nv_link;
+	vnode_t			*nv_vp;    /* (c) */
+	int			nv_refcnt; /* (l) */
+	struct nlm_slreq_list	nv_slreqs; /* (l) */
+	TAILQ_ENTRY(nlm_vhold)	nv_link;   /* (l) */
 };
 TAILQ_HEAD(nlm_vhold_list, nlm_vhold);
 
@@ -203,13 +211,13 @@ typedef enum nlm_slock_state {
  *   nsl_link: A list node for nlm_globals->nlm_slocks list.
  */
 struct nlm_slock {
-	nlm_slock_state_t	nsl_state;
-	kcondvar_t		nsl_cond;
-	nlm4_lock		nsl_lock;
-	struct netobj		nsl_fh;
-	struct nlm_host		*nsl_host;
-	struct vnode		*nsl_vp;
-	TAILQ_ENTRY(nlm_slock)	nsl_link;
+	nlm_slock_state_t	nsl_state; /* (z) */
+	kcondvar_t		nsl_cond;  /* (z) */
+	nlm4_lock		nsl_lock;  /* (c) */
+	struct netobj		nsl_fh;    /* (c) */
+	struct nlm_host		*nsl_host; /* (c) */
+	struct vnode		*nsl_vp;   /* (c) */
+	TAILQ_ENTRY(nlm_slock)	nsl_link;  /* (z) */
 };
 TAILQ_HEAD(nlm_slock_list, nlm_slock);
 
@@ -236,9 +244,9 @@ TAILQ_HEAD(nlm_slock_list, nlm_slock);
  *            RPC handles cache.
  */
 typedef struct nlm_rpc {
-	CLIENT	  *nr_handle;
-	rpcvers_t  nr_vers;
-	TAILQ_ENTRY(nlm_rpc) nr_link;
+	CLIENT	  *nr_handle;		/* (l) */
+	rpcvers_t  nr_vers;		/* (c) */
+	TAILQ_ENTRY(nlm_rpc) nr_link;	/* (l) */
 } nlm_rpc_t;
 TAILQ_HEAD(nlm_rpch_list, nlm_rpc);
 
@@ -318,26 +326,26 @@ struct lm_sysid {
  *   nh_vholds_list: a linked list of all vholds host owns. (used for iteration)
  */
 struct nlm_host {
-	kmutex_t		nh_lock;
-	volatile uint_t		nh_refs;
-	TAILQ_ENTRY(nlm_host)	nh_link;
-	avl_node_t		nh_by_addr;
-	char			*nh_name;
-	char			*nh_netid;
-	struct knetconfig	nh_knc;
-	struct netbuf		nh_addr;
-	struct lm_sysid		nh_lms;
-	sysid_t			nh_sysid;
-	int32_t			nh_state;
-	clock_t			nh_idle_timeout;
-	uint8_t			nh_flags;
-	kcondvar_t		nh_recl_cv;
-	kcondvar_t		nh_rpcb_cv;
-	enum clnt_stat		nh_rpcb_ustat;
-	enum nlm_rpcb_state	nh_rpcb_state;
-	struct nlm_rpch_list	nh_rpchc;
-	mod_hash_t		*nh_vholds_by_vp;
-	struct nlm_vhold_list	nh_vholds_list;
+	kmutex_t		nh_lock;		/* (c) */
+	volatile uint_t		nh_refs;		/* (z) */
+	TAILQ_ENTRY(nlm_host)	nh_link;		/* (z) */
+	avl_node_t		nh_by_addr;		/* (z) */
+	char			*nh_name;		/* (c) */
+	char			*nh_netid;		/* (c) */
+	struct knetconfig	nh_knc;			/* (c) */
+	struct netbuf		nh_addr;		/* (c) */
+	struct lm_sysid		nh_lms;			/* (c) */
+	sysid_t			nh_sysid;		/* (c) */
+	int32_t			nh_state;		/* (z) */
+	clock_t			nh_idle_timeout;	/* (z) */
+	uint8_t			nh_flags;		/* (z) */
+	kcondvar_t		nh_recl_cv;		/* (z) */
+	kcondvar_t		nh_rpcb_cv;		/* (l) */
+	enum clnt_stat		nh_rpcb_ustat;		/* (l) */
+	enum nlm_rpcb_state	nh_rpcb_state;		/* (l) */
+	struct nlm_rpch_list	nh_rpchc;		/* (l) */
+	mod_hash_t		*nh_vholds_by_vp;	/* (l) */
+	struct nlm_vhold_list	nh_vholds_list;		/* (l) */
 };
 TAILQ_HEAD(nlm_host_list, nlm_host);
 
@@ -363,29 +371,67 @@ TAILQ_HEAD(nlm_host_list, nlm_host);
  */
 struct nlm_nsm {
 	ksema_t			ns_sem;
-	struct knetconfig	ns_knc;
-	struct netbuf		ns_addr;
-	CLIENT			*ns_handle;
+	struct knetconfig	ns_knc;		/* (c) */
+	struct netbuf		ns_addr;	/* (c) */
+	CLIENT			*ns_handle;	/* (c) */
 };
 
+/*
+ * Could use flock.h flk_nlm_status_t instead, but
+ * prefer our own enum with initial zero...
+ */
+typedef enum {
+	NLM_ST_DOWN = 0,
+	NLM_ST_STOPPING,
+	NLM_ST_UP,
+	NLM_ST_STARTING
+} nlm_run_status_t;
+
+/*
+ * nlm_globals structure allows NLM be zone aware. The structure
+ * collects all "global variables" NLM has for each zone.
+ *
+ * struct nlm_globals:
+ * lock: mutex protecting all operations inside given zone
+ * grace_threshold: grace period expiration time (in ticks)
+ * lockd_pid: PID of lockd user space daemon
+ * run_status: run status of klmmod inside given zone
+ * nsm_state: state obtained from local statd during klmmod startup
+ * nlm_gc_thread: garbage collector thread
+ * nlm_gc_sched_cv: condvar that can be signalled to wakeup GC
+ * nlm_gc_finish_cv: condvar that is signalled just before GC thread exits
+ * nlm_nsm: an object describing RPC handle used for talking to local statd
+ * nlm_hosts_tree: an AVL tree of all hosts in the given zone
+ *                 (used for hosts lookup by <netid, address> pair)
+ * nlm_hosts_hash: a hash table of all hosts in the given zone
+ *                 (used for hosts lookup by sysid)
+ * nlm_idle_hosts: a list of all hosts that are idle state (i.e. unused)
+ * nlm_slocks: a list of all client-side sleeping locks in the zone
+ * cn_idle_tmo: a value of idle timeout (in seconds) obtained from lockd
+ * grace_period: a value of grace period (in seconds) obtained from lockd
+ * retrans_tmo: a value of retransmission timeout (in seconds) obtained
+ *              from lockd.
+ * nlm_link: a list node used for keeping all nlm_globals objects
+ *           in one global linked list.
+ */
 struct nlm_globals {
 	kmutex_t			lock;
-	clock_t				grace_threshold;
-	pid_t				lockd_pid;
-	nlm_run_status_t		run_status;
-	int32_t				nsm_state;
-	kthread_t			*nlm_gc_thread;
-	kcondvar_t			nlm_gc_sched_cv;
-	kcondvar_t			nlm_gc_finish_cv;
-	struct nlm_nsm			nlm_nsm;
-	avl_tree_t			nlm_hosts_tree;
-	mod_hash_t			*nlm_hosts_hash;
-	struct nlm_host_list		nlm_idle_hosts;
-	struct nlm_slock_list		nlm_slocks;
-	int				cn_idle_tmo;
-	int				grace_period;
-	int				retrans_tmo;
-	TAILQ_ENTRY(nlm_globals)	nlm_link;
+	clock_t				grace_threshold;	/* (z) */
+	pid_t				lockd_pid;		/* (z) */
+	nlm_run_status_t		run_status;		/* (z) */
+	int32_t				nsm_state;		/* (z) */
+	kthread_t			*nlm_gc_thread;		/* (z) */
+	kcondvar_t			nlm_gc_sched_cv;	/* (z) */
+	kcondvar_t			nlm_gc_finish_cv;	/* (z) */
+	struct nlm_nsm			nlm_nsm;		/* (z) */
+	avl_tree_t			nlm_hosts_tree;		/* (z) */
+	mod_hash_t			*nlm_hosts_hash;	/* (z) */
+	struct nlm_host_list		nlm_idle_hosts;		/* (z) */
+	struct nlm_slock_list		nlm_slocks;		/* (z) */
+	int				cn_idle_tmo;		/* (z) */
+	int				grace_period;		/* (z) */
+	int				retrans_tmo;		/* (z) */
+	TAILQ_ENTRY(nlm_globals)	nlm_link;		/* (g) */
 };
 TAILQ_HEAD(nlm_globals_list, nlm_globals);
 

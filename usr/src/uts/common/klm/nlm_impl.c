@@ -95,7 +95,7 @@ struct nlm_knc {
 /*
  * Total number of sysids in NLM sysid bitmap
  */
-#define NLM_BMAP_NITEMS	(LM_SYSID_MAX + 1)
+#define	NLM_BMAP_NITEMS	(LM_SYSID_MAX + 1)
 
 /*
  * Number of ulong_t words in bitmap that is used
@@ -115,7 +115,7 @@ struct nlm_knc {
  * List of all Zone globals nlm_globals instences
  * linked together.
  */
-static struct nlm_globals_list nlm_zones_list;
+static struct nlm_globals_list nlm_zones_list; /* (g) */
 
 /*
  * NLM kmem caches
@@ -129,8 +129,8 @@ static struct kmem_cache *nlm_vhold_cache = NULL;
  * and LM_SYSID_MAX. Sysid represents unique remote
  * host that does file locks on the given host.
  */
-static ulong_t	nlm_sysid_bmap[NLM_BMAP_WORDS];
-static int	nlm_sysid_nidx;
+static ulong_t	nlm_sysid_bmap[NLM_BMAP_WORDS];	/* (g) */
+static int	nlm_sysid_nidx;			/* (g) */
 
 /*
  * RPC service registrations for LOOPBACK,
@@ -167,7 +167,7 @@ static SVC_CALLOUT_TABLE nlm_sct_in = {
  * user-space lockd daemon (server side) or by taking
  * knetconfig from NFS mountinfo (client side)
  */
-static struct nlm_knc nlm_netconfigs[] = {
+static struct nlm_knc nlm_netconfigs[] = { /* (g) */
 	/* UDP */
 	{
 		{ NC_TPI_CLTS, NC_INET, NC_UDP, NODEV },
@@ -463,7 +463,7 @@ nlm_knc_to_netid(struct knetconfig *knc)
 		knc_iter = &nlm_netconfigs[i].n_knc;
 		if (knc_iter->knc_semantics == knc->knc_semantics &&
 		    strcmp(knc_iter->knc_protofmly,
-		        knc->knc_protofmly) == 0) {
+		    knc->knc_protofmly) == 0) {
 			netid = nlm_netconfigs[i].n_netid;
 			break;
 		}
@@ -514,9 +514,9 @@ nlm_knc_activate(struct knetconfig *knc)
 
 		if (knc_iter->knc_semantics == knc->knc_semantics &&
 		    strcmp(knc_iter->knc_protofmly,
-		        knc->knc_protofmly) == 0 &&
+		    knc->knc_protofmly) == 0 &&
 		    strcmp(knc_iter->knc_proto, knc->knc_proto) == 0) {
-			knc_iter->knc_rdev = knc->knc_rdev;
+		    knc_iter->knc_rdev = knc->knc_rdev;
 			break;
 		}
 	}
@@ -1940,7 +1940,7 @@ nlm_slock_grant(struct nlm_globals *g,
 		    alock->l_len	== nslp->nsl_lock.l_len &&
 		    alock->fh.n_len	== nslp->nsl_lock.fh.n_len &&
 		    memcmp(alock->fh.n_bytes, nslp->nsl_lock.fh.n_bytes,
-		        nslp->nsl_lock.fh.n_len) == 0) {
+		    nslp->nsl_lock.fh.n_len) == 0) {
 			nslp->nsl_state = NLM_SL_GRANTED;
 			cv_broadcast(&nslp->nsl_cond);
 			error = 0;
