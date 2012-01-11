@@ -57,6 +57,18 @@
 
 #include "nlm_impl.h"
 
+/*
+ * Max. number of retries NLM client tries to
+ * resend request to the NLM server if previous
+ * request failed.
+ * Used in functions:
+ *  nlm_call_lock()
+ *  nlm_call_unlock()
+ *  nlm_call_test()
+ *  nlm_call_share()
+ */
+#define NLM_CLNT_MAX_RETRIES 3
+
 /* Extra flags for nlm_call_lock() - xflags */
 #define	NLM_X_RECLAIM	1
 #define	NLM_X_BLOCKING	2
