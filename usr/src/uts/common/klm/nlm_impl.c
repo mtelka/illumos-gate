@@ -74,13 +74,13 @@
  * Number of attempts NLM tries to obtain RPC binding
  * of local statd.
  */
-#define NLM_NSM_RPCBIND_RETRIES 10
+#define	NLM_NSM_RPCBIND_RETRIES 10
 
 /*
  * Timeout (in seconds) NLM waits before making another
  * attempt to obtain RPC binding of local statd.
  */
-#define NLM_NSM_RPCBIND_TIMEOUT 5
+#define	NLM_NSM_RPCBIND_TIMEOUT 5
 
 /*
  * Given an interger x, the macro is returned
@@ -88,7 +88,7 @@
  *  0 if x is zero
  *  1 if x is positive
  */
-#define SIGN(x) (((x) < 0) - ((x) > 0))
+#define	SIGN(x) (((x) < 0) - ((x) > 0))
 
 krwlock_t lm_lck;
 
@@ -138,30 +138,29 @@ static enum clnt_stat nlm_nsm_unmon(struct nlm_nsm *, char *);
 static enum clnt_stat nlm_nsm_unmon_all(struct nlm_nsm *);
 
 /*
+ * NLM host functions
+ */
+static int nlm_host_ctor(void *, void *, int);
+static void nlm_host_dtor(void *, void *);
+static void nlm_host_destroy(struct nlm_host *);
+static struct nlm_host *nlm_create_host(struct nlm_globals *,
+    char *, const char *, struct knetconfig *, struct netbuf *);
+static struct nlm_host *nlm_host_find_locked(struct nlm_globals *,
+    const char *, struct netbuf *, avl_index_t *);
+static void nlm_host_unregister(struct nlm_globals *, struct nlm_host *);
+static void nlm_host_gc_vholds(struct nlm_host *);
+static bool_t nlm_host_has_locks(struct nlm_host *);
+
+/*
  * NLM vhold functions
  */
 static int nlm_vhold_ctor(void *, void *, int);
 static void nlm_vhold_dtor(void *, void *);
-static struct nlm_vhold *nlm_vhold_find_locked(struct nlm_host *hostp,
-    vnode_t *vp);
-static void nlm_vhold_destroy(struct nlm_host *hostp,
-    struct nlm_vhold *nvp);
-static bool_t nlm_vhold_busy(struct nlm_host *hostp, struct nlm_vhold *nvp);
-
-/*
- * NLM host functions
- */
-static int nlm_host_ctor(void *datap, void *cdrarg, int kmflags);
-static void nlm_host_dtor(void *datap, void *cdrarg);
-static void nlm_host_destroy(struct nlm_host *hostp);
-static struct nlm_host *nlm_create_host(struct nlm_globals *g,
-    char *name, const char *netid,
-    struct knetconfig *knc, struct netbuf *naddr);
-static struct nlm_host *nlm_host_find_locked(struct nlm_globals *g,
-    const char *netid, struct netbuf *naddr, avl_index_t *wherep);
-static void nlm_host_unregister(struct nlm_globals *g, struct nlm_host *hostp);
-static void nlm_host_gc_vholds(struct nlm_host *hostp);
-static bool_t nlm_host_has_locks(struct nlm_host *hostp);
+static struct nlm_vhold *nlm_vhold_find_locked(struct nlm_host *,
+    vnode_t *);
+static void nlm_vhold_destroy(struct nlm_host *,
+    struct nlm_vhold *);
+static bool_t nlm_vhold_busy(struct nlm_host *, struct nlm_vhold *);
 
 /*
  * NLM client/server sleeping locks functions
@@ -197,10 +196,10 @@ nlm_acquire_next_sysid(void)
 			break;
 	}
 
-	return next_sysid;
+	return (next_sysid);
 }
 
-/*********************************************************************
+/*
  * NLM initialization functions.
  */
 void
@@ -323,7 +322,7 @@ nlm_gc(struct nlm_globals *g)
 			 * While we were doing expensive operations outside of
 			 * nlm_globals critical section, somebody could
 			 * take the host, add lock/share to one of its vnodes
-			 * and release the host back. If so, host's idle  timeout
+			 * and release the host back. If so, host's idle timeout
 			 * is renewed and our information about locks on the
 			 * given host is outdated.
 			 */
@@ -333,13 +332,15 @@ nlm_gc(struct nlm_globals *g)
 			/*
 			 * Either host has locks or somebody has began to
 			 * use it while we were outside the nlm_globals critical
-			 * section. In both cases we have to renew host's timeout
-			 * and put it to the end of LRU list.
+			 * section. In both cases we have to renew host's
+			 * timeout and put it to the end of LRU list.
 			 */
 			if (has_locks || hostp->nh_refs > 0) {
-				TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
+				TAILQ_REMOVE(&g->nlm_idle_hosts,
+				    hostp, nh_link);
 				hostp->nh_idle_timeout = now + idle_period;
-				TAILQ_INSERT_TAIL(&g->nlm_idle_hosts, hostp, nh_link);
+				TAILQ_INSERT_TAIL(&g->nlm_idle_hosts,
+				    hostp, nh_link);
 				continue;
 			}
 
@@ -402,13 +403,6 @@ nlm_reclaimer(struct nlm_host *hostp)
 	zthread_exit();
 }
 
-/*********************************************************************
- * The in-kernel RPC (kRPC) subsystem uses TLI/XTI, which needs
- * both a knetconfig and an address when creating endpoints.
- * These functions keep track of the bindings give to us by
- * the user-level lockd, allowing fetch by "netid".
- */
-
 /*
  * Copy a struct netobj.  (see xdr.h)
  */
@@ -420,7 +414,7 @@ nlm_copy_netobj(struct netobj *dst, struct netobj *src)
 	bcopy(src->n_bytes, dst->n_bytes, src->n_len);
 }
 
-/*********************************************************************
+/*
  * NLM functions responsible for operations on NSM handle.
  */
 
@@ -641,31 +635,6 @@ nlm_nsm_unmon_all(struct nlm_nsm *nsm)
 	return (stat);
 }
 
-/*********************************************************************
- * NLM vhold functions
- *********************************************************************
- *
- * See comment to definition of nlm_vhold structure.
- *
- * NLM vhold object is a container of vnode on NLM side.
- * Vholds are used for two purposes:
- * 1) Hold vnode (with VN_HOLD) while it has any locks;
- * 2) Keep a track of all vnodes remote host touched
- *    with lock/share operations on NLM server, so that NLM
- *    can know what vnodes are potentially locked;
- *
- * Vholds are used on side only. For server side it's really
- * important to keep vnodes held while they potentially have
- * any locks/shares. In contrast, it's not important for clinet
- * side at all. When particular vnode comes to the NLM client side
- * code, it's already held (VN_HOLD) by the process calling
- * lock/share function (it's referenced because client calls open()
- * before making locks or shares).
- *
- * Vhold objects are cleaned up by GC thread when parent host
- * becomes idle and its idle timeout is expired.
- */
-
 /*
  * Get NLM vhold object corresponding to vnode "vp".
  * If no such object was found, create a new one.
@@ -707,7 +676,7 @@ nlm_vhold_get(struct nlm_host *hostp, vnode_t *vp)
 		VN_HOLD(nvp->nv_vp);
 
 		VERIFY(mod_hash_insert(hostp->nh_vholds_by_vp,
-		        (mod_hash_key_t)vp, (mod_hash_val_t)nvp) == 0);
+		    (mod_hash_key_t)vp, (mod_hash_val_t)nvp) == 0);
 		TAILQ_INSERT_TAIL(&hostp->nh_vholds_list, nvp, nv_link);
 	}
 
@@ -740,8 +709,8 @@ nlm_vhold_destroy(struct nlm_host *hostp, struct nlm_vhold *nvp)
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
 
 	VERIFY(mod_hash_remove(hostp->nh_vholds_by_vp,
-	        (mod_hash_key_t)nvp->nv_vp,
-	        (mod_hash_val_t)&nvp) == 0);
+	    (mod_hash_key_t)nvp->nv_vp,
+	    (mod_hash_val_t)&nvp) == 0);
 
 	TAILQ_REMOVE(&hostp->nh_vholds_list, nvp, nv_link);
 	VN_RELE(nvp->nv_vp);
@@ -853,10 +822,9 @@ nlm_destroy_client_locks(struct nlm_host *host)
 	}
 }
 
-/*********************************************************************
+/*
  * NLM host functions
  */
-
 static void
 nlm_copy_netbuf(struct netbuf *dst, struct netbuf *src)
 {
@@ -891,8 +859,8 @@ nlm_host_unregister(struct nlm_globals *g, struct nlm_host *hostp)
 
 	avl_remove(&g->nlm_hosts_tree, hostp);
 	VERIFY(mod_hash_remove(g->nlm_hosts_hash,
-	        (mod_hash_key_t)(uintptr_t)hostp->nh_sysid,
-	        (mod_hash_val_t)&hostp) == 0);
+	    (mod_hash_key_t)(uintptr_t)hostp->nh_sysid,
+	    (mod_hash_val_t)&hostp) == 0);
 	TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
 }
 
@@ -1062,6 +1030,11 @@ nlm_host_wait_grace(struct nlm_host *hostp)
 
 /*
  * Create a new NLM host.
+ *
+ * NOTE: The in-kernel RPC (kRPC) subsystem uses TLI/XTI,
+ * which needs both a knetconfig and an address when creating
+ * endpoints. Thus host object stores both knetconfig and
+ * netid.
  */
 static struct nlm_host *
 nlm_create_host(struct nlm_globals *g, char *name,
@@ -1175,14 +1148,14 @@ nlm_host_has_locks(struct nlm_host *hostp)
 	 * some time ago, but doesn't have them now.
 	 * In this case flk_sysid_has_locks() will iterate
 	 * thrught dozens of thousands locks until it returns us
- 	 * FALSE.
+	 * FALSE.
 	 * Oh, I hope that in shiny future somebody will make
 	 * local lock manager (os/flock.c) better, so that
 	 * it'd be more friedly to remote locks and
 	 * flk_sysid_has_locks() wouldn't be so expensive.
 	 */
 	if (flk_sysid_has_locks(hostp->nh_sysid |
-	        NLM_SYSID_CLIENT, FLK_QUERY_ACTIVE))
+	    NLM_SYSID_CLIENT, FLK_QUERY_ACTIVE))
 		return (TRUE);
 
 	/*
@@ -1394,8 +1367,8 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 		 * used to lookup host by sysid.
 		 */
 		VERIFY(mod_hash_insert(g->nlm_hosts_hash,
-		        (mod_hash_key_t)(uintptr_t)host->nh_sysid,
-		        (mod_hash_val_t)host) == 0);
+		    (mod_hash_key_t)(uintptr_t)host->nh_sysid,
+		    (mod_hash_val_t)host) == 0);
 	}
 
 	mutex_exit(&g->lock);
@@ -1475,7 +1448,7 @@ nlm_host_release(struct nlm_globals *g, struct nlm_host *hostp)
 	 * and move it to the idle hosts LRU list.
 	 */
 	hostp->nh_idle_timeout = ddi_get_lbolt() +
-		SEC_TO_TICK(g->cn_idle_tmo);
+	    SEC_TO_TICK(g->cn_idle_tmo);
 
 	TAILQ_INSERT_TAIL(&g->nlm_idle_hosts, hostp, nh_link);
 	mutex_exit(&g->lock);
@@ -1539,7 +1512,9 @@ nlm_host_monitor(struct nlm_globals *g, struct nlm_host *host, int state)
 	 * make it simpler to find the host if we are notified of a
 	 * host restart.
 	 */
-	stat = nlm_nsm_mon(&g->nlm_nsm, host->nh_name, (uint16_t)host->nh_sysid);
+	stat = nlm_nsm_mon(&g->nlm_nsm, host->nh_name,
+	    (uint16_t)host->nh_sysid);
+
 	if (stat != RPC_SUCCESS) {
 		NLM_WARN("Failed to contact local NSM, stat=%d\n", stat);
 		mutex_enter(&g->lock);
@@ -1563,7 +1538,7 @@ nlm_host_get_state(struct nlm_host *hostp)
 	return (hostp->nh_state);
 }
 
-/*********************************************************************
+/*
  * NLM client/server sleeping locks
  */
 
@@ -1772,9 +1747,9 @@ nlm_slreq_find_locked(struct nlm_host *hostp, struct nlm_vhold *nvp,
 
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
 	TAILQ_FOREACH(slr, &nvp->nv_slreqs, nsr_link) {
-		if (slr->nsr_fl.l_start		== flp->l_start &&
-		    slr->nsr_fl.l_len		== flp->l_len   &&
-		    slr->nsr_fl.l_pid		== flp->l_pid   &&
+		if (slr->nsr_fl.l_start		== flp->l_start	&&
+		    slr->nsr_fl.l_len		== flp->l_len	&&
+		    slr->nsr_fl.l_pid		== flp->l_pid	&&
 		    slr->nsr_fl.l_type		== flp->l_type)
 			break;
 	}
@@ -1896,7 +1871,7 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 	}
 
 	g->grace_threshold = ddi_get_lbolt() +
-		SEC_TO_TICK(g->grace_period);
+	    SEC_TO_TICK(g->grace_period);
 	g->run_status = NLM_ST_UP;
 
 	/* Register endpoint used for communications with local NLM */

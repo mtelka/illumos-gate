@@ -46,9 +46,12 @@
 
 static struct kmem_cache *nlm_rpch_cache = NULL;
 
-static int nlm_rpch_ctor(void *datap, void *cdrarg, int kmflags);
-static void nlm_rpch_dtor(void *datap, void *cdrarg);
-static void destroy_rpch(nlm_rpc_t *rpcp);
+static int nlm_rpch_ctor(void *, void *, int);
+static void nlm_rpch_dtor(void *, void *);
+static void destroy_rpch(nlm_rpc_t *);
+static nlm_rpc_t *get_nlm_rpc_fromcache(struct nlm_host *, int);
+static void update_host_rpcbinding(struct nlm_host *, int);
+static int refresh_nlm_rpc(struct nlm_host *, nlm_rpc_t *);
 
 static nlm_rpc_t *
 get_nlm_rpc_fromcache(struct nlm_host *hostp, int vers)

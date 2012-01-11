@@ -10,6 +10,9 @@
 #include <rpcsvc/nlm_prot.h>
 #include "nlm_impl.h"
 
+#define	NLM_NUM_NETCONFIGS \
+	(sizeof (nlm_netconfigs) / sizeof (nlm_netconfigs[0]))
+
 /*
  * nlm_netconfig structure describes particular knetconfig
  * and a pair netid/device corresponding to given knetconfig.
@@ -70,9 +73,6 @@ static struct nlm_netconfig nlm_netconfigs[] = {
 	},
 };
 
-#define NLM_NUM_NETCONFIGS \
-	(sizeof (nlm_netconfigs) / sizeof (nlm_netconfigs[0]))
-
 /*
  * Initialize NLM netconfigs table.
  */
@@ -84,8 +84,9 @@ nlm_netconfigs_init(void)
 
 		for (i = 0; i < NLM_NUM_NETCONFIGS; i++) {
 			nlm_netconfigs[i].knc.knc_rdev =
-				makedevice(clone_major,
-				    ddi_name_to_major((char *)nlm_netconfigs[i].netid));
+			    makedevice(clone_major,
+			    ddi_name_to_major(
+			    (char *)nlm_netconfigs[i].netid));
 		}
 
 		nlm_netconfigs_initialized = TRUE;
@@ -97,13 +98,12 @@ nlm_netconfigs_init(void)
  * and copy it to *knc, or return EINVAL.
  */
 int
-nlm_knetconfig_from_netid(const char *netid,
-    /* OUT */ struct knetconfig *knc)
+nlm_knetconfig_from_netid(const char *netid, struct knetconfig *knc)
 {
 	int i, ret = ENOENT;
 
 	for (i = 0; i < NLM_NUM_NETCONFIGS; i++) {
-		if (!strcmp(nlm_netconfigs[i].netid, netid)) {
+		if (strcmp(nlm_netconfigs[i].netid, netid) == 0) {
 			ret = 0;
 			*knc = nlm_netconfigs[i].knc;
 			break;
@@ -128,8 +128,9 @@ nlm_netid_from_knetconfig(struct knetconfig *knc)
 	for (i = 0; i < NLM_NUM_NETCONFIGS; i++) {
 		knc_iter = &nlm_netconfigs[i].knc;
 		if ((knc_iter->knc_semantics == knc->knc_semantics) &&
-		    !strcmp(knc_iter->knc_protofmly, knc->knc_protofmly))
-			return nlm_netconfigs[i].netid;
+		    strcmp(knc_iter->knc_protofmly,
+		    knc->knc_protofmly) == 0)
+			return (nlm_netconfigs[i].netid);
 	}
 
 	return (NULL);

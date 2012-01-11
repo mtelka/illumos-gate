@@ -70,7 +70,7 @@
 
 #include "nlm_impl.h"
 
-#define NLM_IN_GRACE(g) (ddi_get_lbolt() < (g)->grace_threshold)
+#define	NLM_IN_GRACE(g) (ddi_get_lbolt() < (g)->grace_threshold)
 
 static void nlm_block(
 	nlm4_lockargs *lockargs,
@@ -79,6 +79,12 @@ static void nlm_block(
 	struct flock64 *fl,
 	nlm_testargs_cb grant_cb,
 	rpcvers_t vers);
+
+static void nlm_init_flock(struct flock64 *, struct nlm4_lock *, int);
+static vnode_t *nlm_do_fh_to_vp(struct netobj *);
+static vnode_t *nlm_fh_to_vp(struct netobj *);
+static struct nlm_vhold *nlm_fh_to_vhold(struct nlm_host *, struct netobj *);
+static void nlm_init_shrlock(struct shrlock *, nlm4_share *, struct nlm_host *);
 
 static void
 nlm_init_flock(struct flock64 *fl, struct nlm4_lock *nl, int sysid)
@@ -554,13 +560,12 @@ doreply:
  * because nlm_do_lock() was getting quite long.
  */
 static void
-nlm_block(
-	nlm4_lockargs *lockargs,
-	struct nlm_host *host,
-	struct nlm_vhold *nvp,
-	struct flock64 *flp,
-	nlm_testargs_cb grant_cb,
-	rpcvers_t vers)
+nlm_block(nlm4_lockargs *lockargs,
+    struct nlm_host *host,
+    struct nlm_vhold *nvp,
+    struct flock64 *flp,
+    nlm_testargs_cb grant_cb,
+    rpcvers_t vers)
 {
 	nlm4_testargs args;
 	int error;
@@ -865,7 +870,7 @@ nlm_do_granted(nlm4_testargs *argp, nlm4_res *resp,
 		    argp->alock.l_len == nslp->nsl_lock.l_len &&
 		    argp->alock.fh.n_len == nslp->nsl_lock.fh.n_len &&
 		    memcmp(argp->alock.fh.n_bytes, nslp->nsl_lock.fh.n_bytes,
-		        nslp->nsl_lock.fh.n_len) == 0) {
+		    nslp->nsl_lock.fh.n_len) == 0) {
 			nslp->nsl_state = NLM_SL_GRANTED;
 			cv_broadcast(&nslp->nsl_cond);
 			resp->stat.stat = nlm4_granted;
@@ -938,7 +943,7 @@ nlm_do_free_all(nlm4_notify *argp, void *res, struct svc_req *sr)
 
 static void
 nlm_init_shrlock(struct shrlock *shr,
-	nlm4_share *nshare, struct nlm_host *host)
+    nlm4_share *nshare, struct nlm_host *host)
 {
 
 	switch (nshare->access) {

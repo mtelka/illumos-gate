@@ -43,8 +43,6 @@
 #include <rpcsvc/nlm_prot.h>
 #include "nlm_impl.h"
 
-/* ******************************************************************** */
-
 /*
  * Convert between various versions of the protocol structures.
  */
@@ -534,16 +532,6 @@ nlm_granted_res_1_svc(nlm_res *argp, void *resp, struct svc_req *sr)
 	return (FALSE);
 }
 
-#if 0
-int
-nlm_prog_1_freeresult(SVCXPRT *transp, xdrproc_t xdr_result, caddr_t resp)
-{
-
-	xdr_free(xdr_result, resp);
-	return (TRUE);
-}
-#endif
-
 /*
  * Version 2 svc functions (used by local statd)
  */
@@ -563,16 +551,6 @@ nlm_sm_notify2_2_svc(struct nlm_sm_status *argp, void *resp,
 	nlm_do_notify2(argp, resp, sr);
 	return (TRUE);
 }
-
-#if 0
-int
-nlm_prog_2_freeresult(SVCXPRT *transp, xdrproc_t xdr_result, caddr_t resp)
-{
-
-	xdr_free(xdr_result, resp);
-	return (TRUE);
-}
-#endif
 
 /*
  * Version 3 svc functions
@@ -669,16 +647,6 @@ nlm_free_all_3_svc(nlm_notify *argp, void *resp, struct svc_req *sr)
 
 	return (TRUE);
 }
-
-#if 0
-int
-nlm_prog_3_freeresult(SVCXPRT *transp, xdrproc_t xdr_result, caddr_t resp)
-{
-
-	xdr_free(xdr_result, resp);
-	return (TRUE);
-}
-#endif
 
 /*
  * Version 4 svc functions
@@ -932,12 +900,3 @@ nlm4_free_all_4_svc(nlm4_notify *argp, void *resp, struct svc_req *sr)
 	nlm_do_free_all(argp, resp, sr);
 	return (TRUE);
 }
-
-#if 0
-int
-nlm_prog_4_freeresult(SVCXPRT *transp, xdrproc_t xdr_result, caddr_t res)
-{
-	xdr_free(xdr_result, res);
-	return (TRUE);
-}
-#endif

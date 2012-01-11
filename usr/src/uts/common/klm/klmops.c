@@ -78,13 +78,11 @@ _info(struct modinfo *modinfop)
  */
 int
 lm_frlock(struct vnode *vp, int cmd, struct flock64 *flk, int flags,
-	u_offset_t off, struct cred *cr, struct netobj *fh,
-	struct flk_callback *flcb)
+    u_offset_t off, struct cred *cr, struct netobj *fh,
+    struct flk_callback *flcb)
 {
-	int err;
-	err = nlm_frlock(vp, cmd, flk, flags, off,
-	    cr, fh, flcb, NLM_VERS);
-	return (err);
+	return (nlm_frlock(vp, cmd, flk, flags, off,
+	    cr, fh, flcb, NLM_VERS));
 }
 
 /*
@@ -108,11 +106,9 @@ lm4_frlock(struct vnode *vp, int cmd, struct flock64 *flk, int flags,
  */
 int
 lm_shrlock(struct vnode *vp, int cmd,
-	struct shrlock *shr, int flags, struct netobj *fh)
+    struct shrlock *shr, int flags, struct netobj *fh)
 {
-	int err;
-	err = nlm_shrlock(vp, cmd, shr, flags, fh, NLM_VERSX);
-	return (err);
+	return (nlm_shrlock(vp, cmd, shr, flags, fh, NLM_VERSX));
 }
 
 /*
@@ -121,11 +117,9 @@ lm_shrlock(struct vnode *vp, int cmd,
  */
 int
 lm4_shrlock(struct vnode *vp, int cmd,
-	struct shrlock *shr, int flags, struct netobj *fh)
+    struct shrlock *shr, int flags, struct netobj *fh)
 {
-	int err;
-	err = nlm_shrlock(vp, cmd, shr, flags, fh, NLM4_VERS);
-	return (err);
+	return (nlm_shrlock(vp, cmd, shr, flags, fh, NLM4_VERS));
 }
 
 /*
@@ -134,12 +128,8 @@ lm4_shrlock(struct vnode *vp, int cmd,
  * register the lock locally.
  */
 void
-lm_register_lock_locally(
-	struct vnode *vp,
-	struct lm_sysid *ls,
-	struct flock64 *flk,
-	int flags,
-	u_offset_t offset)
+lm_register_lock_locally(struct vnode *vp, struct lm_sysid *ls,
+    struct flock64 *flk, int flags, u_offset_t offset)
 {
 	/* Calls os/flock.c: reclock() */
 }
@@ -171,4 +161,3 @@ void
 lm_nlm4_reclaim(struct vnode *vp, struct flock64 *flkp)
 {
 }
-

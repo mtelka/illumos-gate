@@ -209,7 +209,8 @@ lm_svc(struct lm_svc_args *args)
 	 * Check version of lockd calling.
 	 */
 	if (args->version != LM_SVC_CUR_VERS) {
-		NLM_ERR("lm_svc: Version mismatch (given 0x%x, expected 0x%x)\n",
+		NLM_ERR("lm_svc: Version mismatch "
+		    "(given 0x%x, expected 0x%x)\n",
 		    args->version, LM_SVC_CUR_VERS);
 		return (EINVAL);
 	}
@@ -288,9 +289,9 @@ lm_svc(struct lm_svc_args *args)
 		g->lockd_pid = curproc->p_pid;
 
 		/* Save the options. */
-		g->cn_idle_tmo  = args->timout;
+		g->cn_idle_tmo = args->timout;
 		g->grace_period = args->grace;
-		g->retrans_tmo  = args->retransmittimeout;
+		g->retrans_tmo = args->retransmittimeout;
 
 		/* See nfs_sys.c (not yet per-zone) */
 		if (INGLOBALZONE(curproc)) {
@@ -438,7 +439,7 @@ lm_vp_active(const vnode_t *vp)
  */
 struct lm_sysid *
 lm_get_sysid(struct knetconfig *knc, struct netbuf *addr,
-		char *name, bool_t *nc_changed)
+    char *name, bool_t *nc_changed)
 {
 	/* XXX - todo... */
 	return (0);
