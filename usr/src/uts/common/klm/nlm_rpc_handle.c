@@ -237,3 +237,20 @@ nlm_host_rele_rpc(nlm_rpc_t *rpcp)
 	TAILQ_INSERT_HEAD(&hostp->nh_rpchc, rpcp, nr_link);
 	mutex_exit(&hostp->nh_lock);
 }
+
+/*
+ * The function invalidates host's RPC binding by marking it
+ * as not fresh. In this case another time thread tries to
+ * get RPC handle from host's handles cache, host's RPC binding
+ * will be updated.
+ *
+ * The function should be executed when RPC call invoked via
+ * handle taken from RPC cache returns RPC_PROCUNAVAIL.
+ */
+void
+nlm_host_invalidate_binding(struct nlm_host *hostp)
+{
+	mutex_enter(&hostp->nh_lock);
+	hostp->nh_rpcb_state = NRPCB_NEED_UPDATE;
+	mutex_exit(&hostp->nh_lock);
+}

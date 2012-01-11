@@ -89,12 +89,13 @@ nlm_convert_to_nlm4_res(struct nlm4_res *dst, struct nlm_res *src)
 enum clnt_stat
 nlm_test_rpc(nlm4_testargs *args, nlm4_testres *res, nlm_rpc_t *rpcp)
 {
+	enum clnt_stat stat;
+
 	if (rpcp->nr_vers == NLM4_VERS) {
-		return (nlm4_test_4(args, res, rpcp->nr_handle));
+		stat = nlm4_test_4(args, res, rpcp->nr_handle);
 	} else {
 		nlm_testargs args1;
 		nlm_testres res1;
-		enum clnt_stat stat;
 
 		args1.cookie = args->cookie;
 		args1.exclusive = args->exclusive;
@@ -111,20 +112,24 @@ nlm_test_rpc(nlm4_testargs *args, nlm4_testres *res, nlm_rpc_t *rpcp)
 				    &res->stat.nlm4_testrply_u.holder,
 				    &res1.stat.nlm_testrply_u.holder);
 		}
-
-		return (stat);
 	}
+
+	if (stat == RPC_PROCUNAVAIL)
+		nlm_host_invalidate_binding(rpcp->nr_owner);
+
+	return (stat);
 }
 
 enum clnt_stat
 nlm_lock_rpc(nlm4_lockargs *args, nlm4_res *res, nlm_rpc_t *rpcp)
 {
+	enum clnt_stat stat;
+
 	if (rpcp->nr_vers == NLM4_VERS) {
-		return (nlm4_lock_4(args, res, rpcp->nr_handle));
+		stat = nlm4_lock_4(args, res, rpcp->nr_handle);
 	} else {
 		nlm_lockargs args1;
 		nlm_res res1;
-		enum clnt_stat stat;
 
 		args1.cookie = args->cookie;
 		args1.block = args->block;
@@ -139,20 +144,24 @@ nlm_lock_rpc(nlm4_lockargs *args, nlm4_res *res, nlm_rpc_t *rpcp)
 		if (stat == RPC_SUCCESS) {
 			nlm_convert_to_nlm4_res(res, &res1);
 		}
-
-		return (stat);
 	}
+
+	if (stat == RPC_PROCUNAVAIL)
+		nlm_host_invalidate_binding(rpcp->nr_owner);
+
+	return (stat);
 }
 
 enum clnt_stat
 nlm_cancel_rpc(nlm4_cancargs *args, nlm4_res *res, nlm_rpc_t *rpcp)
 {
+	enum clnt_stat stat;
+
 	if (rpcp->nr_vers == NLM4_VERS) {
-		return (nlm4_cancel_4(args, res, rpcp->nr_handle));
+		stat = nlm4_cancel_4(args, res, rpcp->nr_handle);
 	} else {
 		nlm_cancargs args1;
 		nlm_res res1;
-		enum clnt_stat stat;
 
 		args1.cookie = args->cookie;
 		args1.block = args->block;
@@ -165,20 +174,24 @@ nlm_cancel_rpc(nlm4_cancargs *args, nlm4_res *res, nlm_rpc_t *rpcp)
 		if (stat == RPC_SUCCESS) {
 			nlm_convert_to_nlm4_res(res, &res1);
 		}
-
-		return (stat);
 	}
+
+	if (stat == RPC_PROCUNAVAIL)
+		nlm_host_invalidate_binding(rpcp->nr_owner);
+
+	return (stat);
 }
 
 enum clnt_stat
 nlm_unlock_rpc(nlm4_unlockargs *args, nlm4_res *res, nlm_rpc_t *rpcp)
 {
+	enum clnt_stat stat;
+
 	if (rpcp->nr_vers == NLM4_VERS) {
-		return (nlm4_unlock_4(args, res, rpcp->nr_handle));
+		stat = nlm4_unlock_4(args, res, rpcp->nr_handle);
 	} else {
 		nlm_unlockargs args1;
 		nlm_res res1;
-		enum clnt_stat stat;
 
 		args1.cookie = args->cookie;
 		nlm_convert_to_nlm_lock(&args1.alock, &args->alock);
@@ -189,9 +202,12 @@ nlm_unlock_rpc(nlm4_unlockargs *args, nlm4_res *res, nlm_rpc_t *rpcp)
 		if (stat == RPC_SUCCESS) {
 			nlm_convert_to_nlm4_res(res, &res1);
 		}
-
-		return (stat);
 	}
+
+	if (stat == RPC_PROCUNAVAIL)
+		nlm_host_invalidate_binding(rpcp->nr_owner);
+
+	return (stat);
 }
 
 /*
@@ -222,12 +238,13 @@ nlm_convert_to_nlm4_shres(struct nlm4_shareres *dst,
 enum clnt_stat
 nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res, nlm_rpc_t *rpcp)
 {
+	enum clnt_stat stat;
+
 	if (rpcp->nr_vers == NLM4_VERS) {
-		return (nlm4_share_4(args, res, rpcp->nr_handle));
+		stat = nlm4_share_4(args, res, rpcp->nr_handle);
 	} else {
 		nlm_shareargs args3;
 		nlm_shareres res3;
-		enum clnt_stat stat;
 
 		args3.cookie = args->cookie;
 		nlm_convert_to_nlm_share(&args3.share, &args->share);
@@ -239,20 +256,24 @@ nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res, nlm_rpc_t *rpcp)
 		if (stat == RPC_SUCCESS) {
 			nlm_convert_to_nlm4_shres(res, &res3);
 		}
-
-		return (stat);
 	}
+
+	if (stat == RPC_PROCUNAVAIL)
+		nlm_host_invalidate_binding(rpcp->nr_owner);
+
+	return (stat);
 }
 
 enum clnt_stat
 nlm_unshare_rpc(nlm4_shareargs *args, nlm4_shareres *res, nlm_rpc_t *rpcp)
 {
+	enum clnt_stat stat;
+
 	if (rpcp->nr_vers == NLM4_VERS) {
-		return (nlm4_unshare_4(args, res, rpcp->nr_handle));
+		stat = nlm4_unshare_4(args, res, rpcp->nr_handle);
 	} else {
 		nlm_shareargs args3;
 		nlm_shareres res3;
-		enum clnt_stat stat;
 
 		args3.cookie = args->cookie;
 		nlm_convert_to_nlm_share(&args3.share, &args->share);
@@ -264,7 +285,10 @@ nlm_unshare_rpc(nlm4_shareargs *args, nlm4_shareres *res, nlm_rpc_t *rpcp)
 		if (stat == RPC_SUCCESS) {
 			nlm_convert_to_nlm4_shres(res, &res3);
 		}
-
-		return (stat);
 	}
+
+	if (stat == RPC_PROCUNAVAIL)
+		nlm_host_invalidate_binding(rpcp->nr_owner);
+
+	return (stat);
 }
