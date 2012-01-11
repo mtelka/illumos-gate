@@ -25,6 +25,7 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/sdt.h>
 #include <rpcsvc/nlm_prot.h>
 #include "nlm_impl.h"
 
@@ -98,12 +99,13 @@ nlm_dispatch(
 	bool_t (*func)(char *, void *, struct svc_req *);
 	xdrproc_t xargs, xres;
 	int flags;
-	bool_t retval;
+	bool_t do_reply;
 
 	if ((func = de->de_func) == NULL) {
 		svcerr_noproc(transp);
 		return;
 	}
+
 	xargs = de->de_xargs;
 	xres  = de->de_xres;
 	flags = de->de_flags;
@@ -111,28 +113,30 @@ nlm_dispatch(
 	/*
 	 * This section from rpcgen
 	 */
-
 	bzero((char *)&argu, sizeof (argu));
 	if (!SVC_GETARGS(transp, xargs, (caddr_t)&argu)) {
 		svcerr_decode(transp);
 		return;
 	}
+
 	bzero((char *)&resu, sizeof (resu));
+	do_reply = (*func)((char *)&argu, (void *)&resu, rqstp);
 
-	retval = (*func)((char *)&argu, (void *)&resu, rqstp);
+	if (do_reply && !(flags & NLM_DISP_NOREPLY)) {
+		ASSERT(xres != (xdrproc_t)0);
+		DTRACE_PROBE3(sendreply, struct svc_req *, rqstp,
+		    SVCXPRT *, transp, struct dispatch_entry *, de);
 
-	if (xres && retval != 0 &&
-	    (flags & NLM_DISP_NOREPLY) != 0) {
-		if (!svc_sendreply(transp, xres, (char *)&resu))
+		if (!svc_sendreply(transp, xres, (char *)&resu)) {
 			svcerr_systemerr(transp);
+			NLM_ERR("nlm_dispatch(): svc_sendreply() failed!\n");
+		}
 	}
-	if (!SVC_FREEARGS(transp, xargs, (caddr_t)&argu)) {
-		RPC_MSGOUT("%s",
-		    "unable to free arguments");
-	}
-	if (xres != NULL) {
+
+	if (!SVC_FREEARGS(transp, xargs, (caddr_t)&argu))
+		NLM_WARN("nlm_dispatch(): unable to free arguments");
+	if (xres != (xdrproc_t)0)
 		xdr_free(xres, (caddr_t)&resu);
-	}
 }
 
 /*
