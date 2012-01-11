@@ -126,20 +126,19 @@ refresh_nlm_rpc(struct nlm_host *hostp, nlm_rpc_t *rpcp)
 	} else {
 		ret = clnt_tli_kinit(rpcp->nr_handle, &hostp->nh_knc,
 		    &hostp->nh_addr, 0, NLM_RPC_RETRIES, CRED());
-	}
+		if (ret == 0) {
+			enum clnt_stat stat;
 
-	if (ret == 0) {
-		enum clnt_stat stat;
-
-		/*
-		 * Check whether host's RPC binding is still
-		 * fresh, i.e. if remote program is still sits
-		 * on the same port we assume. Call NULL proc
-		 * to do it.
-		 */
-		stat = nlm_null_rpc(rpcp->nr_handle, rpcp->nr_vers);
-		if (stat == RPC_PROCUNAVAIL)
-			ret = ESTALE;
+			/*
+			 * Check whether host's RPC binding is still
+			 * fresh, i.e. if remote program is still sits
+			 * on the same port we assume. Call NULL proc
+			 * to do it.
+			 */
+			stat = nlm_null_rpc(rpcp->nr_handle, rpcp->nr_vers);
+			if (stat == RPC_PROCUNAVAIL)
+				ret = ESTALE;
+		}
 	}
 
 	return (ret);
