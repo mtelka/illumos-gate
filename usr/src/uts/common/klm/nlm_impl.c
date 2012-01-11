@@ -445,23 +445,17 @@ nlm_vnode_find_locked(struct nlm_host *hostp,
 }
 
 /*
- * Find nlm_vnode by given netobj
+ * Find nlm_vnode by given pointer to vnode.
  */
 struct nlm_vnode *
-nlm_vnode_find(struct nlm_host *hostp, struct netobj *fh)
+nlm_vnode_find(struct nlm_host *hostp, vnode_t *vp)
 {
 	struct nlm_vnode *nvp;
-	vnode_t *vp;
-
-	vp = nlm_fh_to_vnode(fh);
-	if (vp == NULL)
-		return (NULL);
 
 	mutex_enter(&hostp->nh_lock);
 	nvp = nlm_vnode_find_locked(hostp, vp, NULL);
 	mutex_exit(&hostp->nh_lock);
 
-	VN_RELE(vp);
 	return (nvp);
 }
 
@@ -470,15 +464,10 @@ nlm_vnode_find(struct nlm_host *hostp, struct netobj *fh)
  * See comments at struct nlm_vnode def.
  */
 struct nlm_vnode *
-nlm_vnode_findcreate(struct nlm_host *hostp, struct netobj *fh)
+nlm_vnode_findcreate(struct nlm_host *hostp, vnode_t *vp)
 {
-	vnode_t *vp;
 	struct nlm_vnode *nvp, *new_nvp = NULL;
 	avl_index_t where;
-
-	vp = nlm_fh_to_vnode(fh);
-	if (vp == NULL)
-		return (NULL);
 
 	mutex_enter(&hostp->nh_lock);
 	nvp = nlm_vnode_find_locked(hostp, vp, NULL);
@@ -510,7 +499,45 @@ nlm_vnode_findcreate(struct nlm_host *hostp, struct netobj *fh)
 		kmem_cache_free(nlm_vnode_cache, new_nvp);
 
 out:
+	return (nvp);
+}
+
+/*
+ * Find nlm_vnode by given filehandle.
+ * See also: nlm_vnode_find().
+ */
+struct nlm_vnode *
+nlm_vnode_find_fh(struct nlm_host *hostp, struct netobj *fh)
+{
+	struct nlm_vnode *nvp;
+	vnode_t *vp;
+
+	vp = nlm_fh_to_vnode(fh);
+	if (vp == NULL)
+		return (NULL);
+
+	nvp = nlm_vnode_find(hostp, vp);
 	VN_RELE(vp);
+	return (nvp);
+}
+
+/*
+ * Find or create nlm_vnode by given filehandle.
+ * See also: nlm_vnode_findcreate().
+ */
+struct nlm_vnode *
+nlm_vnode_findcreate_fh(struct nlm_host *hostp, struct netobj *fh)
+{
+	vnode_t *vp;
+	struct nlm_vnode *nvp;
+
+	vp = nlm_fh_to_vnode(fh);
+	if (vp == NULL)
+		return (NULL);
+
+	nvp = nlm_vnode_findcreate(hostp, vp);
+	VN_RELE(vp);
+
 	return (nvp);
 }
 
@@ -1438,7 +1465,7 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 	VERIFY(g->run_status == NLM_ST_STARTING);
 	err = nlm_svc_create_nsm(knc, &nsm);
 	if (err != 0) {
-		NLM_ERR("NLM: Failed to contact to local NSM: errno=%d\n", err);
+		NLM_WARN("NLM: Failed to contact to local NSM: errno=%d\n", err);
 		err = EIO;
 		goto shutdown_lm;
 	}

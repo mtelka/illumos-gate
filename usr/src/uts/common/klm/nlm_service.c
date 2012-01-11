@@ -171,7 +171,7 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 
 	NLM_DEBUG(NLM_LL3, "nlm_do_test(): name = %s sysid = %d\n", name, sysid);
 
-	nv = nlm_vnode_findcreate(host, &argp->alock.fh);
+	nv = nlm_vnode_findcreate_fh(host, &argp->alock.fh);
 	if (nv == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto out;
@@ -291,7 +291,7 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_lockargs *, argp);
 
-	nv = nlm_vnode_findcreate(host, &argp->alock.fh);
+	nv = nlm_vnode_findcreate_fh(host, &argp->alock.fh);
 	if (nv == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto doreply;
@@ -596,7 +596,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_cancargs *, argp);
 
-	nv = nlm_vnode_find(host, &argp->alock.fh);
+	nv = nlm_vnode_find_fh(host, &argp->alock.fh);
 	if (nv == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto out;
@@ -708,7 +708,7 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	DTRACE_PROBE3(start, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_unlockargs *, argp);
 
-	nv = nlm_vnode_find(host, &argp->alock.fh);
+	nv = nlm_vnode_find_fh(host, &argp->alock.fh);
 	if (nv == NULL) {
 		resp->stat.stat = nlm4_stale_fh;
 		goto out;
@@ -975,7 +975,7 @@ nlm_do_share(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 		goto out;
 	}
 
-	nv = nlm_vnode_findcreate(host, &argp->share.fh);
+	nv = nlm_vnode_findcreate_fh(host, &argp->share.fh);
 	if (nv == NULL) {
 		resp->stat = nlm4_stale_fh;
 		goto out;
@@ -1034,7 +1034,7 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 		goto out;
 	}
 
-	nv = nlm_vnode_findcreate(host, &argp->share.fh);
+	nv = nlm_vnode_findcreate_fh(host, &argp->share.fh);
 	if (nv == NULL) {
 		resp->stat = nlm4_stale_fh;
 		goto out;
