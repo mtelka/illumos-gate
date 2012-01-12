@@ -497,7 +497,7 @@ nlm_do_lock(nlm4_lockargs *argp, nlm4_res *resp, struct svc_req *sr,
 
 	case EDEADLK:
 		/* dead lock condition */
-		status = nlm4_deadlk;
+		status = nlm4_deadlck;
 		break;
 
 	default:
@@ -595,7 +595,7 @@ nlm_block(nlm4_lockargs *lockargs,
 		 * Sleeping lock request with given fl is already
 		 * registered by someone else. This means that
 		 * some other thread is handling the request, let
-		 * him do its work.
+		 * him to do its work.
 		 */
 		ASSERT(error == EEXIST);
 		return;
@@ -609,15 +609,17 @@ nlm_block(nlm4_lockargs *lockargs,
 	/* BSD: VOP_ADVLOCK(vp, NULL, F_SETLK, fl, F_REMOTE); */
 	error = VOP_FRLOCK(nvp->nv_vp, F_SETLKW, flp,
 	    F_REMOTELOCK | FREAD | FWRITE,
-	    (u_offset_t)0, NULL, CRED(), NULL);
+	    (u_offset_t)0, &flk_cb, CRED(), NULL);
 
 	if (error != 0) {
 		/*
 		 * We failed getting the lock, but have no way to
 		 * tell the client about that.  Let 'em time out.
 		 */
+		(void) nlm_slreq_unregister(host, nvp, flp);
 		return;
 	}
+
 	/*
 	 * Do the "granted" call-back to the client.
 	 */
@@ -631,7 +633,7 @@ nlm_block(nlm4_lockargs *lockargs,
 /*
  * The function that is used as flk callback when NLM server
  * sets new sleeping lock. The function unregisters NLM
- * sleeping lock request (nlm_slreq) asspciated with the
+ * sleeping lock request (nlm_slreq) associated with the
  * sleeping lock _before_ lock becomes active. It prevents
  * potential race condition between nlm_block() and
  * nlm_do_cancel().

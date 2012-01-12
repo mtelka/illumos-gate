@@ -986,7 +986,7 @@ nlm_host_destroy(struct nlm_host *hostp)
 
 	strfree(hostp->nh_name);
 	strfree(hostp->nh_netid);
-	kmem_free(hostp->nh_addr.buf, sizeof (struct netbuf));
+	kmem_free(hostp->nh_addr.buf, hostp->nh_addr.maxlen);
 
 	if (hostp->nh_sysid != LM_NOSYSID)
 		nlm_sysid_free(hostp->nh_sysid);
