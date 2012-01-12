@@ -224,8 +224,9 @@ static void nlm_reclaimer(struct nlm_host *);
 /*
  * NLM NSM functions
  */
-static int nlm_nsm_init_knc(struct knetconfig *);
-static int nlm_nsm_init(struct nlm_nsm *);
+static int nlm_init_loopback_knc(struct knetconfig *);
+static int nlm_nsm_init_local(struct nlm_nsm *);
+static int nlm_nsm_init(struct nlm_nsm *, struct knetconfig *, struct netbuf *);
 static void nlm_nsm_fini(struct nlm_nsm *);
 static enum clnt_stat nlm_nsm_simu_crash(struct nlm_nsm *);
 static enum clnt_stat nlm_nsm_stat(struct nlm_nsm *, int32_t *);
@@ -559,7 +560,7 @@ nlm_clnt_call(CLIENT *clnt, rpcproc_t procnum, xdrproc_t xdr_args,
  * with local statd via loopback transport.
  */
 static int
-nlm_nsm_init_knc(struct knetconfig *knc)
+nlm_init_loopback_knc(struct knetconfig *knc)
 {
 	int error;
 	vnode_t *vp;
@@ -585,14 +586,14 @@ nlm_nsm_init_knc(struct knetconfig *knc)
  * to local statd.
  */
 static int
-nlm_nsm_init(struct nlm_nsm *nsm)
+nlm_nsm_init_local(struct nlm_nsm *nsm)
 {
-	CLIENT *clnt = NULL;
-	char *addr, *nodename;
-	enum clnt_stat stat;
-	int error, retries;
+	int error;
+	char *nodename;
+	struct knetconfig knc;
+	struct netbuf nb;
 
-	error = nlm_nsm_init_knc(&nsm->ns_knc);
+	error = nlm_init_loopback_knc(&knc);
 	if (error != 0)
 		return (error);
 
@@ -603,19 +604,36 @@ nlm_nsm_init(struct nlm_nsm *nsm)
 	 * by a dot.
 	 */
 	nodename = uts_nodename();
-	nsm->ns_addr.len = nsm->ns_addr.maxlen = strlen(nodename) + 1;
-	nsm->ns_addr.buf = kmem_zalloc(nsm->ns_addr.len, KM_SLEEP);
-	(void) strncpy(nsm->ns_addr.buf, nodename, nsm->ns_addr.len - 1);
-	nsm->ns_addr.buf[nsm->ns_addr.len - 1] = '.';
+	nb.len = nb.maxlen = strlen(nodename) + 1;
+	nb.buf = kmem_zalloc(nb.len, KM_SLEEP);
+	(void) strncpy(nb.buf, nodename, nb.len - 1);
+	nb.buf[nb.len - 1] = '.';
+
+	error = nlm_nsm_init(nsm, &knc, &nb);
+	kmem_free(nb.buf, nb.maxlen);
+
+	return (error);
+}
+
+/*
+ * Initialize NSM handle used for talking to statd
+ */
+static int
+nlm_nsm_init(struct nlm_nsm *nsm, struct knetconfig *knc, struct netbuf *nb)
+{
+	CLIENT *clnt = NULL;
+	enum clnt_stat stat;
+	int error, retries;
+
+	bzero(nsm, sizeof (*nsm));
+	nsm->ns_knc = *knc;
+	nlm_copy_netbuf(&nsm->ns_addr, nb);
 
 	/*
-	 * Try several times to get the port of local statd service,
-	 * because it's possible that we start before statd registers
-	 * on the rpcbind.
-	 *
-	 * If rpcbind_getaddr returns either RPC_INTR or
-	 * RPC_PROGNOTREGISTERED, retry an attempt, but wait
-	 * for NLM_NSM_RPCBIND_TIMEOUT seconds berofore.
+	 * Try several times to get the port of statd service,
+	 * If rpcbind_getaddr returns  RPC_PROGNOTREGISTERED,
+	 * retry an attempt, but wait for NLM_NSM_RPCBIND_TIMEOUT
+	 * seconds berofore.
 	 */
 	for (retries = 0; retries < NLM_NSM_RPCBIND_RETRIES; retries++) {
 		stat = rpcbind_getaddr(&nsm->ns_knc, SM_PROG,
@@ -2088,8 +2106,7 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 	VERIFY(g->run_status == NLM_ST_STARTING);
 	VERIFY(g->nlm_gc_thread == NULL);
 
-	bzero(&g->nlm_nsm, sizeof (g->nlm_nsm));
-	error = nlm_nsm_init(&g->nlm_nsm);
+	error = nlm_nsm_init_local(&g->nlm_nsm);
 	if (error != 0) {
 		NLM_ERR("Failed to initialize NSM handler "
 		    "(error=%d)\n", error);
