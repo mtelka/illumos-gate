@@ -82,7 +82,7 @@ struct nlm_block_cb_data {
  * Invoke an asyncronous RPC callbeck
  * (used when NLM server needs to reply to MSG NLM procedure).
  */
-#define NLM_INVOKE_CALLBACK(descr, rpcp, resp, callb)			\
+#define	NLM_INVOKE_CALLBACK(descr, rpcp, resp, callb)			\
 	do {								\
 		enum clnt_stat _stat;					\
 									\

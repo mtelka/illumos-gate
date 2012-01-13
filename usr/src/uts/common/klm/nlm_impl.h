@@ -331,7 +331,7 @@ enum nlm_rpcb_state {
  *   nh_rpcb_state: host's RPC binding state (see enum nlm_rpcb_state
  *                  for more details).
  *   nh_rpchc: host's RPC handles cache.
- *   nh_vholds_by_vp: a hash table of all vholds host owns. (used for lookup) 
+ *   nh_vholds_by_vp: a hash table of all vholds host owns. (used for lookup)
  *   nh_vholds_list: a linked list of all vholds host owns. (used for iteration)
  *   nh_shrlist: a list of all active share resevations on the client side.
  *   nh_reclaimer: a pointer to reclamation thread (kthread_t)

@@ -2658,13 +2658,13 @@ nlm_knc_activate(struct knetconfig *knc)
 void
 nlm_cprsuspend(void)
 {
-     struct nlm_globals *g;
+	struct nlm_globals *g;
 
-     rw_enter(&lm_lck, RW_READER);
-     TAILQ_FOREACH(g, &nlm_zones_list, nlm_link)
-          nlm_suspend_zone(g);
+	rw_enter(&lm_lck, RW_READER);
+	TAILQ_FOREACH(g, &nlm_zones_list, nlm_link)
+		nlm_suspend_zone(g);
 
-     rw_exit(&lm_lck);
+	rw_exit(&lm_lck);
 }
 
 void

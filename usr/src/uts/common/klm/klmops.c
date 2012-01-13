@@ -131,8 +131,8 @@ void
 lm_register_lock_locally(struct vnode *vp, struct lm_sysid *ls,
     struct flock64 *flk, int flags, u_offset_t offset)
 {
-    nlm_register_lock_locally(vp, (struct nlm_host *)ls,
-	flk, flags, offset);
+	nlm_register_lock_locally(vp, (struct nlm_host *)ls,
+	    flk, flags, offset);
 }
 
 /*
