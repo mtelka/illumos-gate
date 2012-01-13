@@ -365,13 +365,13 @@ lm_unexport(struct exportinfo *exi)
 void
 lm_cprsuspend(void)
 {
-	/* TODO */
+	nlm_cprsuspend();
 }
 
 void
 lm_cprresume(void)
 {
-	/* TODO */
+	nlm_cprresume();
 }
 
 /*

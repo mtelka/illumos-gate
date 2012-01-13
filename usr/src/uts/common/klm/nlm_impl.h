@@ -298,6 +298,7 @@ enum nlm_rpcb_state {
 #define	NLM_NH_MONITORED 0x01
 #define	NLM_NH_RECLAIM   0x02
 #define	NLM_NH_INIDLE    0x04
+#define	NLM_NH_SUSPEND   0x08
 
 /*
  * NLM host object is the most major structure in NLM.
@@ -497,6 +498,12 @@ int nlm_svc_starting(struct nlm_globals *, struct file *,
 void nlm_svc_stopping(struct nlm_globals *);
 int nlm_svc_add_ep(struct nlm_globals *, struct file *,
     const char *, struct knetconfig *);
+
+/*
+ * NLM suspend/resume
+ */
+void nlm_cprsuspend(void);
+void nlm_cprresume(void);
 
 /*
  * NLM internal functions for initialization.

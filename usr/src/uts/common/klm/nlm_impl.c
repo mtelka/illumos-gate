@@ -214,6 +214,8 @@ static void nlm_copy_netbuf(struct netbuf *, struct netbuf *);
 static int nlm_netbuf_addrs_cmp(struct netbuf *, struct netbuf *);
 static void nlm_kmem_reclaim(void *);
 static void nlm_pool_shutdown(void);
+static void nlm_suspend_zone(struct nlm_globals *);
+static void nlm_resume_zone(struct nlm_globals *);
 
 /*
  * NLM thread functions
@@ -246,6 +248,8 @@ static struct nlm_host *nlm_host_find_locked(struct nlm_globals *,
     const char *, struct netbuf *, avl_index_t *);
 static void nlm_host_unregister(struct nlm_globals *, struct nlm_host *);
 static void nlm_host_gc_vholds(struct nlm_host *);
+static bool_t nlm_host_has_srv_locks(struct nlm_host *);
+static bool_t nlm_host_has_cli_locks(struct nlm_host *);
 static bool_t nlm_host_has_locks(struct nlm_host *);
 
 /*
@@ -549,6 +553,157 @@ nlm_clnt_call(CLIENT *clnt, rpcproc_t procnum, xdrproc_t xdr_args,
 		sigreplace(&oldmask, (k_sigset_t *)NULL);
 
 	return (stat);
+}
+
+/*
+ * Suspend NLM client/server in the given zone.
+ *
+ * During suspend operation we mark those hosts
+ * that have any locks with NLM_NH_SUSPEND flags,
+ * so that they can be checked later, when resume
+ * operation occurs.
+ */
+static void
+nlm_suspend_zone(struct nlm_globals *g)
+{
+	struct nlm_host *hostp;
+	struct nlm_host_list all_hosts;
+
+	/*
+	 * Note that while we're doing suspend, GC thread is active
+	 * and it can destroy some hosts while we're walking through
+	 * the hosts tree. To prevent that and make suspend logic
+	 * a bit more simple we put all hosts to local "all_hosts"
+	 * list and increment reference counter of each host.
+	 * This guaranties that no hosts will be released while
+	 * we're doing suspend.
+	 * NOTE: reference of each host must be dropped during
+	 * resume operation.
+	 */
+	TAILQ_INIT(&all_hosts);
+	mutex_enter(&g->lock);
+	for (hostp = avl_first(&g->nlm_hosts_tree); hostp != NULL;
+	    hostp = AVL_NEXT(&g->nlm_hosts_tree, hostp)) {
+		/*
+		 * If host is idle, remove it from idle list and
+		 * clear idle flag. That is done to prevent GC
+		 * from touching this host.
+		 */
+		if (hostp->nh_flags & NLM_NH_INIDLE) {
+			TAILQ_REMOVE(&g->nlm_idle_hosts, hostp, nh_link);
+			hostp->nh_flags &= ~NLM_NH_INIDLE;
+		}
+
+		hostp->nh_refs++;
+		TAILQ_INSERT_TAIL(&all_hosts, hostp, nh_link);
+	}
+
+	/*
+	 * Now we can walk through all hosts on the system
+	 * with zone globals lock released. The fact the
+	 * we have taken a reference to each host guaranties
+	 * that no hosts can be destroyed during that process.
+	 */
+	mutex_exit(&g->lock);
+	while ((hostp = TAILQ_FIRST(&all_hosts)) != NULL) {
+		mutex_enter(&hostp->nh_lock);
+		if (nlm_host_has_locks(hostp))
+			hostp->nh_flags |= NLM_NH_SUSPEND;
+
+		mutex_exit(&hostp->nh_lock);
+		TAILQ_REMOVE(&all_hosts, hostp, nh_link);
+	}
+}
+
+/*
+ * Resume NLM hosts for the given zone.
+ *
+ * nlm_resume_zone() is called after hosts were suspended
+ * (see nlm_suspend_zone) and its main purpose to check
+ * whether remote locks owned by hosts are still in consistent
+ * state. If they aren't, resume function tries to reclaim
+ * reclaim locks (for client side hosts) and clean locks (for
+ * server side hosts).
+ */
+static void
+nlm_resume_zone(struct nlm_globals *g)
+{
+	struct nlm_host *hostp, *h_next;
+
+	mutex_enter(&g->lock);
+	hostp = avl_first(&g->nlm_hosts_tree);
+
+	/*
+	 * In nlm_suspend_zone() the reference counter of each
+	 * host was incremented, so we can safely iterate through
+	 * all hosts without worrying that any host we touch will
+	 * be removed at the moment.
+	 */
+	while (hostp != NULL) {
+		struct nlm_nsm nsm;
+		enum clnt_stat stat;
+		int32_t sm_state;
+		int error;
+		bool_t resume_failed = FALSE;
+
+		h_next = AVL_NEXT(&g->nlm_hosts_tree, hostp);
+		mutex_exit(&g->lock);
+
+		DTRACE_PROBE1(resume__host, struct nlm_host *, hostp);
+
+		/*
+		 * Suspend operation marked that the host doesn't
+		 * have any locks. Skip it.
+		 */
+		if (!(hostp->nh_flags & NLM_NH_SUSPEND))
+			goto cycle_end;
+
+		error = nlm_nsm_init(&nsm, &hostp->nh_knc, &hostp->nh_addr);
+		if (error != 0) {
+			NLM_ERR("Resume: Failed to contact to NSM of host %s "
+			    "[error=%d]\n", hostp->nh_name, error);
+			resume_failed = TRUE;
+			goto cycle_end;
+		}
+
+		stat = nlm_nsm_stat(&nsm, &sm_state);
+		if (stat != RPC_SUCCESS) {
+			NLM_ERR("Resume: Failed to call SM_STAT operation for "
+			    "host %s [stat=%d]\n", hostp->nh_name, stat);
+			resume_failed = TRUE;
+			goto cycle_end;
+		}
+
+		if (sm_state != hostp->nh_state) {
+			/*
+			 * Current SM state of the host isn't equal
+			 * to the one host had when it was suspended.
+			 * Probably it was rebooted. Try to reclaim
+			 * locks if the host has any on its client side.
+			 * Also try to clean up its server side locks
+			 * (if the host has any).
+			 */
+			nlm_host_notify_client(hostp, sm_state);
+			nlm_host_notify_server(hostp, sm_state);
+		}
+
+cycle_end:
+		if (resume_failed) {
+			/*
+			 * Resume failed for the given host.
+			 * Just clean up all resources it owns.
+			 */
+			nlm_host_notify_server(hostp, 0);
+			nlm_client_cancel_all(g, hostp);
+		}
+
+		hostp->nh_flags &= ~NLM_NH_SUSPEND;
+		nlm_host_release(g, hostp);
+		hostp = h_next;
+		mutex_enter(&g->lock);
+	}
+
+	mutex_exit(&g->lock);
 }
 
 /*
@@ -1094,7 +1249,6 @@ nlm_host_notify_server(struct nlm_host *hostp, int32_t state)
  * star the "recovery" process to reclaim any locks
  * we hold on this server.
  */
-
 void
 nlm_host_notify_client(struct nlm_host *hostp, int32_t state)
 {
@@ -1243,16 +1397,13 @@ nlm_host_gc_vholds(struct nlm_host *hostp)
 }
 
 /*
- * Determine whether the given host owns any
- * locks or share reservations.
+ * Check whether the given host has any
+ * server side locks or share reservations.
  */
 static bool_t
-nlm_host_has_locks(struct nlm_host *hostp)
+nlm_host_has_srv_locks(struct nlm_host *hostp)
 {
-	ASSERT(MUTEX_HELD(&hostp->nh_lock));
-
 	/*
-	 * Check the server side at first.
 	 * It's cheap and simple: if server has
 	 * any locks/shares there must be vhold
 	 * object storing the affected vnode.
@@ -1263,12 +1414,23 @@ nlm_host_has_locks(struct nlm_host *hostp)
 	 * there must be a vhold object corresponding
 	 * to target vnode.
 	 */
+	ASSERT(MUTEX_HELD(&hostp->nh_lock));
 	if (!TAILQ_EMPTY(&hostp->nh_vholds_list))
 		return (TRUE);
 
+	return (FALSE);
+}
+
+/*
+ * Check whether the given host has any client side
+ * locks or share reservations.
+ */
+static bool_t
+nlm_host_has_cli_locks(struct nlm_host *hostp)
+{
+	ASSERT(MUTEX_HELD(&hostp->nh_lock));
+
 	/*
-	 * Then check whether cliet side made any locks.
-	 *
 	 * XXX: It's not the way I'd like to do the check,
 	 * because flk_sysid_has_locks() can be very
 	 * expensive by design. Unfortunatelly it iterates
@@ -1299,6 +1461,19 @@ nlm_host_has_locks(struct nlm_host *hostp)
 		return (TRUE);
 
 	return (FALSE);
+}
+
+/*
+ * Determine whether the given host owns any
+ * locks or share reservations.
+ */
+static bool_t
+nlm_host_has_locks(struct nlm_host *hostp)
+{
+	if (nlm_host_has_srv_locks(hostp))
+		return (TRUE);
+
+	return (nlm_host_has_cli_locks(hostp));
 }
 
 /*
@@ -2205,7 +2380,7 @@ nlm_svc_stopping(struct nlm_globals *g)
 	/*
 	 * Cleanup locks owned by NLM hosts.
 	 * NOTE: New hosts won't be created while
-	 * NLM is topping.
+	 * NLM is stopping.
 	 */
 	while (!avl_is_empty(&g->nlm_hosts_tree)) {
 		struct nlm_host *hostp;
@@ -2476,6 +2651,30 @@ nlm_knc_activate(struct knetconfig *knc)
 			break;
 		}
 	}
+
+	rw_exit(&lm_lck);
+}
+
+void
+nlm_cprsuspend(void)
+{
+     struct nlm_globals *g;
+
+     rw_enter(&lm_lck, RW_READER);
+     TAILQ_FOREACH(g, &nlm_zones_list, nlm_link)
+          nlm_suspend_zone(g);
+
+     rw_exit(&lm_lck);
+}
+
+void
+nlm_cprresume(void)
+{
+	struct nlm_globals *g;
+
+	rw_enter(&lm_lck, RW_READER);
+	TAILQ_FOREACH(g, &nlm_zones_list, nlm_link)
+		nlm_resume_zone(g);
 
 	rw_exit(&lm_lck);
 }
