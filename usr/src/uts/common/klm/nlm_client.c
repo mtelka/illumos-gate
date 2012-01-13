@@ -391,7 +391,7 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 		error = nlm_local_getlk(vp, &flk0, flags);
 		if (error != 0 && flk0.l_type != F_UNLCK) {
 			/* Found a conflicting lock. */
-			error = EAGAIN;
+			return (EAGAIN);
 		}
 
 		xflags = 0;
@@ -772,7 +772,6 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 			continue;
 		}
 
-
 		switch (nlm_err) {
 		case nlm4_granted:
 		case nlm4_blocked:
@@ -780,7 +779,12 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 			break;
 
 		case nlm4_denied:
-			error = ENOLCK;
+			if (nslp != NULL) {
+				NLM_WARN("nlm_call_lock: got nlm4_denied for "
+					"blocking lock\n");
+			}
+
+			error = EAGAIN;
 			break;
 
 		default:
