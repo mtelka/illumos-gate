@@ -100,7 +100,7 @@ nlm_test_rpc(nlm4_testargs *args, nlm4_testres *res,
 		args1.cookie = args->cookie;
 		args1.exclusive = args->exclusive;
 		nlm_convert_to_nlm_lock(&args1.alock, &args->alock);
-		memset(&res1, 0, sizeof (res1));
+		(void) memset(&res1, 0, sizeof (res1));
 
 		stat = nlm_test_1(&args1, &res1, client);
 
@@ -134,7 +134,7 @@ nlm_lock_rpc(nlm4_lockargs *args, nlm4_res *res,
 		nlm_convert_to_nlm_lock(&args1.alock, &args->alock);
 		args1.reclaim = args->reclaim;
 		args1.state = args->state;
-		memset(&res1, 0, sizeof (res1));
+		(void) memset(&res1, 0, sizeof (res1));
 
 		stat = nlm_lock_1(&args1, &res1, client);
 
@@ -161,7 +161,7 @@ nlm_cancel_rpc(nlm4_cancargs *args, nlm4_res *res,
 		args1.block = args->block;
 		args1.exclusive = args->exclusive;
 		nlm_convert_to_nlm_lock(&args1.alock, &args->alock);
-		memset(&res1, 0, sizeof (res1));
+		(void) memset(&res1, 0, sizeof (res1));
 
 		stat = nlm_cancel_1(&args1, &res1, client);
 
@@ -186,7 +186,7 @@ nlm_unlock_rpc(nlm4_unlockargs *args, nlm4_res *res,
 
 		args1.cookie = args->cookie;
 		nlm_convert_to_nlm_lock(&args1.alock, &args->alock);
-		memset(&res1, 0, sizeof (res1));
+		(void) memset(&res1, 0, sizeof (res1));
 
 		stat = nlm_unlock_1(&args1, &res1, client);
 
@@ -246,7 +246,7 @@ nlm_share_rpc(nlm4_shareargs *args, nlm4_shareres *res,
 		args3.cookie = args->cookie;
 		nlm_convert_to_nlm_share(&args3.share, &args->share);
 		args3.reclaim = args->reclaim;
-		memset(&res3, 0, sizeof (res3));
+		(void) memset(&res3, 0, sizeof (res3));
 
 		stat = nlm_share_3(&args3, &res3, client);
 
@@ -272,7 +272,7 @@ nlm_unshare_rpc(nlm4_shareargs *args, nlm4_shareres *res,
 		args3.cookie = args->cookie;
 		nlm_convert_to_nlm_share(&args3.share, &args->share);
 		args3.reclaim = args->reclaim;
-		memset(&res3, 0, sizeof (res3));
+		(void) memset(&res3, 0, sizeof (res3));
 
 		stat = nlm_unshare_3(&args3, &res3, client);
 

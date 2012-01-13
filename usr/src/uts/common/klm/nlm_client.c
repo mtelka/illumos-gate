@@ -96,10 +96,10 @@ static void nlm_init_lock(struct nlm4_lock *,
 static int nlm_call_lock(vnode_t *, struct flock64 *,
     struct nlm_host *, struct netobj *,
     struct flk_callback *, int, int);
-static int nlm_call_unlock(vnode_t *, struct flock64 *,
-    struct nlm_host *, struct netobj *, int);
-static int nlm_call_test(vnode_t *, struct flock64 *,
-    struct nlm_host *, struct netobj *, int);
+static int nlm_call_unlock(struct flock64 *, struct nlm_host *,
+    struct netobj *, int);
+static int nlm_call_test(struct flock64 *, struct nlm_host *,
+    struct netobj *, int);
 static int nlm_call_cancel(struct nlm4_lockargs *,
     struct nlm_host *, int);
 
@@ -110,10 +110,10 @@ static void nlm_local_cancelk(vnode_t *, struct flock64 *);
 static void nlm_init_share(struct nlm4_share *,
     const struct shrlock *, struct netobj *);
 
-static int nlm_call_share(vnode_t *, struct shrlock *,
-    struct nlm_host *, struct netobj *, int, int);
-static int nlm_call_unshare(struct vnode *, struct shrlock *,
-	struct nlm_host *, struct netobj *, int);
+static int nlm_call_share(struct shrlock *, struct nlm_host *,
+    struct netobj *, int, int);
+static int nlm_call_unshare(struct shrlock *, struct nlm_host *,
+    struct netobj *, int);
 static int nlm_reclaim_share(struct nlm_host *, vnode_t *,
     struct shrlock *, uint32_t);
 static int nlm_local_shrlock(vnode_t *, struct shrlock *, int, int);
@@ -212,7 +212,7 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
 			if (error == 0) {
 				nsp = nsp->ns_next;
 				continue;
-			} else if (error = ERESTART) {
+			} else if (error == ERESTART) {
 				break;
 			} else {
 				/* Failed to reclaim share */
@@ -241,6 +241,7 @@ nlm_reclaim_client(struct nlm_globals *g, struct nlm_host *hostp)
  *
  * Was: nlm_advlock()
  */
+/* ARGSUSED */
 int
 nlm_frlock(struct vnode *vp, int cmd, struct flock64 *flkp,
 	int flags, u_offset_t offset, struct cred *crp,
@@ -328,7 +329,7 @@ nlm_frlock_getlk(struct nlm_host *hostp, vnode_t *vp,
 	if (error != 0)
 		return (error);
 
-	error = nlm_call_test(vp, &flk0, hostp, fhp, vers);
+	error = nlm_call_test(&flk0, hostp, fhp, vers);
 	if (error != 0)
 		return (error);
 
@@ -376,7 +377,7 @@ nlm_frlock_setlk(struct nlm_host *hostp, vnode_t *vp,
 		 * then clear the remote lock.
 		 */
 		(void) nlm_local_setlk(vp, flkp, flags);
-		error = nlm_call_unlock(vp, flkp, hostp, fhp, vers);
+		error = nlm_call_unlock(flkp, hostp, fhp, vers);
 
 		return (error);
 	}
@@ -453,8 +454,8 @@ nlm_client_cancel_all(struct nlm_globals *g, struct nlm_host *hostp)
 
 		error = nlm_init_fh_by_vp(llp->ll_vp, &lm_fh, &vers);
 		if (error == 0)
-			(void) nlm_call_unlock(llp->ll_vp, &llp->ll_flock,
-			    hostp, &lm_fh, vers);
+			(void) nlm_call_unlock(&llp->ll_flock, hostp,
+			    &lm_fh, vers);
 
 		nlm_local_cancelk(llp->ll_vp, &llp->ll_flock);
 		llp = llp->ll_next;
@@ -469,8 +470,8 @@ nlm_client_cancel_all(struct nlm_globals *g, struct nlm_host *hostp)
 	while (nsp != NULL) {
 		error = nlm_init_fh_by_vp(nsp->ns_vp, &lm_fh, &vers);
 		if (error == 0)
-			(void) nlm_call_unshare(nsp->ns_vp, nsp->ns_shr,
-			    hostp, &lm_fh, vers);
+			(void) nlm_call_unshare(nsp->ns_shr, hostp,
+			    &lm_fh, vers);
 
 		nlm_local_shrcancel(nsp->ns_vp, nsp->ns_shr);
 		nlm_shres_untrack(hostp, nsp->ns_vp, nsp->ns_shr);
@@ -571,7 +572,8 @@ nlm_has_sleep(const vnode_t *vp)
 	g = zone_getspecific(nlm_zone_key, curzone);
 	mutex_enter(&g->lock);
 	TAILQ_FOREACH(nslp, &g->nlm_slocks, nsl_link) {
-		if (nslp->nsl_state == NLM_SL_BLOCKED) {
+		if (nslp->nsl_state	== NLM_SL_BLOCKED &&
+		    nslp->nsl_vp	== vp) {
 			has_slocks = TRUE;
 			break;
 		}
@@ -593,7 +595,7 @@ nlm_register_lock_locally(struct vnode *vp, struct nlm_host *hostp,
 	}
 
 	flk->l_sysid = sysid;
-	convoff(vp, flk, 0, (offset_t)offset);
+	(void) convoff(vp, flk, 0, (offset_t)offset);
 	(void) nlm_local_setlk(vp, flk, flags);
 }
 
@@ -688,8 +690,6 @@ nlm_local_setlk(vnode_t *vp, struct flock64 *fl, int flags)
 static void
 nlm_local_cancelk(vnode_t *vp, struct flock64 *flp)
 {
-	proc_t *p;
-
 	flp->l_type = F_UNLCK;
 	(void) nlm_local_setlk(vp, flp, FREAD | FWRITE);
 	nlm_send_siglost(flp->l_pid);
@@ -816,7 +816,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		 * Take care on rnode->r_lkserlock, we should
 		 * release it before going to sleep.
 		 */
-		flk_invoke_callbacks(flcb, FLK_BEFORE_SLEEP);
+		(void) flk_invoke_callbacks(flcb, FLK_BEFORE_SLEEP);
 		nfs_rw_exit(&rnp->r_lkserlock);
 
 		error = nlm_slock_wait(g, nslp, g->retrans_tmo);
@@ -832,8 +832,8 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		 * we return with rnode->r_lkserlock acquired. So we don't
 		 * want our lock attempt to be interrupted by a signal.
 		 */
-		nfs_rw_enter_sig(&rnp->r_lkserlock, RW_WRITER, 0);
-		flk_invoke_callbacks(flcb, FLK_AFTER_SLEEP);
+		(void) nfs_rw_enter_sig(&rnp->r_lkserlock, RW_WRITER, 0);
+		(void) flk_invoke_callbacks(flcb, FLK_AFTER_SLEEP);
 
 		if (error == 0) {
 			break;
@@ -843,7 +843,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 			 * lock request.
 			 */
 			DTRACE_PROBE1(cancel__lock, int, error);
-			nlm_call_cancel(&args, hostp, vers);
+			(void) nlm_call_cancel(&args, hostp, vers);
 			break;
 		} else {
 			/*
@@ -957,8 +957,8 @@ nlm_call_cancel(struct nlm4_lockargs *largs,
  * Was: nlm_clearlock
  */
 static int
-nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
-	struct nlm_host *hostp, struct netobj *fhp, int vers)
+nlm_call_unlock(struct flock64 *flp, struct nlm_host *hostp,
+    struct netobj *fhp, int vers)
 {
 	struct nlm4_unlockargs args;
 	struct nlm_owner_handle oh;
@@ -1027,8 +1027,8 @@ nlm_call_unlock(struct vnode *vp, struct flock64 *flp,
  * Was: nlm_getlock()
  */
 static int
-nlm_call_test(struct vnode *vp, struct flock64 *flp,
-	struct nlm_host *hostp, struct netobj *fhp, int vers)
+nlm_call_test(struct flock64 *flp, struct nlm_host *hostp,
+    struct netobj *fhp, int vers)
 {
 	struct nlm4_testargs args;
 	struct nlm4_holder h;
@@ -1139,7 +1139,7 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 	servinfo_t *sv;
 	const char *netid;
 	struct nlm_host *host = NULL;
-	int error, xflags;
+	int error;
 	struct nlm_globals *g;
 
 	mi = VTOMI(vp);
@@ -1171,14 +1171,14 @@ nlm_shrlock(struct vnode *vp, int cmd, struct shrlock *shr,
 		 */
 		(void) nlm_local_shrlock(vp, &shlk, cmd, flags);
 		nlm_shres_untrack(host, vp, &shlk);
-		error = nlm_call_unshare(vp, &shlk, host, fh, vers);
+		error = nlm_call_unshare(&shlk, host, fh, vers);
 		goto out;
 	}
 
 	nfs_add_locking_id(vp, curproc->p_pid, RLMPL_OWNER,
 	    shr->s_owner, shr->s_own_len);
 
-	error = nlm_call_share(vp, &shlk, host, fh, vers, FALSE);
+	error = nlm_call_share(&shlk, host, fh, vers, FALSE);
 	if (error != 0)
 		goto out;
 
@@ -1226,7 +1226,7 @@ nlm_reclaim_share(struct nlm_host *hostp, vnode_t *vp,
 	if (error != 0)
 		return (error);
 
-	return (nlm_call_share(vp, shr, hostp, &lm_fh,
+	return (nlm_call_share(shr, hostp, &lm_fh,
 		vers, 1));
 }
 
@@ -1260,18 +1260,15 @@ nlm_local_shrcancel(vnode_t *vp, struct shrlock *shr)
  * Was: nlm_setshare()
  */
 static int
-nlm_call_share(vnode_t *vp, struct shrlock *shr,
-	struct nlm_host *host, struct netobj *fh,
-	int vers, int reclaim)
+nlm_call_share(struct shrlock *shr, struct nlm_host *host,
+    struct netobj *fh, int vers, int reclaim)
 {
 	struct nlm4_shareargs args;
-	struct nlm_globals *g;
 	enum nlm4_stats nlm_err;
 	uint32_t xid;
 	int error;
 
 	bzero(&args, sizeof (args));
-	g = zone_getspecific(nlm_zone_key, curzone);
 	nlm_init_share(&args.share, shr, fh);
 
 	args.reclaim = reclaim;
@@ -1342,8 +1339,8 @@ nlm_call_share(vnode_t *vp, struct shrlock *shr,
  * Do NLM_UNSHARE call.
  */
 static int
-nlm_call_unshare(struct vnode *vp, struct shrlock *shr,
-	struct nlm_host *host, struct netobj *fh, int vers)
+nlm_call_unshare(struct shrlock *shr, struct nlm_host *host,
+    struct netobj *fh, int vers)
 {
 	struct nlm4_shareargs args;
 	enum nlm4_stats nlm_err;

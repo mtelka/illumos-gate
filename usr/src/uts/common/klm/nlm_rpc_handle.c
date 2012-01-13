@@ -85,7 +85,6 @@ static void
 update_host_rpcbinding(struct nlm_host *hostp, int vers)
 {
 	enum clnt_stat stat;
-	int ret = 0;
 
 	ASSERT(MUTEX_HELD(&hostp->nh_lock));
 
@@ -287,6 +286,7 @@ nlm_rpc_cache_destroy(struct nlm_host *hostp)
 	}
 }
 
+/* ARGSUSED */
 static int
 nlm_rpch_ctor(void *datap, void *cdrarg, int kmflags)
 {
@@ -296,6 +296,7 @@ nlm_rpch_ctor(void *datap, void *cdrarg, int kmflags)
 	return (0);
 }
 
+/* ARGSUSED */
 static void
 nlm_rpch_dtor(void *datap, void *cdrarg)
 {

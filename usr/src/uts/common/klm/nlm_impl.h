@@ -496,8 +496,7 @@ void nlm_unexport(struct exportinfo *);
 int nlm_svc_starting(struct nlm_globals *, struct file *,
     const char *, struct knetconfig *);
 void nlm_svc_stopping(struct nlm_globals *);
-int nlm_svc_add_ep(struct nlm_globals *, struct file *,
-    const char *, struct knetconfig *);
+int nlm_svc_add_ep(struct file *, const char *, struct knetconfig *);
 
 /*
  * NLM suspend/resume

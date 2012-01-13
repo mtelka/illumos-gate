@@ -66,6 +66,7 @@ zone_key_t		nlm_zone_key;
 /*
  * Init/fini per-zone stuff for klm
  */
+/* ARGSUSED */
 void *
 lm_zone_init(zoneid_t zoneid)
 {
@@ -94,6 +95,7 @@ lm_zone_init(zoneid_t zoneid)
 	return (g);
 }
 
+/* ARGSUSED */
 void
 lm_zone_fini(zoneid_t zoneid, void *data)
 {
@@ -178,7 +180,6 @@ lm_svc(struct lm_svc_args *args)
 	struct nlm_globals *g;
 	struct file *fp = NULL;
 	int err = 0;
-	bool_t nlm_started = FALSE;
 
 	/* Get our "globals" */
 	g = zone_getspecific(nlm_zone_key, curzone);
@@ -292,7 +293,7 @@ lm_svc(struct lm_svc_args *args)
 			goto out;
 		}
 
-		err = nlm_svc_add_ep(g, fp, netid, &knc);
+		err = nlm_svc_add_ep(fp, netid, &knc);
 	}
 
 out:
@@ -314,7 +315,6 @@ lm_shutdown(void)
 	struct nlm_globals *g;
 	proc_t *p;
 	pid_t pid;
-	int err;
 
 	/* Get our "globals" */
 	g = zone_getspecific(nlm_zone_key, curzone);
@@ -395,6 +395,7 @@ lm_set_nlmid_flk(int *new_sysid)
 void
 lm_free_config(struct knetconfig *knc)
 {
+	_NOTE(ARGUNUSED(knc));
 }
 
 /*
@@ -439,6 +440,7 @@ lm_get_sysid(struct knetconfig *knc, struct netbuf *addr,
 	const char *netid;
 	struct nlm_host *hostp;
 
+	_NOTE(ARGUNUSED(nc_changed));
 	netid = nlm_knc_to_netid(knc);
 	if (netid == NULL)
 		return (NULL);

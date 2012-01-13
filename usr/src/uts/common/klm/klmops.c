@@ -142,10 +142,13 @@ lm_register_lock_locally(struct vnode *vp, struct lm_sysid *ls,
 void
 lm_nlm_dispatch(struct svc_req *req, SVCXPRT *xprt)
 {
+	_NOTE(ARGUNUSED(req, xprt))
 }
+
 void
 lm_nlm4_dispatch(struct svc_req *req, SVCXPRT *xprt)
 {
+	_NOTE(ARGUNUSED(req, xprt))
 }
 
 /*
@@ -157,8 +160,11 @@ lm_nlm4_dispatch(struct svc_req *req, SVCXPRT *xprt)
 void
 lm_nlm_reclaim(struct vnode *vp, struct flock64 *flkp)
 {
+	_NOTE(ARGUNUSED(vp, flkp))
 }
+
 void
 lm_nlm4_reclaim(struct vnode *vp, struct flock64 *flkp)
 {
+	_NOTE(ARGUNUSED(vp, flkp))
 }

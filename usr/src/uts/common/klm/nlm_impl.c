@@ -220,7 +220,7 @@ static void nlm_resume_zone(struct nlm_globals *);
 /*
  * NLM thread functions
  */
-static void nlm_hosts_gc(struct nlm_globals *);
+static void nlm_gc(struct nlm_globals *);
 static void nlm_reclaimer(struct nlm_host *);
 
 /*
@@ -234,7 +234,6 @@ static enum clnt_stat nlm_nsm_simu_crash(struct nlm_nsm *);
 static enum clnt_stat nlm_nsm_stat(struct nlm_nsm *, int32_t *);
 static enum clnt_stat nlm_nsm_mon(struct nlm_nsm *, char *, uint16_t);
 static enum clnt_stat nlm_nsm_unmon(struct nlm_nsm *, char *);
-static enum clnt_stat nlm_nsm_unmon_all(struct nlm_nsm *);
 
 /*
  * NLM host functions
@@ -242,8 +241,8 @@ static enum clnt_stat nlm_nsm_unmon_all(struct nlm_nsm *);
 static int nlm_host_ctor(void *, void *, int);
 static void nlm_host_dtor(void *, void *);
 static void nlm_host_destroy(struct nlm_host *);
-static struct nlm_host *nlm_host_create(struct nlm_globals *,
-    char *, const char *, struct knetconfig *, struct netbuf *);
+static struct nlm_host *nlm_host_create(char *, const char *,
+    struct knetconfig *, struct netbuf *);
 static struct nlm_host *nlm_host_find_locked(struct nlm_globals *,
     const char *, struct netbuf *, avl_index_t *);
 static void nlm_host_unregister(struct nlm_globals *, struct nlm_host *);
@@ -316,6 +315,7 @@ nlm_globals_unregister(struct nlm_globals *g)
 	rw_exit(&lm_lck);
 }
 
+/* ARGSUSED */
 static void
 nlm_kmem_reclaim(void *cdrarg)
 {
@@ -358,7 +358,7 @@ nlm_gc(struct nlm_globals *g)
 		 * GC thread can be explicitly scheduled from
 		 * memory reclamation function.
 		 */
-		cv_timedwait(&g->nlm_gc_sched_cv, &g->lock,
+		(void) cv_timedwait(&g->nlm_gc_sched_cv, &g->lock,
 		    ddi_get_lbolt() + idle_period);
 
 		/*
@@ -922,28 +922,6 @@ nlm_nsm_unmon(struct nlm_nsm *nsm, char *hostname)
 	return (stat);
 }
 
-static enum clnt_stat
-nlm_nsm_unmon_all(struct nlm_nsm *nsm)
-{
-	struct my_id args;
-	struct sm_stat res;
-	enum clnt_stat stat;
-
-	bzero(&args, sizeof (args));
-	bzero(&res, sizeof (res));
-
-	args.my_name = uts_nodename();
-	args.my_prog = NLM_PROG;
-	args.my_vers = NLM_SM;
-	args.my_proc = NLM_SM_NOTIFY1;
-
-	sema_v(&nsm->ns_sem);
-	stat = sm_unmon_all_1(&args, &res, nsm->ns_handle);
-	sema_p(&nsm->ns_sem);
-
-	return (stat);
-}
-
 /*
  * Get NLM vhold object corresponding to vnode "vp".
  * If no such object was found, create a new one.
@@ -1068,6 +1046,7 @@ nlm_vhold_busy(struct nlm_host *hostp, struct nlm_vhold *nvp)
 	return (FALSE);
 }
 
+/* ARGSUSED */
 static int
 nlm_vhold_ctor(void *datap, void *cdrarg, int kmflags)
 {
@@ -1077,6 +1056,7 @@ nlm_vhold_ctor(void *datap, void *cdrarg, int kmflags)
 	return (0);
 }
 
+/* ARGSUSED */
 static void
 nlm_vhold_dtor(void *datap, void *cdrarg)
 {
@@ -1117,6 +1097,7 @@ nlm_copy_netbuf(struct netbuf *dst, struct netbuf *src)
 	bcopy(src->buf, dst->buf, src->len);
 }
 
+/* ARGSUSED */
 static int
 nlm_host_ctor(void *datap, void *cdrarg, int kmflags)
 {
@@ -1126,6 +1107,7 @@ nlm_host_ctor(void *datap, void *cdrarg, int kmflags)
 	return (0);
 }
 
+/* ARGSUSED */
 static void
 nlm_host_dtor(void *datap, void *cdrarg)
 {
@@ -1317,8 +1299,8 @@ nlm_host_wait_grace(struct nlm_host *hostp)
  * netid.
  */
 static struct nlm_host *
-nlm_host_create(struct nlm_globals *g, char *name,
-    const char *netid, struct knetconfig *knc, struct netbuf *naddr)
+nlm_host_create(char *name, const char *netid,
+    struct knetconfig *knc, struct netbuf *naddr)
 {
 	struct nlm_host *host;
 
@@ -1637,7 +1619,7 @@ nlm_host_findcreate(struct nlm_globals *g, char *name,
 	 * Do allocations (etc.) outside of mutex,
 	 * and then check again before inserting.
 	 */
-	newhost = nlm_host_create(g, name, netid, &knc, addr);
+	newhost = nlm_host_create(name, netid, &knc, addr);
 	newhost->nh_sysid = nlm_sysid_alloc();
 	if (newhost->nh_sysid == LM_NOSYSID)
 		goto out;
@@ -1680,14 +1662,13 @@ out:
 struct nlm_host *
 nlm_host_find_by_sysid(struct nlm_globals *g, sysid_t sysid)
 {
-	mod_hash_val_t hval;
 	struct nlm_host *hostp = NULL;
 
 	mutex_enter(&g->lock);
 	if (g->run_status != NLM_ST_UP)
 		goto out;
 
-	mod_hash_find(g->nlm_hosts_hash,
+	(void) mod_hash_find(g->nlm_hosts_hash,
 	    (mod_hash_key_t)(uintptr_t)sysid,
 	    (mod_hash_val_t)&hostp);
 
@@ -1854,12 +1835,8 @@ nlm_slock_register(
 	struct nlm4_lock *lock,
 	struct vnode *vp)
 {
-	struct nlm_owner_handle *oh;
 	struct nlm_slock *nslp;
 
-	ASSERT(lock->oh.n_len == sizeof (*oh));
-
-	oh = (void *) lock->oh.n_bytes;
 	nslp = kmem_zalloc(sizeof (*nslp), KM_SLEEP);
 	cv_init(&nslp->nsl_cond, NULL, CV_DEFAULT, NULL);
 	nslp->nsl_lock = *lock;
@@ -1907,7 +1884,6 @@ int
 nlm_slock_wait(struct nlm_globals *g,
     struct nlm_slock *nslp, uint_t timeo_secs)
 {
-	struct nlm_host *host = nslp->nsl_host;
 	clock_t timeo_ticks;
 	int cv_res, error;
 
@@ -2246,8 +2222,7 @@ nlm_shres_destroy_item(struct nlm_shres *nsp)
  * on which we should begin RPC services.
  */
 int
-nlm_svc_add_ep(struct nlm_globals *g, struct file *fp,
-    const char *netid, struct knetconfig *knc)
+nlm_svc_add_ep(struct file *fp, const char *netid, struct knetconfig *knc)
 {
 	SVC_CALLOUT_TABLE *sct;
 	SVCMASTERXPRT *xprt = NULL;
@@ -2274,7 +2249,6 @@ int
 nlm_svc_starting(struct nlm_globals *g, struct file *fp,
     const char *netid, struct knetconfig *knc)
 {
-	clock_t time_uptime;
 	int error;
 	enum clnt_stat stat;
 
@@ -2322,7 +2296,7 @@ nlm_svc_starting(struct nlm_globals *g, struct file *fp,
 	    SEC_TO_TICK(g->grace_period);
 
 	/* Register endpoint used for communications with local NLM */
-	error = nlm_svc_add_ep(g, fp, netid, knc);
+	error = nlm_svc_add_ep(fp, netid, knc);
 	if (error != 0)
 		goto shutdown_lm;
 

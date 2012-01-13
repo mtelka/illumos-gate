@@ -95,7 +95,8 @@ struct nlm_block_cb_data {
 			    "stat %d, err %d\n", descr, _stat,		\
 			    _err.re_errno);				\
 		}							\
-	} while (0)
+									\
+	_NOTE(CONSTCOND) } while (0)
 
 static void nlm_block(
 	nlm4_lockargs *lockargs,
@@ -103,8 +104,7 @@ static void nlm_block(
 	struct nlm_vhold *nvp,
 	nlm_rpc_t *rpcp,
 	struct flock64 *fl,
-	nlm_testargs_cb grant_cb,
-	rpcvers_t vers);
+	nlm_testargs_cb grant_cb);
 
 static void nlm_init_flock(struct flock64 *, struct nlm4_lock *, int);
 static vnode_t *nlm_fh_to_vp(struct netobj *);
@@ -315,7 +315,7 @@ nlm_do_test(nlm4_testargs *argp, nlm4_testres *resp,
 		lh->l_len = fl.l_len;
 
 		bzero(&oh, sizeof (oh));
-		oh.oh_sysid = fl.l_sysid;
+		oh.oh_sysid = (sysid_t)fl.l_sysid;
 	}
 
 out:
@@ -547,10 +547,10 @@ doreply:
 		 */
 		ASSERT(rpcp != NULL);
 		(void) svc_detach_thread(sr->rq_xprt);
-		nlm_block(argp, host, nvp, rpcp, &fl, grant_cb, sr->rq_vers);
+		nlm_block(argp, host, nvp, rpcp, &fl, grant_cb);
 	}
 
-	DTRACE_PROBE3(end, struct nlm_globals *, g,
+	DTRACE_PROBE3(lock__end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
 	if (rpcp != NULL)
@@ -571,8 +571,7 @@ nlm_block(nlm4_lockargs *lockargs,
     struct nlm_vhold *nvp,
     nlm_rpc_t *rpcp,
     struct flock64 *flp,
-    nlm_testargs_cb grant_cb,
-    rpcvers_t vers)
+    nlm_testargs_cb grant_cb)
 {
 	nlm4_testargs args;
 	int error;
@@ -669,7 +668,6 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	char *netid;
 	char *name;
 	int error;
-	bool_t slreq_unreg = FALSE;
 	struct flock64 fl;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
@@ -735,7 +733,7 @@ out:
 	if (cb != NULL && rpcp != NULL)
 		NLM_INVOKE_CALLBACK("cancel", rpcp, resp, cb);
 
-	DTRACE_PROBE3(end, struct nlm_globals *, g,
+	DTRACE_PROBE3(cancel__end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
 	if (rpcp != NULL)
@@ -762,7 +760,6 @@ nlm_do_unlock(nlm4_unlockargs *argp, nlm4_res *resp,
 	char *netid;
 	char *name;
 	int error;
-	bool_t nvp_check_locks = FALSE;
 	struct flock64 fl;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
@@ -819,7 +816,7 @@ out:
 	if (cb != NULL && rpcp != NULL)
 		NLM_INVOKE_CALLBACK("unlock", rpcp, resp, cb);
 
-	DTRACE_PROBE3(end, struct nlm_globals *, g,
+	DTRACE_PROBE3(unlock__end, struct nlm_globals *, g,
 	    struct nlm_host *, host, nlm4_res *, resp);
 
 	if (vp != NULL)
@@ -909,9 +906,7 @@ nlm_do_free_all(nlm4_notify *argp, void *res, struct svc_req *sr)
 	struct nlm_host *host;
 	struct netbuf *addr;
 	char *netid;
-	char *name;
 
-	name = argp->name;
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
@@ -1056,13 +1051,11 @@ nlm_do_unshare(nlm4_shareargs *argp, nlm4_shareres *resp, struct svc_req *sr)
 	struct netbuf *addr;
 	vnode_t *vp = NULL;
 	char *netid;
-	char *name;
 	int error;
 	struct shrlock shr;
 
 	nlm_copy_netobj(&resp->cookie, &argp->cookie);
 
-	name = argp->share.caller_name;
 	netid = svc_getnetid(sr->rq_xprt);
 	addr = svc_getrpccaller(sr->rq_xprt);
 
