@@ -671,6 +671,7 @@ nlm_resume_zone(struct nlm_globals *g)
 			NLM_ERR("Resume: Failed to call SM_STAT operation for "
 			    "host %s [stat=%d]\n", hostp->nh_name, stat);
 			resume_failed = TRUE;
+			nlm_nsm_fini(&nsm);
 			goto cycle_end;
 		}
 
@@ -686,6 +687,8 @@ nlm_resume_zone(struct nlm_globals *g)
 			nlm_host_notify_client(hostp, sm_state);
 			nlm_host_notify_server(hostp, sm_state);
 		}
+
+		nlm_nsm_fini(&nsm);
 
 cycle_end:
 		if (resume_failed) {
