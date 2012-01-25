@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
+ * Copyright 2012 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -140,28 +140,17 @@ static ulong_t	nlm_sysid_bmap[NLM_BMAP_WORDS];	/* (g) */
 static int	nlm_sysid_nidx;			/* (g) */
 
 /*
- * RPC service registrations for LOOPBACK,
- * allowed to call the real nlm_prog_2.
- * None of the others are used locally.
+ * RPC service registration for all transports
  */
-static SVC_CALLOUT nlm_svcs_lo[] = {
-	{ NLM_PROG, 2, 2, nlm_prog_2 } /* NLM_SM */
-};
-static SVC_CALLOUT_TABLE nlm_sct_lo = {
-	sizeof (nlm_svcs_lo) / sizeof (nlm_svcs_lo[0]),
-	FALSE,
-	nlm_svcs_lo
-};
-
-static SVC_CALLOUT nlm_svcs_in[] = {
+static SVC_CALLOUT nlm_svcs[] = {
 	{ NLM_PROG, 4, 4, nlm_prog_4 },	/* NLM4_VERS */
 	{ NLM_PROG, 1, 3, nlm_prog_3 }	/* NLM_VERS - NLM_VERSX */
 };
 
-static SVC_CALLOUT_TABLE nlm_sct_in = {
-	sizeof (nlm_svcs_in) / sizeof (nlm_svcs_in[0]),
+static SVC_CALLOUT_TABLE nlm_sct = {
+	ARRSIZE(nlm_svcs),
 	FALSE,
-	nlm_svcs_in
+	nlm_svcs
 };
 
 /*
@@ -226,7 +215,7 @@ static void nlm_reclaimer(struct nlm_host *);
 /*
  * NLM NSM functions
  */
-static int nlm_init_loopback_knc(struct knetconfig *);
+static int nlm_init_local_knc(struct knetconfig *);
 static int nlm_nsm_init_local(struct nlm_nsm *);
 static int nlm_nsm_init(struct nlm_nsm *, struct knetconfig *, struct netbuf *);
 static void nlm_nsm_fini(struct nlm_nsm *);
@@ -715,62 +704,54 @@ cycle_end:
 
 /*
  * Initialize knetconfig that is used for communication
- * with local statd via loopback transport.
+ * with local statd via loopback interface.
  */
 static int
-nlm_init_loopback_knc(struct knetconfig *knc)
+nlm_init_local_knc(struct knetconfig *knc)
 {
 	int error;
 	vnode_t *vp;
 
 	bzero(knc, sizeof (*knc));
-
-	error = lookupname("/dev/ticotsord", UIO_SYSSPACE,
+	error = lookupname("/dev/tcp", UIO_SYSSPACE,
 	    FOLLOW, NULLVPP, &vp);
 	if (error != 0)
 		return (error);
 
-	knc->knc_semantics = NC_TPI_COTS_ORD;
-	knc->knc_protofmly = NC_LOOPBACK;
-	knc->knc_proto = NC_NOPROTO;
+	knc->knc_semantics = NC_TPI_COTS;
+	knc->knc_protofmly = NC_INET;
+	knc->knc_proto = NC_TCP;
 	knc->knc_rdev = vp->v_rdev;
 	VN_RELE(vp);
+
 
 	return (0);
 }
 
 /*
  * Initialize NSM handle that will be used to talk
- * to local statd.
+ * to local statd via loopback interface.
  */
 static int
 nlm_nsm_init_local(struct nlm_nsm *nsm)
 {
 	int error;
-	char *nodename;
 	struct knetconfig knc;
+	struct sockaddr_in sin;
 	struct netbuf nb;
 
-	error = nlm_init_loopback_knc(&knc);
+	error = nlm_init_local_knc(&knc);
 	if (error != 0)
 		return (error);
 
-	/*
-	 * Initialize an address of local statd we'll talk to.
-	 * We use local transport for communication with local
-	 * NSM, so the address will be simply our nodename follwed
-	 * by a dot.
-	 */
-	nodename = uts_nodename();
-	nb.len = nb.maxlen = strlen(nodename) + 1;
-	nb.buf = kmem_zalloc(nb.len, KM_SLEEP);
-	(void) strncpy(nb.buf, nodename, nb.len - 1);
-	nb.buf[nb.len - 1] = '.';
+	bzero(&sin, sizeof (sin));
+	sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	sin.sin_family = AF_INET;
 
-	error = nlm_nsm_init(nsm, &knc, &nb);
-	kmem_free(nb.buf, nb.maxlen);
+	nb.buf = (char *)&sin;
+	nb.len = nb.maxlen = sizeof (sin);
 
-	return (error);
+	return (nlm_nsm_init(nsm, &knc, &nb));
 }
 
 /*
@@ -2227,17 +2208,11 @@ nlm_shres_destroy_item(struct nlm_shres *nsp)
 int
 nlm_svc_add_ep(struct file *fp, const char *netid, struct knetconfig *knc)
 {
-	SVC_CALLOUT_TABLE *sct;
 	SVCMASTERXPRT *xprt = NULL;
 	int error;
 
-	if (0 == strcmp(knc->knc_protofmly, NC_LOOPBACK))
-		sct = &nlm_sct_lo;
-	else
-		sct = &nlm_sct_in;
-
 	error = svc_tli_kcreate(fp, 0, (char *)netid, NULL, &xprt,
-	    sct, NULL, NLM_SVCPOOL_ID, FALSE);
+	    &nlm_sct, NULL, NLM_SVCPOOL_ID, FALSE);
 	if (error != 0)
 		return (error);
 
@@ -2555,6 +2530,41 @@ nlm_sysid_free(sysid_t sysid)
 }
 
 /*
+ * Return true if the request came from a local caller.
+ * By necessity, this "knows" the netid names invented
+ * in lm_svc() and nlm_netid_from_knetconfig().
+ */
+bool_t
+nlm_caller_is_local(SVCXPRT *transp)
+{
+	char *netid;
+	struct netbuf *rtaddr;
+
+	netid = svc_getnetid(transp);
+	rtaddr = svc_getrpccaller(transp);
+
+	if (netid == NULL)
+		return (FALSE);
+
+	if (strcmp(netid, "ticlts") == 0 ||
+	    strcmp(netid, "ticotsord") == 0)
+		return (TRUE);
+
+	if (strcmp(netid, "tcp") == 0 || strcmp(netid, "udp") == 0) {
+		struct sockaddr_in *sin = (void *)rtaddr->buf;
+		if (sin->sin_addr.s_addr == htonl(INADDR_LOOPBACK))
+			return (TRUE);
+	}
+	if (strcmp(netid, "tcp6") == 0 || strcmp(netid, "udp6") == 0) {
+		struct sockaddr_in6 *sin6 = (void *)rtaddr->buf;
+		if (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr))
+			return (TRUE);
+	}
+
+	return (FALSE); /* unknown transport */
+}
+
+/*
  * Get netid string correspondig to the
  * given knetconfig.
  */
@@ -2624,7 +2634,7 @@ nlm_knc_activate(struct knetconfig *knc)
 		    strcmp(knc_iter->knc_protofmly,
 		    knc->knc_protofmly) == 0 &&
 		    strcmp(knc_iter->knc_proto, knc->knc_proto) == 0) {
-		    knc_iter->knc_rdev = knc->knc_rdev;
+			knc_iter->knc_rdev = knc->knc_rdev;
 			break;
 		}
 	}

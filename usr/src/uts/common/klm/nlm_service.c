@@ -205,7 +205,7 @@ nlm_fh_to_vhold(struct nlm_host *hostp, struct netobj *fh)
  */
 /* ARGSUSED */
 void
-nlm_do_notify1(nlm_sm_status *argp, void *res, struct svc_req *sr)
+nlm_do_notify2(nlm_sm_status *argp, void *res, struct svc_req *sr)
 {
 	struct nlm_globals *g;
 	struct nlm_host *host;
@@ -232,7 +232,7 @@ nlm_do_notify1(nlm_sm_status *argp, void *res, struct svc_req *sr)
  */
 /* ARGSUSED */
 void
-nlm_do_notify2(nlm_sm_status *argp, void *res, struct svc_req *sr)
+nlm_do_notify1(nlm_sm_status *argp, void *res, struct svc_req *sr)
 {
 }
 
@@ -723,7 +723,7 @@ nlm_do_cancel(nlm4_cancargs *argp, nlm4_res *resp,
 	    (u_offset_t)0, NULL, CRED(), NULL);
 
 	resp->stat.stat = (error == 0) ?
-		nlm4_granted : nlm4_denied;
+	    nlm4_granted : nlm4_denied;
 
 out:
 	/*

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Nexenta Systems, Inc.  All rights reserved.
+ * Copyright 2012 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
  * Developed with Red Inc: Alfred Perlstein <alfred@freebsd.org>
@@ -540,7 +540,6 @@ enum clnt_stat nlm_unshare_rpc(nlm4_shareargs *, nlm4_shareres *,
  * RPC service functions.
  * nlm_dispatch.c
  */
-void nlm_prog_2(struct svc_req *rqstp, SVCXPRT *transp);
 void nlm_prog_3(struct svc_req *rqstp, SVCXPRT *transp);
 void nlm_prog_4(struct svc_req *rqstp, SVCXPRT *transp);
 
@@ -624,5 +623,6 @@ void nlm_do_free_all(nlm4_notify *, void *, struct svc_req *);
  */
 enum clnt_stat nlm_clnt_call(CLIENT *, rpcproc_t, xdrproc_t,
     caddr_t, xdrproc_t, caddr_t, struct timeval);
+bool_t nlm_caller_is_local(SVCXPRT *);
 
 #endif	/* _NLM_NLM_H_ */
