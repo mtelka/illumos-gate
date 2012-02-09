@@ -71,6 +71,15 @@
  */
 #define	NLM_CANCEL_NRETRS 5
 
+/*
+ * Determines wether given lock "flp" is safe.
+ * The lock is considered to be safe when it
+ * acquires the whole file (i.e. its start
+ * and len are zeroes).
+ */
+#define	NLM_FLOCK_IS_SAFE(flp) \
+	((flp)->l_start == 0 && (flp)->l_len == 0)
+
 static volatile uint32_t nlm_xid = 1;
 
 static int nlm_init_fh_by_vp(vnode_t *, struct netobj *, rpcvers_t *);
@@ -533,8 +542,7 @@ nlm_safemap(const vnode_t *vp)
 	llp = flk_active_locks_for_vp(vp);
 	while (llp != NULL) {
 		if ((llp->ll_vp == vp) &&
-		    ((llp->ll_flock.l_start != 0) ||
-		    (llp->ll_flock.l_len != 0)))
+		    !NLM_FLOCK_IS_SAFE(&llp->ll_flock))
 			safe = 0;
 
 		llp_next = llp->ll_next;
@@ -551,8 +559,8 @@ nlm_safemap(const vnode_t *vp)
 	TAILQ_FOREACH(nslp, &g->nlm_slocks, nsl_link) {
 		if (nslp->nsl_state == NLM_SL_BLOCKED	&&
 		    nslp->nsl_vp == vp			&&
-		    ((nslp->nsl_lock.l_offset != 0)	||
-		    (nslp->nsl_lock.l_len != 0))) {
+		    (nslp->nsl_lock.l_offset != 0	||
+		    nslp->nsl_lock.l_len != 0)) {
 			safe = 0;
 			break;
 		}
@@ -590,8 +598,7 @@ nlm_register_lock_locally(struct vnode *vp, struct nlm_host *hostp,
 	int sysid = 0;
 
 	if (hostp != NULL) {
-		sysid = nlm_host_get_sysid(hostp) |
-			LM_SYSID_CLIENT;
+		sysid = nlm_host_get_sysid(hostp) | LM_SYSID_CLIENT;
 	}
 
 	flk->l_sysid = sysid;
@@ -714,7 +721,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 	rnode_t *rnp = VTOR(vp);
 	struct nlm_slock *nslp = NULL;
 	uint32_t xid;
-	int error;
+	int error = 0;
 
 	bzero(&args, sizeof (args));
 	g = zone_getspecific(nlm_zone_key, curzone);
@@ -783,7 +790,7 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		case nlm4_denied:
 			if (nslp != NULL) {
 				NLM_WARN("nlm_call_lock: got nlm4_denied for "
-					"blocking lock\n");
+				    "blocking lock\n");
 			}
 
 			error = EAGAIN;
@@ -803,6 +810,24 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 		    nlm_err != nlm4_blocked		||
 		    error != 0)
 			goto out;
+
+		/*
+		 * Before releasing the r_lkserlock of rnode, we should
+		 * check whether the new lock is "safe". If it's not
+		 * safe, disable caching for the given vnode. That is done
+		 * for sleeping locks only that are waiting for a GRANT reply
+		 * from the NLM server.
+		 *
+		 * NOTE: the vnode cache can be enabled back later if an
+		 * unsafe lock will be merged with existent locks so that
+		 * it will become safe. This condition is checked in the
+		 * NFSv3 code (see nfs_lockcompletion).
+		 */
+		if (!NLM_FLOCK_IS_SAFE(flp)) {
+			mutex_enter(&vp->v_lock);
+			vp->v_flag &= ~VNOCACHE;
+			mutex_exit(&vp->v_lock);
+		}
 
 		/*
 		 * The server should call us back with a
@@ -856,6 +881,23 @@ nlm_call_lock(vnode_t *vp, struct flock64 *flp,
 			ASSERT(error == ETIMEDOUT);
 			continue;
 		}
+	}
+
+	/*
+	 * We could disable the vnode cache for the given _sleeping_
+	 * (codition: nslp != NULL) lock if it was unsafe. Normally,
+	 * nfs_lockcompletion() function can enable the vnode cache
+	 * back if the lock becomes safe after activativation. But it
+	 * will not happen if any error occurs on the locking path.
+	 *
+	 * Here we enable the vnode cache back if the error occurred
+	 * and if there aren't any unsafe locks on the given vnode.
+	 * Note that if error happened, sleeping lock was derigistered.
+	 */
+	if (error != 0 && nslp != NULL && nlm_safemap(vp)) {
+		mutex_enter(&vp->v_lock);
+		vp->v_flag |= VNOCACHE;
+		mutex_exit(&vp->v_lock);
 	}
 
 out:
@@ -1226,8 +1268,7 @@ nlm_reclaim_share(struct nlm_host *hostp, vnode_t *vp,
 	if (error != 0)
 		return (error);
 
-	return (nlm_call_share(shr, hostp, &lm_fh,
-		vers, 1));
+	return (nlm_call_share(shr, hostp, &lm_fh, vers, 1));
 }
 
 /*
