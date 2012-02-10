@@ -1456,7 +1456,7 @@ PIPEMOD_OBJS +=	pipemod.o
 
 RPCMOD_OBJS +=	rpcmod.o	clnt_cots.o	clnt_clts.o \
 		clnt_gen.o	clnt_perr.o	mt_rpcinit.o	rpc_calmsg.o \
-		rpc_prot.o	rpc_sztypes.o	rpc_subr.o	rpcb_prot.o	pmap_prot.o \
+		rpc_prot.o	rpc_sztypes.o	rpc_subr.o	rpcb_prot.o \
 		svc.o		svc_clts.o	svc_gen.o	svc_cots.o \
 		rpcsys.o	xdr_sizeof.o	clnt_rdma.o	svc_rdma.o \
 		xdr_rdma.o	rdma_subr.o	xdrrdma_sizeof.o
