@@ -224,6 +224,7 @@ rfs4_do_cb_null(rfs4_client_t *cp)
 	if (cbp->cb_nullcaller == TRUE) {
 		mutex_exit(cbp->cb_lock);
 		rfs4_client_rele(cp);
+		zthread_exit();
 		return;
 	}
 
@@ -292,6 +293,7 @@ retry:
 		cbp->cb_nullcaller = FALSE;
 		mutex_exit(cbp->cb_lock);
 		rfs4_client_rele(cp);
+		zthread_exit();
 		return;
 	}
 
@@ -336,6 +338,7 @@ retry:
 	mutex_exit(cbp->cb_lock);
 
 	rfs4_client_rele(cp);
+	zthread_exit();
 }
 
 /*
@@ -964,6 +967,7 @@ do_recall(struct recall_arg *arg)
 	rfs4_deleg_state_rele(dsp); /* release the hold for this thread */
 
 	kmem_free(arg, sizeof (struct recall_arg));
+	zthread_exit();
 }
 
 struct master_recall_args {
@@ -991,6 +995,7 @@ do_recall_file(struct master_recall_args *map)
 		rfs4_dbe_rele_nolock(fp->rf_dbe);
 		rfs4_dbe_unlock(fp->rf_dbe);
 		kmem_free(map, sizeof (struct master_recall_args));
+		zthread_exit();
 		return;
 	}
 
@@ -1049,6 +1054,7 @@ do_recall_file(struct master_recall_args *map)
 	mutex_enter(&cpr_lock);
 	CALLB_CPR_EXIT(&cpr_info);
 	mutex_destroy(&cpr_lock);
+	zthread_exit();
 }
 
 static void
