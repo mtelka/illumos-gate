@@ -1193,7 +1193,7 @@ exi_cache_reclaim(void *cdrarg)
 	rw_enter(&ne->exported_lock, RW_READER);
 
 	nag = zone_getspecific(nfsauth_zone_key, curzone);
-	rw_enter(&exported_lock, RW_READER);
+	rw_enter(&ne->exported_lock, RW_READER);
 
 	for (i = 0; i < EXPTABLESIZE; i++) {
 		for (exi = ne->exptable[i]; exi; exi = exi->fid_hash.next) {
