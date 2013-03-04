@@ -26,6 +26,7 @@
 #include <nfs/nfs.h>
 #include <nfs/export.h>
 #include <sys/cmn_err.h>
+#include <sys/zone.h>
 
 #define	PSEUDOFS_SUFFIX		" (pseudo)"
 
@@ -145,6 +146,7 @@ pseudo_exportfs(vnode_t *vp, fid_t *fid, struct exp_visible *vis_head,
 	struct exportdata *kex;
 	fsid_t fsid;
 	int vpathlen;
+	char *vpath_tmp;
 	nfs_export_t *ne = nfs_get_export();
 
 	ASSERT(RW_WRITE_HELD(&ne->exported_lock));
@@ -175,11 +177,31 @@ pseudo_exportfs(vnode_t *vp, fid_t *fid, struct exp_visible *vis_head,
 	kex->ex_flags = EX_PSEUDO;
 
 	vpathlen = vp->v_path ? strlen(vp->v_path) : 0;
+	vpath_tmp = vp->v_path;
+	
+	/* 
+	 * if we are in zone, we need to cut off zone root dir
+	 */
+	if (getzoneid() != GLOBAL_ZONEID && vpath_tmp) {
+		vnode_t *rvp = ZONE_ROOTVP();
+		int clen = rvp->v_path ? strlen(rvp->v_path) : 0;
+
+		vpath_tmp += clen;
+		if (*vpath_tmp == '\0') {
+			vpath_tmp = "/";
+			vpath_len = 1;
+		} else {
+			vpathlen = vpathlen - clen;
+		}
+
+		VERIFY(vpathlen > 0);
+	}
+
 	kex->ex_pathlen = vpathlen + strlen(PSEUDOFS_SUFFIX);
 	kex->ex_path = kmem_alloc(kex->ex_pathlen + 1, KM_SLEEP);
 
 	if (vpathlen)
-		(void) strcpy(kex->ex_path, vp->v_path);
+		(void) strcpy(kex->ex_path, vpath_tmp);
 	(void) strcpy(kex->ex_path + vpathlen, PSEUDOFS_SUFFIX);
 
 	/* Transfer the secinfo data from exdata to this new pseudo node */

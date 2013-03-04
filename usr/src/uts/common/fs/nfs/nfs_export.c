@@ -837,7 +837,7 @@ nfs_export_zone_init(zoneid_t zoneid)
 	}
 
 	/* setup the fhandle template */
-	ne->exi_root->exi_fh.fh_fsid = rootdir->v_vfsp->vfs_fsid;
+	ne->exi_root->exi_fh.fh_fsid = ZONE_ROOTVP()->v_vfsp->vfs_fsid;
 	ne->exi_root->exi_fh.fh_xlen = ne->exi_rootfid.fid_len;
 	bcopy(ne->exi_rootfid.fid_data, ne->exi_root->exi_fh.fh_xdata,
 	    ne->exi_rootfid.fid_len);

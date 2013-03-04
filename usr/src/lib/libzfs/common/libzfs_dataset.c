@@ -1120,16 +1120,6 @@ badlabel:
 					    errbuf);
 					goto error;
 				}
-			} else if (getzoneid() != GLOBAL_ZONEID) {
-				/*
-				 * If zoned property is 'off', this must be in
-				 * a global zone. If not, something is wrong.
-				 */
-				zfs_error_aux(hdl, dgettext(TEXT_DOMAIN,
-				    "'%s' cannot be set while dataset "
-				    "'zoned' property is set"), propname);
-				(void) zfs_error(hdl, EZFS_ZONED, errbuf);
-				goto error;
 			}
 
 			/*
