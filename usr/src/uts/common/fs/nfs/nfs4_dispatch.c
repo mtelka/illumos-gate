@@ -39,11 +39,6 @@
 #define	NFS4_MAX_MINOR_VERSION	0
 
 /*
- * This is the duplicate request cache for NFSv4
- */
-rfs4_drc_t *nfs4_drc = NULL;
-
-/*
  * The default size of the duplicate request cache
  */
 uint32_t nfs4_drc_max = 8 * 1024;
@@ -374,7 +369,7 @@ rfs4_find_dr(struct svc_req *req, rfs4_drc_t *drc, rfs4_dupreq_t **dup)
  */
 int
 rfs4_dispatch(struct rpcdisp *disp, struct svc_req *req,
-		SVCXPRT *xprt, char *ap)
+		SVCXPRT *xprt, char *ap, rfs4_drc_t *nfs4_drc)
 {
 
 	COMPOUND4res	 res_buf;

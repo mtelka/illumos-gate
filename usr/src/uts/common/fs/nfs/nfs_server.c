@@ -252,7 +252,7 @@ static SVC_CALLOUT_TABLE nfs_sct_rdma = {
  */
 nvlist_t *rfs4_dss_paths, *rfs4_dss_oldpaths;
 
-int rfs4_dispatch(struct rpcdisp *, struct svc_req *, SVCXPRT *, char *);
+int rfs4_dispatch(struct rpcdisp *, struct svc_req *, SVCXPRT *, char *, rfs4_drc_t *);
 bool_t rfs4_minorvers_mismatch(struct svc_req *, SVCXPRT *, void *);
 
 /*
@@ -324,7 +324,7 @@ nfs_srv_shutdown_all(int quiesce) {
 			ng->nfs_server_upordown = NFS_SERVER_STOPPING;
 			mutex_exit(&ng->nfs_server_upordown_lock);
 			rfs4_state_fini();
-			rfs4_fini_drc(nfs4_drc);
+			rfs4_fini_drc(ng->nfs4_drc);
 			mutex_enter(&ng->nfs_server_upordown_lock);
 			ng->nfs_server_upordown = NFS_SERVER_STOPPED;
 			cv_signal(&ng->nfs_server_upordown_cv);
@@ -523,7 +523,7 @@ rfs4_server_start(nfs_globals_t *ng, int nfs4_srv_delegation)
 			} else {
 				/* cold start */
 				rfs4_state_init();
-				nfs4_drc = rfs4_init_drc(nfs4_drc_max,
+				ng->nfs4_drc = rfs4_init_drc(nfs4_drc_max,
 				    nfs4_drc_hash);
 			}
 
@@ -1485,7 +1485,9 @@ common_dispatch(struct svc_req *req, SVCXPRT *xprt, rpcvers_t min_vers,
 	char **procnames;
 	char cbuf[INET6_ADDRSTRLEN];	/* to hold both IPv4 and IPv6 addr */
 	nfs_export_t *ne;
+	nfs_globals_t *ng;
 
+	ng = zone_getspecific(nfssrv_zone_key, curzone);
 	vers = req->rq_vers;
 
 	if (vers < min_vers || vers > max_vers) {
@@ -1550,7 +1552,7 @@ common_dispatch(struct svc_req *req, SVCXPRT *xprt, rpcvers_t min_vers,
 	 * If Version 4 use that specific dispatch function.
 	 */
 	if (req->rq_vers == 4) {
-		error += rfs4_dispatch(disp, req, xprt, args);
+		error += rfs4_dispatch(disp, req, xprt, args, ng->nfs4_drc);
 		goto done;
 	}
 
@@ -1612,9 +1614,6 @@ common_dispatch(struct svc_req *req, SVCXPRT *xprt, rpcvers_t min_vers,
 		ASSERT(cr != NULL);
 #ifdef DEBUG
 		{
-			nfs_globals_t *ng;
-
-			ng = zone_getspecific(nfssrv_zone_key, curzone);
 			if (crgetref(cr) != 1) {
 				crfree(cr);
 				cr = crget();
@@ -2560,6 +2559,7 @@ nfs_srv_zone_init(zoneid_t zoneid)
 
 	ng->nfs_versmin = NFS_VERSMIN_DEFAULT;
 	ng->nfs_versmax = NFS_VERSMAX_DEFAULT;
+	ng->nfs4_drc = NULL;
 
 	/* Init the stuff to control start/stop */
 	ng->nfs_server_upordown = NFS_SERVER_STOPPED;

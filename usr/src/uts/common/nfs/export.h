@@ -596,23 +596,24 @@ typedef struct nfs_export {
 	struct exportinfo *exptable[EXPTABLESIZE];
 
 	/*
-	 * exported_lock	Read/Write lock that protects the exportinfo list.
-	 *			This lock must be held when searching or modifiying
-	 *			the exportinfo list.
+	 * exported_lock
+	 * 	Read/Write lock that protects the exportinfo list.
+	 *	This lock must be held when searching or modifiying
+	 *	the exportinfo list.
 	 */
 	krwlock_t exported_lock;
 
-    /*
+	/*
 	 * "public" and default (root) location for public filehandle
 	 */
 	struct exportinfo *exi_public, *exi_root;
 
-	fid_t exi_rootfid;	/* for checking the default public file handle */
+	fid_t exi_rootfid;	/* for checking the default public fh */
 
 	fhandle_t nullfh2;	/* for comparing V2 filehandles */
 } nfs_export_t;
 
-extern nfs_export_t* nfs_get_export();
+extern nfs_export_t * nfs_get_export();
 extern void	export_link(nfs_export_t *, struct exportinfo *);
 extern void	export_unlink(nfs_export_t *, struct exportinfo *);
 

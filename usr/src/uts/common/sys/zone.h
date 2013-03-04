@@ -544,7 +544,7 @@ typedef struct zone {
 /*
  * A root vnode of current zone
  */
-#define ZONE_ROOTVP()	(curproc->p_zone->zone_rootvp)
+#define	ZONE_ROOTVP()	(curproc->p_zone->zone_rootvp)
 
 
 extern zone_t zone0;

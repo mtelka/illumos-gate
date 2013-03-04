@@ -82,6 +82,7 @@ typedef enum {
 	NFS_SERVER_OFFLINE	/* server pool offline */
 } nfs_server_running_t;
 
+struct	rfs4_drc;
 /*
  * Zone globals variables of NFS server
  */
@@ -101,6 +102,7 @@ struct nfs_globals {
 	 */
 	kcondvar_t		rdma_wait_cv;
 	kmutex_t		rdma_wait_mutex;
+	struct rfs4_drc		*nfs4_drc;
 
 #ifdef DEBUG
 	int			cred_hits;
