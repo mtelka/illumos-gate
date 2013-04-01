@@ -32,8 +32,6 @@
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T */
 /*	All Rights Reserved */
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/flock_impl.h>
 #include <sys/vfs.h>
 #include <sys/t_lock.h>		/* for <sys/callb.h> */
