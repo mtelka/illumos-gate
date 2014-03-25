@@ -85,15 +85,14 @@ _t_checkfd(int fd, int force_sync, int api_semantics)
 		t_errno = TBADF;
 		return (NULL);
 	}
-	tiptr = NULL;
-	sig_mutex_lock(&_ti_userlock);
-	if ((tiptr = find_tilink(fd)) != NULL) {
-		if (!force_sync) {
-			sig_mutex_unlock(&_ti_userlock);
+
+	if (!force_sync) {
+		sig_mutex_lock(&_ti_userlock);
+		tiptr = find_tilink(fd);
+		sig_mutex_unlock(&_ti_userlock);
+		if (tiptr != NULL)
 			return (tiptr);
-		}
 	}
-	sig_mutex_unlock(&_ti_userlock);
 
 	/*
 	 * Not found or a forced sync is required.
