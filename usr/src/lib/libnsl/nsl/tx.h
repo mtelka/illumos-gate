@@ -24,13 +24,22 @@
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
+/*
+ * Copyright 2014 Nexenta Systems, Inc.  All rights reserved.
+ */
 
 #ifndef	_TX_H
 #define	_TX_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
+#include <thread.h>
+#include <synch.h>
+#include <stropts.h>
 #include <sys/uio.h>
+#ifdef TLI_WRAPPERS
+#include <tiuser.h>
+#else /* TLI_WRAPPERS */
+#include <xti.h>
+#endif /* TLI_WRAPPERS */
 
 #ifdef	__cplusplus
 extern "C" {
@@ -286,59 +295,59 @@ extern int t_nerr;
  * UTILITY ROUTINES FUNCTION PROTOTYPES
  */
 
-extern void _t_adjust_iov(int, struct iovec *, int *);
-extern struct _ti_user *_t_checkfd(int, int, int);
-extern int _t_delete_tilink(int);
-extern int _t_rcv_conn_con(struct _ti_user *, struct t_call *, struct strbuf *,
-							int);
-extern int _t_snd_conn_req(struct _ti_user *, const struct t_call *,
-							struct strbuf *);
-extern int _t_aligned_copy(struct strbuf *, int, int, char *, t_scalar_t *);
-extern struct _ti_user *_t_create(int, struct t_info *, int, int *);
-extern int _t_do_ioctl(int, char *, int, int, int *);
-extern int _t_is_event(int, struct _ti_user *);
-extern int _t_is_ok(int, struct _ti_user *, t_scalar_t);
-extern int _t_look_locked(int, struct _ti_user *, int, int);
-extern int _t_register_lookevent(struct _ti_user *, caddr_t, int, caddr_t, int);
-extern void _t_free_looklist_head(struct _ti_user *);
-extern void _t_flush_lookevents(struct _ti_user *);
-extern int _t_acquire_ctlbuf(struct _ti_user *, struct strbuf *, int *);
-extern int _t_acquire_databuf(struct _ti_user *, struct strbuf *, int *);
+void _t_adjust_iov(int, struct iovec *, int *);
+struct _ti_user *_t_checkfd(int, int, int);
+int _t_delete_tilink(int);
+void _t_tilink_lock_all(void);
+void _t_tilink_unlock_all(void);
+int _t_rcv_conn_con(struct _ti_user *, struct t_call *, struct strbuf *, int);
+int _t_snd_conn_req(struct _ti_user *, const struct t_call *, struct strbuf *);
+int _t_aligned_copy(struct strbuf *, int, int, char *, t_scalar_t *);
+struct _ti_user *_t_create(int, struct t_info *, int, int *);
+int _t_do_ioctl(int, char *, int, int, int *);
+int _t_is_event(int, struct _ti_user *);
+int _t_is_ok(int, struct _ti_user *, t_scalar_t);
+int _t_look_locked(int, struct _ti_user *, int, int);
+int _t_register_lookevent(struct _ti_user *, caddr_t, int, caddr_t, int);
+void _t_free_looklist_head(struct _ti_user *);
+void _t_flush_lookevents(struct _ti_user *);
+int _t_acquire_ctlbuf(struct _ti_user *, struct strbuf *, int *);
+int _t_acquire_databuf(struct _ti_user *, struct strbuf *, int *);
 
 /*
  * Core function TLI/XTI routines function prototypes
  */
-extern int _tx_accept(int, int, const struct t_call *, int);
-extern char *_tx_alloc(int, int, int, int);
-extern int _tx_bind(int, const struct t_bind *, struct t_bind *, int);
-extern int _tx_close(int, int);
-extern int _tx_connect(int, const struct t_call *, struct t_call *, int);
-extern int _tx_error(const char *, int);
-extern int _tx_free(char *, int, int);
-extern int _tx_getinfo(int, struct t_info *, int);
-extern int _tx_getname(int, struct netbuf *, int, int);
-extern int _tx_getstate(int, int);
-extern int _tx_getprotaddr(int, struct t_bind *, struct t_bind *, int);
-extern int _tx_listen(int, struct t_call *, int);
-extern int _tx_look(int, int);
-extern int _tx_open(const char *, int, struct t_info *, int);
-extern int _tx_optmgmt(int, const struct t_optmgmt *, struct t_optmgmt *, int);
-extern int _tx_rcv(int, char *, unsigned, int *, int);
-extern int _tx_rcvconnect(int, struct t_call *, int);
-extern int _tx_rcvdis(int, struct t_discon *, int);
-extern int _tx_rcvrel(int, int);
-extern int _tx_rcvudata(int, struct t_unitdata *, int *, int);
-extern int _tx_rcvuderr(int, struct t_uderr *, int);
-extern int _tx_snd(int, char *, unsigned, int, int);
-extern int _tx_snddis(int, const struct t_call *, int);
-extern int _tx_sndrel(int, int);
-extern int _tx_sndudata(int, const struct t_unitdata *, int);
-extern char *_tx_strerror(int, int);
-extern int _tx_sync(int, int);
-extern int _tx_unbind(int, int);
-extern int _tx_unbind_locked(int, struct _ti_user *, struct strbuf *);
-extern int _t_expinline_queued(int, int *);
-extern int _t_do_postconn_sync(int, struct _ti_user *);
+int _tx_accept(int, int, const struct t_call *, int);
+char *_tx_alloc(int, int, int, int);
+int _tx_bind(int, const struct t_bind *, struct t_bind *, int);
+int _tx_close(int, int);
+int _tx_connect(int, const struct t_call *, struct t_call *, int);
+int _tx_error(const char *, int);
+int _tx_free(char *, int, int);
+int _tx_getinfo(int, struct t_info *, int);
+int _tx_getname(int, struct netbuf *, int, int);
+int _tx_getstate(int, int);
+int _tx_getprotaddr(int, struct t_bind *, struct t_bind *, int);
+int _tx_listen(int, struct t_call *, int);
+int _tx_look(int, int);
+int _tx_open(const char *, int, struct t_info *, int);
+int _tx_optmgmt(int, const struct t_optmgmt *, struct t_optmgmt *, int);
+int _tx_rcv(int, char *, unsigned, int *, int);
+int _tx_rcvconnect(int, struct t_call *, int);
+int _tx_rcvdis(int, struct t_discon *, int);
+int _tx_rcvrel(int, int);
+int _tx_rcvudata(int, struct t_unitdata *, int *, int);
+int _tx_rcvuderr(int, struct t_uderr *, int);
+int _tx_snd(int, char *, unsigned, int, int);
+int _tx_snddis(int, const struct t_call *, int);
+int _tx_sndrel(int, int);
+int _tx_sndudata(int, const struct t_unitdata *, int);
+char *_tx_strerror(int, int);
+int _tx_sync(int, int);
+int _tx_unbind(int, int);
+int _tx_unbind_locked(int, struct _ti_user *, struct strbuf *);
+int _t_expinline_queued(int, int *);
+int _t_do_postconn_sync(int, struct _ti_user *);
 
 /*
  * The following helper functions are used by scatter/gather functions,
@@ -358,15 +367,15 @@ void _t_copy_tiov_to_iov(const struct t_iovec *, int, struct iovec *, int *);
  * which is used below is not visible to TLI. Hence tli_wrappers.c should not
  * see the prototypes below.
  */
-extern int _tx_rcvv(int, struct t_iovec *, unsigned int,  int *, int);
-extern int _tx_rcvreldata(int, struct t_discon *, int);
-extern int _tx_rcvvudata(int, struct t_unitdata *, struct t_iovec *,
-    unsigned int, int *, int);
-extern int _tx_sndv(int, const struct t_iovec *, unsigned int, int, int);
-extern int _tx_sndreldata(int, struct t_discon *, int);
-extern int _tx_sndvudata(int, const struct t_unitdata *, struct t_iovec *,
+int _tx_rcvv(int, struct t_iovec *, unsigned int,  int *, int);
+int _tx_rcvreldata(int, struct t_discon *, int);
+int _tx_rcvvudata(int, struct t_unitdata *, struct t_iovec *, unsigned int,
+    int *, int);
+int _tx_sndv(int, const struct t_iovec *, unsigned int, int, int);
+int _tx_sndreldata(int, struct t_discon *, int);
+int _tx_sndvudata(int, const struct t_unitdata *, struct t_iovec *,
     unsigned int, int);
-extern int _tx_sysconf(int, int);
+int _tx_sysconf(int, int);
 #endif /* TLI_WRAPPERS */
 
 #ifdef	__cplusplus

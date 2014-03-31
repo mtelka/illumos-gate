@@ -23,23 +23,27 @@
  * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
+/*
+ * Copyright 2014 Nexenta Systems, Inc.  All rights reserved.
+ */
 
 /*
  *	Define and initialize MT data for libnsl.
  *	The _libnsl_lock_init() function below is the library's .init handler.
  */
 
-#include "mt.h"
-#include "rpc_mt.h"
+#include <signal.h>
+#include <thread.h>
+#include <synch.h>
+#define	TLI_WRAPPERS
+#include "../nsl/tx.h"
+#include <sys/types.h>
 #include <unistd.h>
-#include <rpc/rpc.h>
-#include <sys/time.h>
+#include <rpc/clnt.h>
+#include <pthread.h>
+#include "mt.h"
 #include <stdlib.h>
 #include <syslog.h>
-
-extern	mutex_t	_ti_userlock;
 
 sigset_t fillset;		/* from sigfillset() */
 
@@ -59,9 +63,6 @@ mutex_t	clntraw_lock;		/* clnt_raw.c serialization */
 mutex_t	dname_lock;		/* domainname and domain_fd (getdname.c) */
 				/*	and default_domain (rpcdname.c) */
 mutex_t	dupreq_lock;		/* dupreq variables (svc_dg.c) */
-mutex_t	keyserv_lock;		/* protects first_time and hostname */
-				/*	(key_call.c) */
-mutex_t	libnsl_trace_lock;	/* serializes rpc_trace() (rpc_trace.c) */
 mutex_t	loopnconf_lock;		/* loopnconf (rpcb_clnt.c) */
 mutex_t	ops_lock;		/* serializes ops initializations */
 mutex_t	portnum_lock;		/* protects ``port'' static in bindresvport() */
@@ -69,7 +70,6 @@ mutex_t	proglst_lock;		/* protects proglst list (svc_simple.c) */
 mutex_t	rpcsoc_lock;		/* serializes clnt_com_create() (rpc_soc.c) */
 mutex_t	svcraw_lock;		/* svc_raw.c serialization */
 mutex_t	xprtlist_lock;		/* xprtlist (svc_generic.c) */
-mutex_t serialize_pkey;		/* serializes calls to public key routines */
 mutex_t	svc_thr_mutex;		/* protects thread related variables */
 mutex_t	svc_mutex;		/* protects service handle free lists */
 mutex_t	svc_exit_mutex;		/* used for clean mt exit */
@@ -81,8 +81,6 @@ static mutex_t	*mutex_table[] = {
 	&clntraw_lock,
 	&dname_lock,
 	&dupreq_lock,
-	&keyserv_lock,
-	&libnsl_trace_lock,
 	&loopnconf_lock,
 	&ops_lock,
 	&portnum_lock,
@@ -90,7 +88,6 @@ static mutex_t	*mutex_table[] = {
 	&rpcsoc_lock,
 	&svcraw_lock,
 	&xprtlist_lock,
-	&serialize_pkey,
 	&svc_thr_mutex,
 	&svc_mutex,
 	&svc_exit_mutex
@@ -101,19 +98,46 @@ cond_t	svc_thr_fdwait;		/* threads wait on this for work */
 static void
 _libnsl_prefork()
 {
+	int i;
+
+	for (i = 0; i < (sizeof (rwlock_table) / sizeof (rwlock_table[0])); i++)
+		(void) rw_wrlock(rwlock_table[i]);
+
+	for (i = 0; i < (sizeof (mutex_table) / sizeof (mutex_table[0])); i++)
+		(void) mutex_lock(mutex_table[i]);
+
 	(void) mutex_lock(&_ti_userlock);
+	_t_tilink_lock_all();
 }
 
 static void
 _libnsl_child_atfork()
 {
+	int i;
+
+	for (i = 0; i < (sizeof (rwlock_table) / sizeof (rwlock_table[0])); i++)
+		(void) rw_unlock(rwlock_table[i]);
+
+	for (i = 0; i < (sizeof (mutex_table) / sizeof (mutex_table[0])); i++)
+		(void) mutex_unlock(mutex_table[i]);
+
 	(void) mutex_unlock(&_ti_userlock);
+	_t_tilink_unlock_all();
 }
 
 static void
 _libnsl_parent_atfork()
 {
+	int i;
+
+	for (i = 0; i < (sizeof (rwlock_table) / sizeof (rwlock_table[0])); i++)
+		(void) rw_unlock(rwlock_table[i]);
+
+	for (i = 0; i < (sizeof (mutex_table) / sizeof (mutex_table[0])); i++)
+		(void) mutex_unlock(mutex_table[i]);
+
 	(void) mutex_unlock(&_ti_userlock);
+	_t_tilink_unlock_all();
 }
 
 #pragma init(_libnsl_lock_init)
@@ -125,7 +149,7 @@ _libnsl_lock_init()
 
 	(void) sigfillset(&fillset);
 
-	for (i = 0; i <  (sizeof (mutex_table) / sizeof (mutex_table[0])); i++)
+	for (i = 0; i < (sizeof (mutex_table) / sizeof (mutex_table[0])); i++)
 		(void) mutex_init(mutex_table[i], 0, (void *) 0);
 
 	for (i = 0; i < (sizeof (rwlock_table) / sizeof (rwlock_table[0])); i++)
@@ -139,7 +163,7 @@ _libnsl_lock_init()
 	 * care of unregistering them if/when the library is unloaded.
 	 */
 	(void) pthread_atfork(_libnsl_prefork,
-		_libnsl_parent_atfork, _libnsl_child_atfork);
+	    _libnsl_parent_atfork, _libnsl_child_atfork);
 }
 
 #pragma fini(_libnsl_fini)

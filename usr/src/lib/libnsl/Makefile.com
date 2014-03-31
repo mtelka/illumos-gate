@@ -21,7 +21,7 @@
 
 #
 # Copyright (c) 1997, 2010, Oracle and/or its affiliates. All rights reserved.
-# Copyright 2011 Nexenta Systems, Inc. All rights reserved.
+# Copyright 2014 Nexenta Systems, Inc.  All rights reserved.
 #
 
 LIBRARY= libnsl.a
@@ -215,8 +215,10 @@ LDLIBS +=	$(LIBMP) -lmd -lc
 DYNFLAGS +=	$(ZNODELETE)
 
 $(LINTLIB):=	SRCS=$(SRCDIR)/$(LINTSRC)
-LINTFLAGS +=	-m -DPORTMAP
-LINTFLAGS64 +=	-m -DPORTMAP
+# Lint is confused by nsl/tx.h include in rpc/mt_misc.c, so we need to disable
+# E_INCONS_ARG_DECL2
+LINTFLAGS +=	-m -DPORTMAP -erroff=E_INCONS_ARG_DECL2
+LINTFLAGS64 +=	-m -DPORTMAP -erroff=E_INCONS_ARG_DECL2
 
 .KEEP_STATE:
 
@@ -237,7 +239,7 @@ SRCS=	$(DES:%.o=../des/%.c)			\
 	$(COMMON:%.o=../common/%.c)
 
 lint:
-	@$(LINT.c) $(SRCS) $(LDLIBS)
+	$(LINT.c) $(SRCS) $(LDLIBS)
 
 # include library targets
 include ../../Makefile.targ

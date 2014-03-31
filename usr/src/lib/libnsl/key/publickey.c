@@ -99,8 +99,6 @@ static struct __nsw_switchconfig publickey_default =
 #define	NUL '\0'
 #endif
 
-extern mutex_t serialize_pkey;
-
 static int extract_secret();
 
 /*

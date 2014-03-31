@@ -26,6 +26,9 @@
  * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
+/*
+ * Copyright 2014 Nexenta Systems, Inc.  All rights reserved.
+ */
 
 #include "mt.h"
 #include <stdlib.h>
@@ -270,7 +273,7 @@ _t_register_lookevent(
 		 * signals are deferred, calls to malloc() are safe.
 		 */
 		if ((tlbs->tl_next = malloc(sizeof (struct _ti_lookbufs))) ==
-									NULL)
+		    NULL)
 			return (-1); /* error */
 		tlbs = tlbs->tl_next;
 		/*
@@ -485,9 +488,9 @@ _t_do_ioctl(int fd, char *buf, int size, int cmd, int *retlenp)
 	}
 
 	if (retval > 0) {
-		t_errno = retval&0xff;
+		t_errno = retval & 0xff;
 		if (t_errno == TSYSERR)
-			errno = (retval >>  8)&0xff;
+			errno = (retval >> 8) & 0xff;
 		return (-1);
 	}
 	if (retlenp)
@@ -689,7 +692,7 @@ add_tilink(int s)
 		 * duplicate entry or the end.
 		 */
 		for (curptr = hash_bucket[x]; curptr != NULL;
-						curptr = curptr->ti_next) {
+		    curptr = curptr->ti_next) {
 			if (curptr->ti_fd == s) {
 				/*
 				 * This can happen when the user has close(2)'ed
@@ -825,6 +828,40 @@ _t_delete_tilink(int s)
 		}
 	}
 	return (-1);
+}
+
+/*
+ * Lock all mutexes in all links
+ */
+void
+_t_tilink_lock_all(void)
+{
+	int i;
+
+	for (i = 0; i < NBUCKETS; i++) {
+		struct _ti_user	*tiptr;
+
+		for (tiptr = hash_bucket[i]; tiptr != NULL;
+		    tiptr = tiptr->ti_next)
+			(void) mutex_lock(&tiptr->ti_lock);
+	}
+}
+
+/*
+ * Unlock all mutexes in all links
+ */
+void
+_t_tilink_unlock_all(void)
+{
+	int i;
+
+	for (i = 0; i < NBUCKETS; i++) {
+		struct _ti_user	*tiptr;
+
+		for (tiptr = hash_bucket[i]; tiptr != NULL;
+		    tiptr = tiptr->ti_next)
+			(void) mutex_unlock(&tiptr->ti_lock);
+	}
 }
 
 /*
@@ -1162,8 +1199,8 @@ _t_adjust_state(int fd, int instate)
 			 * from the stream head.
 			 */
 			if ((arg.ctlbuf.len == 4) &&
-				/* LINTED pointer cast */
-				((*(int32_t *)arg.ctlbuf.buf) == T_CONN_CON))
+			    /* LINTED pointer cast */
+			    ((*(int32_t *)arg.ctlbuf.buf) == T_CONN_CON))
 				outstate = T_OUTCON;
 			break;
 		case T_INREL:
@@ -1375,7 +1412,7 @@ _t_acquire_ctlbuf(
 		 * allocate new buffer and free after use.
 		 */
 		if ((ctlbufp->maxlen = _t_cbuf_alloc(tiptr,
-						&ctlbufp->buf)) < 0) {
+		    &ctlbufp->buf)) < 0) {
 			t_errno = TSYSERR;
 			return (-1);
 		}
@@ -1419,7 +1456,7 @@ _t_acquire_databuf(
 		 * allocate new buffer and free after use.
 		 */
 		if ((databufp->maxlen = _t_rbuf_alloc(tiptr,
-						&databufp->buf)) < 0) {
+		    &databufp->buf)) < 0) {
 			t_errno = TSYSERR;
 			return (-1);
 		}
