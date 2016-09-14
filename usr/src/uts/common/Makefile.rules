@@ -1093,6 +1093,10 @@ $(OBJS_DIR)/%.o:		$(UTSBASE)/common/io/scsi/adapters/scsi_vhci/fops/%.c
 	$(COMPILE.c) -o $@ $<
 	$(CTFCONVERT_O)
 
+$(OBJS_DIR)/%.o:		$(UTSBASE)/common/io/scsi/adapters/smrt/%.c
+	$(COMPILE.c) -o $@ $<
+	$(CTFCONVERT_O)
+
 $(OBJS_DIR)/%.o:		$(UTSBASE)/common/io/fibre-channel/ulp/%.c
 	$(COMPILE.c) -o $@ $<
 	$(CTFCONVERT_O)
@@ -2397,6 +2401,9 @@ $(LINTS_DIR)/%.ln:		$(UTSBASE)/common/io/scsi/adapters/scsi_vhci/%.c
 	@($(LHEAD) $(LINT.c) $< $(LTAIL))
 
 $(LINTS_DIR)/%.ln:		$(UTSBASE)/common/io/scsi/adapters/scsi_vhci/fops/%.c
+	@($(LHEAD) $(LINT.c) $< $(LTAIL))
+
+$(LINTS_DIR)/%.ln:		$(UTSBASE)/common/io/scsi/adapters/smrt/%.c
 	@($(LHEAD) $(LINT.c) $< $(LTAIL))
 
 $(LINTS_DIR)/%.ln:		$(UTSBASE)/common/io/fibre-channel/ulp/%.c
