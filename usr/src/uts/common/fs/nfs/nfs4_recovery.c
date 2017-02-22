@@ -2323,8 +2323,8 @@ reclaim_one_lock(vnode_t *vp, flock64_t *flk, nfs4_error_t *ep,
 		}
 		mutex_exit(&rp->r_statelock);
 
-		nfs4frlock(NFS4_LCK_CTYPE_RECLAIM, vp, F_SETLK, flk,
-		    FREAD|FWRITE, 0, cr, ep, NULL, did_reclaimp);
+		nfs4frlock(NFS4_LCK_CTYPE_RECLAIM, vp, F_SETLK, flk, cr, ep,
+		    NULL, did_reclaimp);
 		if (ep->error == 0 && ep->stat == NFS4ERR_FHEXPIRED)
 			start_recovery_action(NR_FHEXPIRED, TRUE, VTOMI4(vp),
 			    vp, NULL);
@@ -2863,8 +2863,8 @@ resend_lock(nfs4_lost_rqst_t *lrp, nfs4_error_t *ep)
 	ASSERT(lrp->lr_ctype == NFS4_LCK_CTYPE_REINSTATE ||
 	    lrp->lr_ctype == NFS4_LCK_CTYPE_RESEND);
 
-	nfs4frlock(lrp->lr_ctype, vp, F_SETLK,
-	    lrp->lr_flk, FREAD|FWRITE, 0, lrp->lr_cr, ep, lrp, NULL);
+	nfs4frlock(lrp->lr_ctype, vp, F_SETLK, lrp->lr_flk, lrp->lr_cr, ep,
+	    lrp, NULL);
 
 	NFS4_DEBUG(nfs4_lost_rqst_debug, (CE_NOTE, "resend_lock: "
 	    "nfs4frlock for vp %p returned error %d, stat %d",

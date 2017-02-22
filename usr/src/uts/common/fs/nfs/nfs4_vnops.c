@@ -117,6 +117,7 @@ typedef enum nfs4_acl_op {
 } nfs4_acl_op_t;
 
 static struct lm_sysid *nfs4_find_sysid(mntinfo4_t *);
+static int nfs4frlock_get_sysid(struct lm_sysid **, vnode_t *, flock64_t *);
 
 static void	nfs4_update_dircaches(change_info4 *, vnode_t *, vnode_t *,
 			char *, dirattr_info_t *);
@@ -173,9 +174,7 @@ static int	nfs4_update_attrcache(nfsstat4, nfs4_ga_res_t *,
 			hrtime_t, vnode_t *, cred_t *);
 static int	nfs4_open_non_reg_file(vnode_t **, int, cred_t *);
 static int	nfs4_safelock(vnode_t *, const struct flock64 *, cred_t *);
-static void	nfs4_register_lock_locally(vnode_t *, struct flock64 *, int,
-			u_offset_t);
-static int 	nfs4_lockrelease(vnode_t *, int, offset_t, cred_t *);
+static int	nfs4_lockrelease(vnode_t *, int, offset_t, cred_t *);
 static int	nfs4_block_and_wait(clock_t *, rnode4_t *);
 static cred_t  *state_to_cred(nfs4_open_stream_t *);
 static void	denied_to_flk(LOCK4denied *, flock64_t *, LOCKT4args *);
@@ -184,7 +183,7 @@ static void	nfs4_reinstitute_local_lock_state(vnode_t *, flock64_t *,
 			cred_t *, nfs4_lock_owner_t *);
 static void	push_reinstate(vnode_t *, int, flock64_t *, cred_t *,
 			nfs4_lock_owner_t *);
-static int 	open_and_get_osp(vnode_t *, cred_t *, nfs4_open_stream_t **);
+static int	open_and_get_osp(vnode_t *, cred_t *, nfs4_open_stream_t **);
 static void	nfs4_delmap_callback(struct as *, void *, uint_t);
 static void	nfs4_free_delmapcall(nfs4_delmapcall_t *);
 static nfs4_delmapcall_t	*nfs4_init_delmapcall();
@@ -440,7 +439,7 @@ const fs_operation_def_t nfs4_vnodeops_template[] = {
 	VOPNAME_SETSECATTR,	{ .vop_setsecattr = nfs4_setsecattr },
 	VOPNAME_GETSECATTR,	{ .vop_getsecattr = nfs4_getsecattr },
 	VOPNAME_SHRLOCK,	{ .vop_shrlock = nfs4_shrlock },
-	VOPNAME_VNEVENT, 	{ .vop_vnevent = fs_vnevent_support },
+	VOPNAME_VNEVENT,	{ .vop_vnevent = fs_vnevent_support },
 	NULL,			NULL
 };
 
@@ -3102,8 +3101,8 @@ nfs4rdwr_check_osid(vnode_t *vp, nfs4_error_t *ep, cred_t *cr)
 	nfs4_open_owner_t	*oop;
 	nfs4_open_stream_t	*osp;
 	rnode4_t		*rp = VTOR4(vp);
-	mntinfo4_t 		*mi = VTOMI4(vp);
-	int 			reopen_needed;
+	mntinfo4_t		*mi = VTOMI4(vp);
+	int			reopen_needed;
 
 	ASSERT(nfs_zone() == mi->mi_zone);
 
@@ -10840,48 +10839,70 @@ nfs4_cmp(vnode_t *vp1, vnode_t *vp2, caller_context_t *ct)
 	return (VTOR4(vp1) == VTOR4(vp2));
 }
 
+/*
+ * Data structure for nfs4_lkserlock_callback() function.
+ */
+struct nfs4_lkserlock_callback_data {
+	vnode_t *vp;
+	int rc;
+};
+
+/*
+ * Callback function for reclock().
+ */
+static callb_cpr_t *
+nfs4_lkserlock_callback(flk_cb_when_t when, void *infop)
+{
+	struct nfs4_lkserlock_callback_data *dp =
+	    (struct nfs4_lkserlock_callback_data *)infop;
+	rnode4_t *rp = VTOR4(dp->vp);
+
+	if (when == FLK_BEFORE_SLEEP)
+		nfs_rw_exit(&rp->r_lkserlock);
+	else
+		dp->rc = nfs_rw_enter_sig(&rp->r_lkserlock, RW_WRITER,
+		    INTR4(dp->vp));
+
+	return (NULL);
+}
+
 /* ARGSUSED */
 static int
 nfs4_frlock(vnode_t *vp, int cmd, struct flock64 *bfp, int flag,
     offset_t offset, struct flk_callback *flk_cbp, cred_t *cr,
     caller_context_t *ct)
 {
-	int rc;
-	u_offset_t start, end;
+	int rc = 0;
 	rnode4_t *rp;
-	int error = 0, intr = INTR4(vp);
+	int intr = INTR4(vp);
 	nfs4_error_t e;
+	int frcmd;
+	struct lm_sysid	*ls = NULL;
 
 	if (nfs_zone() != VTOMI4(vp)->mi_zone)
 		return (EIO);
 
-	/* check for valid cmd parameter */
-	if (cmd != F_GETLK && cmd != F_SETLK && cmd != F_SETLKW)
-		return (EINVAL);
-
-	/* Verify l_type. */
-	switch (bfp->l_type) {
-	case F_RDLCK:
-		if (cmd != F_GETLK && !(flag & FREAD))
-			return (EBADF);
+	/* check for valid cmd parameter and set frcmd appropriately */
+	switch (cmd) {
+	case F_GETLK:
+		frcmd = 0;
 		break;
-	case F_WRLCK:
-		if (cmd != F_GETLK && !(flag & FWRITE))
-			return (EBADF);
+	case F_SETLK:
+		frcmd = SETFLCK;
 		break;
-	case F_UNLCK:
-		intr = 0;
+	case F_SETLKW:
+		frcmd = SETFLCK | SLPFLCK;
 		break;
-
 	default:
 		return (EINVAL);
 	}
 
-	/* check the validity of the lock range */
-	if (rc = flk_convert_lock_data(vp, bfp, &start, &end, offset))
-		return (rc);
-	if (rc = flk_check_lock_data(start, end, MAXEND))
-		return (rc);
+	/*
+	 * If lock is relative to EOF, we need the newest length of the file.
+	 * Therefore invalidate the ATTR_CACHE.
+	 */
+	if (bfp->l_whence == 2)		/* SEEK_END */
+		PURGE_ATTRCACHE4(vp);
 
 	/*
 	 * If the filesystem is mounted using local locking, pass the
@@ -10903,19 +10924,179 @@ nfs4_frlock(vnode_t *vp, int cmd, struct flock64 *bfp, int flag,
 		return (fs_frlock(vp, cmd, bfp, flag, offset, flk_cbp, cr, ct));
 	}
 
+	/*
+	 * Convert the offset.  We need to do this to make sure our view of the
+	 * locking range is always the same through the rest of this function.
+	 * This is especially needed for bfp->l_whence == SEEK_END, because the
+	 * length of the file could change anytime and thus the locking range
+	 * would be a moving target for us.
+	 *
+	 * For the bfp->l_whence == SEEK_CUR case this is just a convenient
+	 * conversion to make the life easier for nfs4frlock().
+	 */
+	rc = convoff(vp, bfp, 0, offset);
+	if (rc != 0)
+		return (rc);
+
+	if (bfp->l_type == F_UNLCK) {
+		u_offset_t start, end;
+
+		/*
+		 * Shortcut for trivial case.
+		 */
+		if (cmd == F_GETLK)
+			return (rc);
+
+		/*
+		 * For every lock or unlock request we need to do two steps:
+		 * (un)register the local lock, and (un)register the lock at
+		 * the NFSv4 server.  It is essential to make sure the lock
+		 * status registered at the server and registered locally is
+		 * same and never goes out of sync.  This means that if one
+		 * step fails, the other one needs to be either skipped, or
+		 * reverted.
+		 *
+		 * For lock requests the situation is easy since a lock
+		 * registration can be reverted without any risk of data
+		 * corruption.
+		 *
+		 * The unlock requests cannot be reverted because once a lock
+		 * is unregistered the race window is open and some other
+		 * process could grab a conflicting lock.  This means that once
+		 * the first step (the first lock unregistration) succeeded,
+		 * the second step cannot fail.  The second step for the unlock
+		 * request is the local lock unregistration by the reclock()
+		 * call.
+		 *
+		 * The only way how the reclock() call for an unlock request
+		 * could fail is the invalid unlock range so we check it here,
+		 * before the lock is unregistered at NFSv4 server.  This
+		 * duplicates the check done in the reclock() function.
+		 */
+		rc = flk_convert_lock_data(vp, bfp, &start, &end, offset);
+		if (rc != 0)
+			return (rc);
+		rc = flk_check_lock_data(start, end, MAXEND);
+		if (rc != 0)
+			return (rc);
+
+		intr = 0;
+	}
+
+	/*
+	 * For F_SETLK and F_SETLKW we need to set sysid.
+	 */
+	if (cmd == F_SETLK || cmd == F_SETLKW) {
+		rc = nfs4frlock_get_sysid(&ls, vp, bfp);
+		if (rc != 0)
+			return (rc);
+
+		/*
+		 * Client locks are registerred locally by oring the sysid with
+		 * LM_SYSID_CLIENT.  The server registers locks locally using
+		 * just the sysid.  We need to distinguish between the two to
+		 * avoid collision in a case one machine is used as both client
+		 * and server.
+		 */
+		bfp->l_sysid |= LM_SYSID_CLIENT;
+	}
+
+	bfp->l_pid = curproc->p_pid;
+
 	rp = VTOR4(vp);
 
 	/*
 	 * Check whether the given lock request can proceed, given the
 	 * current file mappings.
 	 */
-	if (nfs_rw_enter_sig(&rp->r_lkserlock, RW_WRITER, intr))
+	if (nfs_rw_enter_sig(&rp->r_lkserlock, RW_WRITER, intr)) {
+		if (ls != NULL)
+			lm_rel_sysid(ls);
 		return (EINTR);
+	}
 	if (cmd == F_SETLK || cmd == F_SETLKW) {
 		if (!nfs4_safelock(vp, bfp, cr)) {
 			rc = EAGAIN;
 			goto done;
 		}
+	}
+
+	/*
+	 * For query we will try to find a conflicting local lock first by
+	 * calling reclock().
+	 *
+	 * In a case this is a lock request we need to register it locally
+	 * first before we consult the NFSv4 server.
+	 */
+	if (cmd == F_GETLK || bfp->l_type != F_UNLCK) {
+		/*
+		 * If we might sleep in reclock() we need to register a
+		 * callback to release the r_lkserlock during the sleep.
+		 */
+		if ((frcmd & SLPFLCK) == 0) {
+			rc = reclock(vp, bfp, frcmd, flag, 0, flk_cbp);
+		} else {
+			flk_callback_t callback;
+			struct nfs4_lkserlock_callback_data callback_data =
+			    {vp, 0};
+
+			flk_add_callback(&callback, nfs4_lkserlock_callback,
+			    &callback_data, flk_cbp);
+			rc = reclock(vp, bfp, frcmd, flag, 0, &callback);
+			flk_del_callback(&callback);
+
+			if (callback_data.rc != 0) {
+				/*
+				 * The nfs_rw_enter_sig() call in
+				 * nfs4_lkserlock_callback() failed.
+				 */
+
+				if (rc == 0) {
+					/*
+					 * The reclock() call above succeeded
+					 * so we need to revert it.
+					 */
+					bfp->l_type = F_UNLCK;
+					rc = reclock(vp, bfp, frcmd, flag, 0,
+					    flk_cbp);
+					/* The unlock cannot fail */
+					ASSERT(rc == 0);
+
+					/*
+					 * We are here because we failed to
+					 * acquire r_lkserlock in
+					 * nfs4_lkserlock_callback() due to a
+					 * signal.  Return the appropriate
+					 * error.
+					 */
+					rc = EINTR;
+				}
+
+				ASSERT(ls != NULL);
+				lm_rel_sysid(ls);
+
+				return (rc);
+			}
+
+			/*
+			 * We possibly released r_lkserlock in reclock() so
+			 * make sure it is still safe to lock the file.
+			 */
+			if (!nfs4_safelock(vp, bfp, cr)) {
+				rc = EAGAIN;
+				goto revert;
+			}
+
+		}
+
+		/*
+		 * If the reclock() call failed we are done and we will return
+		 * an error to the caller.  Similarly, if we found a
+		 * conflicting lock registered locally we are done too.  We do
+		 * not need to consult the server.
+		 */
+		if ((rc != 0) || (cmd == F_GETLK && bfp->l_type != F_UNLCK))
+			goto done;
 	}
 
 	/*
@@ -10949,19 +11130,28 @@ nfs4_frlock(vnode_t *vp, int cmd, struct flock64 *bfp, int flag,
 			}
 		}
 		mutex_exit(&rp->r_statelock);
-		if (rc != 0)
-			goto done;
-		error = nfs4_putpage(vp, (offset_t)0, 0, B_INVAL, cr, ct);
-		if (error) {
-			if (error == ENOSPC || error == EDQUOT) {
+		if (rc != 0) {
+			ASSERT(bfp->l_type != F_UNLCK);
+
+			goto revert;
+		}
+
+		rc = nfs4_putpage(vp, (offset_t)0, 0, B_INVAL, cr, ct);
+		if (rc != 0) {
+			if (rc == ENOSPC || rc == EDQUOT) {
 				mutex_enter(&rp->r_statelock);
 				if (!rp->r_error)
-					rp->r_error = error;
+					rp->r_error = rc;
 				mutex_exit(&rp->r_statelock);
 			}
+
+			/*
+			 * If this was a lock request, make sure it is
+			 * reverted.
+			 */
 			if (bfp->l_type != F_UNLCK) {
 				rc = ENOLCK;
-				goto done;
+				goto revert;
 			}
 		}
 	}
@@ -10970,15 +11160,31 @@ nfs4_frlock(vnode_t *vp, int cmd, struct flock64 *bfp, int flag,
 	 * Call the lock manager to do the real work of contacting
 	 * the server and obtaining the lock.
 	 */
-	nfs4frlock(NFS4_LCK_CTYPE_NORM, vp, cmd, bfp, flag, offset,
-	    cr, &e, NULL, NULL);
+	nfs4frlock(NFS4_LCK_CTYPE_NORM, vp, cmd, bfp, cr, &e, NULL, NULL);
 	rc = e.error;
 
 	if (rc == 0)
 		nfs4_lockcompletion(vp, cmd);
 
+revert:
+	/*
+	 * If this is either successful unlock request or a lock request that
+	 * failed we should unregister/revert the local lock now.
+	 */
+	if ((rc == 0 && cmd != F_GETLK && bfp->l_type == F_UNLCK) ||
+	    (rc != 0 && cmd != F_GETLK && bfp->l_type != F_UNLCK)) {
+		int r;
+
+		bfp->l_type = F_UNLCK;
+		r = reclock(vp, bfp, frcmd, flag, 0, flk_cbp);
+		/* The unlock cannot fail */
+		ASSERT(r == 0);
+	}
+
 done:
 	nfs_rw_exit(&rp->r_lkserlock);
+	if (ls != NULL)
+		lm_rel_sysid(ls);
 
 	return (rc);
 }
@@ -12417,8 +12623,8 @@ nfs4_getsecattr(vnode_t *vp, vsecattr_t *vsecattr, int flag, cred_t *cr,
 
 /*
  * The function returns:
- * 	- 0 (zero) if the passed in "acl_mask" is a valid request.
- * 	- EINVAL if the passed in "acl_mask" is an invalid request.
+ *	- 0 (zero) if the passed in "acl_mask" is a valid request.
+ *	- EINVAL if the passed in "acl_mask" is an invalid request.
  *
  * In the case of getting an acl (op == NFS4_ACL_GET) the mask is invalid if:
  * - We have a mixture of ACE and ACL requests (e.g. VSA_ACL | VSA_ACE)
@@ -12916,40 +13122,6 @@ flk_to_locktype(int cmd, int l_type)
 }
 
 /*
- * Do some preliminary checks for nfs4frlock.
- */
-static int
-nfs4frlock_validate_args(int cmd, flock64_t *flk, int flag, vnode_t *vp,
-    u_offset_t offset)
-{
-	int error = 0;
-
-	/*
-	 * If we are setting a lock, check that the file is opened
-	 * with the correct mode.
-	 */
-	if (cmd == F_SETLK || cmd == F_SETLKW) {
-		if ((flk->l_type == F_RDLCK && (flag & FREAD) == 0) ||
-		    (flk->l_type == F_WRLCK && (flag & FWRITE) == 0)) {
-			NFS4_DEBUG(nfs4_client_lock_debug, (CE_NOTE,
-			    "nfs4frlock_validate_args: file was opened with "
-			    "incorrect mode"));
-			return (EBADF);
-		}
-	}
-
-	/* Convert the offset. It may need to be restored before returning. */
-	if (error = convoff(vp, flk, 0, offset)) {
-		NFS4_DEBUG(nfs4_client_lock_debug, (CE_NOTE,
-		    "nfs4frlock_validate_args: convoff  =>  error= %d\n",
-		    error));
-		return (error);
-	}
-
-	return (error);
-}
-
-/*
  * Set the flock64's lm_sysid for nfs4frlock.
  */
 static int
@@ -12976,8 +13148,7 @@ nfs4frlock_get_sysid(struct lm_sysid **lspp, vnode_t *vp, flock64_t *flk)
  */
 static void
 nfs4frlock_pre_setup(clock_t *tick_delayp, nfs4_recov_state_t *recov_statep,
-    flock64_t *flk, short *whencep, vnode_t *vp, cred_t *search_cr,
-    cred_t **cred_otw)
+    vnode_t *vp, cred_t *search_cr, cred_t **cred_otw)
 {
 	/*
 	 * set tick_delay to the base delay time.
@@ -12985,16 +13156,6 @@ nfs4frlock_pre_setup(clock_t *tick_delayp, nfs4_recov_state_t *recov_statep,
 	 */
 
 	*tick_delayp = drv_usectohz(NFS4_BASE_WAIT_TIME * 1000 * 1000);
-
-	/*
-	 * If lock is relative to EOF, we need the newest length of the
-	 * file. Therefore invalidate the ATTR_CACHE.
-	 */
-
-	*whencep = flk->l_whence;
-
-	if (*whencep == 2)		/* SEEK_END */
-		PURGE_ATTRCACHE4(vp);
 
 	recov_statep->rs_flags = 0;
 	recov_statep->rs_num_retry_despite_err = 0;
@@ -13180,14 +13341,12 @@ nfs4frlock_setup_resend_lock_args(nfs4_lost_rqst_t *resend_rqstp,
  * Setup the LOCKT4 arguments.
  */
 static void
-nfs4frlock_setup_lockt_args(nfs4_lock_call_type_t ctype, nfs_argop4 *argop,
-    LOCKT4args **lockt_argsp, COMPOUND4args_clnt *argsp, flock64_t *flk,
-    rnode4_t *rp)
+nfs4frlock_setup_lockt_args(nfs_argop4 *argop, LOCKT4args **lockt_argsp,
+    COMPOUND4args_clnt *argsp, flock64_t *flk, rnode4_t *rp)
 {
 	LOCKT4args *lockt_args;
 
 	ASSERT(nfs_zone() == VTOMI4(RTOV4(rp))->mi_zone);
-	ASSERT(ctype == NFS4_LCK_CTYPE_NORM);
 	argop->argop = OP_LOCKT;
 	argsp->ctag = TAG_LOCKT;
 	lockt_args = &argop->nfs_argop4_u.oplockt;
@@ -13206,9 +13365,7 @@ nfs4frlock_setup_lockt_args(nfs4_lock_call_type_t ctype, nfs_argop4 *argop,
 
 	lockt_args->owner.clientid = mi2clientid(VTOMI4(RTOV4(rp)));
 	/* set the lock owner4 args */
-	nfs4_setlockowner_args(&lockt_args->owner, rp,
-	    ctype == NFS4_LCK_CTYPE_NORM ? curproc->p_pidp->pid_id :
-	    flk->l_pid);
+	nfs4_setlockowner_args(&lockt_args->owner, rp, flk->l_pid);
 	lockt_args->offset = flk->l_start;
 	lockt_args->length = flk->l_len;
 	if (flk->l_len == 0)
@@ -13230,7 +13387,7 @@ nfs4frlock_check_deleg(vnode_t *vp, nfs4_error_t *ep, cred_t *cr, int lt)
 	open_delegation_type4	dt;
 	bool_t			reopen_needed, force;
 	nfs4_open_stream_t	*osp;
-	open_claim_type4 	oclaim;
+	open_claim_type4	oclaim;
 	rnode4_t		*rp = VTOR4(vp);
 	mntinfo4_t		*mi = VTOMI4(vp);
 
@@ -13329,12 +13486,11 @@ static void
 nfs4frlock_setup_locku_args(nfs4_lock_call_type_t ctype, nfs_argop4 *argop,
     LOCKU4args **locku_argsp, flock64_t *flk,
     nfs4_lock_owner_t **lopp, nfs4_error_t *ep, COMPOUND4args_clnt *argsp,
-    vnode_t *vp, int flag, u_offset_t offset, cred_t *cr,
-    bool_t *skip_get_err, bool_t *go_otwp)
+    vnode_t *vp, cred_t *cr, bool_t *skip_get_err, bool_t *go_otwp)
 {
 	nfs4_lock_owner_t	*lop = NULL;
 	LOCKU4args		*locku_args;
-	pid_t			pid;
+	pid_t			pid = flk->l_pid;
 	bool_t			is_spec = FALSE;
 	rnode4_t		*rp = VTOR4(vp);
 
@@ -13356,9 +13512,6 @@ nfs4frlock_setup_locku_args(nfs4_lock_call_type_t ctype, nfs_argop4 *argop,
 	/* locktype should be set to any legal value */
 	locku_args->locktype = READ_LT;
 
-	pid = ctype == NFS4_LCK_CTYPE_NORM ? curproc->p_pidp->pid_id :
-	    flk->l_pid;
-
 	/*
 	 * Get the lock owner stateid.  If no lock owner
 	 * exists, return success.
@@ -13370,10 +13523,7 @@ nfs4frlock_setup_locku_args(nfs4_lock_call_type_t ctype, nfs_argop4 *argop,
 	if (!lop || is_spec) {
 		/*
 		 * No lock owner so no locks to unlock.
-		 * Return success.  If there was a failed
-		 * reclaim earlier, the lock might still be
-		 * registered with the local locking code,
-		 * so notify it of the unlock.
+		 * Return success.
 		 *
 		 * If the lockowner is using a special stateid,
 		 * then the original lock request (that created
@@ -13384,9 +13534,6 @@ nfs4frlock_setup_locku_args(nfs4_lock_call_type_t ctype, nfs_argop4 *argop,
 		    "nfs4frlock_setup_locku_args: LOCKU: no lock owner "
 		    "(%ld) so return success", (long)pid));
 
-		if (ctype == NFS4_LCK_CTYPE_NORM)
-			flk->l_pid = curproc->p_pid;
-		nfs4_register_lock_locally(vp, flk, flag, offset);
 		/*
 		 * Release our hold and NULL out so final_cleanup
 		 * doesn't try to end a lock seqid sync we
@@ -13441,7 +13588,7 @@ nfs4frlock_setup_lock_args(nfs4_lock_call_type_t ctype, LOCK4args **lock_argsp,
 	nfs4_open_owner_t	*oop = NULL;
 	nfs4_open_stream_t	*osp = NULL;
 	nfs4_lock_owner_t	*lop = NULL;
-	pid_t			pid;
+	pid_t			pid = flk->l_pid;
 	rnode4_t		*rp = VTOR4(vp);
 
 	ASSERT(nfs_zone() == VTOMI4(vp)->mi_zone);
@@ -13467,7 +13614,6 @@ nfs4frlock_setup_lock_args(nfs4_lock_call_type_t ctype, LOCK4args **lock_argsp,
 	 * owner and open stream).
 	 * This also grabs the lock seqid synchronization.
 	 */
-	pid = ctype == NFS4_LCK_CTYPE_NORM ? curproc->p_pid : flk->l_pid;
 	ep->stat =
 	    nfs4_find_or_create_lock_owner(pid, rp, cr, &oop, &osp, &lop);
 
@@ -13552,7 +13698,6 @@ nfs4frlock_save_lost_rqst(nfs4_lock_call_type_t ctype, int error,
 		lost_rqstp->lr_cr = cr;
 		switch (ctype) {
 		case NFS4_LCK_CTYPE_NORM:
-			flk->l_pid = ttoproc(curthread)->p_pid;
 			lost_rqstp->lr_ctype = NFS4_LCK_CTYPE_RESEND;
 			break;
 		case NFS4_LCK_CTYPE_REINSTATE:
@@ -13775,30 +13920,6 @@ nfs4frlock_recovery(int needrecov, nfs4_error_t *ep,
 }
 
 /*
- * Handles the successful reply from the server for nfs4frlock.
- */
-static void
-nfs4frlock_results_ok(nfs4_lock_call_type_t ctype, int cmd, flock64_t *flk,
-    vnode_t *vp, int flag, u_offset_t offset,
-    nfs4_lost_rqst_t *resend_rqstp)
-{
-	ASSERT(nfs_zone() == VTOMI4(vp)->mi_zone);
-	if ((cmd == F_SETLK || cmd == F_SETLKW) &&
-	    (flk->l_type == F_RDLCK || flk->l_type == F_WRLCK)) {
-		if (ctype == NFS4_LCK_CTYPE_NORM) {
-			flk->l_pid = ttoproc(curthread)->p_pid;
-			/*
-			 * We do not register lost locks locally in
-			 * the 'resend' case since the user/application
-			 * doesn't think we have the lock.
-			 */
-			ASSERT(!resend_rqstp);
-			nfs4_register_lock_locally(vp, flk, flag, offset);
-		}
-	}
-}
-
-/*
  * Handle the DENIED reply from the server for nfs4frlock.
  * Returns TRUE if we should retry the request; FALSE otherwise.
  *
@@ -13813,7 +13934,7 @@ nfs4frlock_results_denied(nfs4_lock_call_type_t ctype, LOCK4args *lock_args,
     vnode_t *vp, flock64_t *flk, nfs4_op_hint_t op_hint,
     nfs4_recov_state_t *recov_statep, int needrecov,
     COMPOUND4args_clnt **argspp, COMPOUND4res_clnt **respp,
-    clock_t *tick_delayp, short *whencep, int *errorp,
+    clock_t *tick_delayp, int *errorp,
     nfs_resop4 *resop, cred_t *cr, bool_t *did_start_fop,
     bool_t *skip_get_err)
 {
@@ -13870,15 +13991,13 @@ nfs4frlock_results_denied(nfs4_lock_call_type_t ctype, LOCK4args *lock_args,
 
 			intr = nfs4_block_and_wait(tick_delayp, rp);
 
+			(void) nfs_rw_enter_sig(&rp->r_lkserlock, RW_WRITER,
+			    FALSE);
+
 			if (intr) {
-				(void) nfs_rw_enter_sig(&rp->r_lkserlock,
-				    RW_WRITER, FALSE);
 				*errorp = EINTR;
 				return (FALSE);
 			}
-
-			(void) nfs_rw_enter_sig(&rp->r_lkserlock,
-			    RW_WRITER, FALSE);
 
 			/*
 			 * Make sure we are still safe to lock with
@@ -13895,7 +14014,6 @@ nfs4frlock_results_denied(nfs4_lock_call_type_t ctype, LOCK4args *lock_args,
 			*errorp = EAGAIN;
 		*skip_get_err = TRUE;
 		flk->l_whence = 0;
-		*whencep = 0;
 		return (FALSE);
 	} else if (lockt_args) {
 		NFS4_DEBUG(nfs4_client_lock_debug, (CE_NOTE,
@@ -13906,7 +14024,6 @@ nfs4frlock_results_denied(nfs4_lock_call_type_t ctype, LOCK4args *lock_args,
 
 		/* according to NLM code */
 		*errorp = 0;
-		*whencep = 0;
 		*skip_get_err = TRUE;
 		return (FALSE);
 	}
@@ -14023,8 +14140,7 @@ static void
 nfs4frlock_final_cleanup(nfs4_lock_call_type_t ctype, COMPOUND4args_clnt *argsp,
     COMPOUND4res_clnt *resp, vnode_t *vp, nfs4_op_hint_t op_hint,
     nfs4_recov_state_t *recov_statep, int needrecov, nfs4_open_owner_t *oop,
-    nfs4_open_stream_t *osp, nfs4_lock_owner_t *lop, flock64_t *flk,
-    short whence, u_offset_t offset, struct lm_sysid *ls,
+    nfs4_open_stream_t *osp, nfs4_lock_owner_t *lop,
     int *errorp, LOCK4args *lock_args, LOCKU4args *locku_args,
     bool_t did_start_fop, bool_t skip_get_err,
     cred_t *cred_otw, cred_t *cred)
@@ -14053,11 +14169,9 @@ nfs4frlock_final_cleanup(nfs4_lock_call_type_t ctype, COMPOUND4args_clnt *argsp,
 		 * the pages associated with the vnode to get the most up to
 		 * date pages from the server after acquiring the lock. We
 		 * want to be sure that the read operation gets the newest data.
-		 * N.B.
-		 * We used to do this in nfs4frlock_results_ok but that doesn't
-		 * work since VOP_PUTPAGE can call nfs4_commit which calls
-		 * nfs4_start_fop. We flush the pages below after calling
-		 * nfs4_end_fop above
+		 *
+		 * We flush the pages below after calling nfs4_end_fop above.
+		 *
 		 * The flush of the page cache must be done after
 		 * nfs4_end_open_seqid_sync() to avoid a 4-way hang.
 		 */
@@ -14095,10 +14209,6 @@ nfs4frlock_final_cleanup(nfs4_lock_call_type_t ctype, COMPOUND4args_clnt *argsp,
 	if (do_flush_pages)
 		nfs4_flush_pages(vp, cred);
 
-	(void) convoff(vp, flk, whence, offset);
-
-	lm_rel_sysid(ls);
-
 	/*
 	 * Record debug information in the event we get EINVAL.
 	 */
@@ -14122,12 +14232,7 @@ nfs4frlock_final_cleanup(nfs4_lock_call_type_t ctype, COMPOUND4args_clnt *argsp,
 }
 
 /*
- * This calls the server and the local locking code.
- *
- * Client locks are registerred locally by oring the sysid with
- * LM_SYSID_CLIENT. The server registers locks locally using just the sysid.
- * We need to distinguish between the two to avoid collision in case one
- * machine is used as both client and server.
+ * This calls the server.
  *
  * Blocking lock requests will continually retry to acquire the lock
  * forever.
@@ -14136,8 +14241,7 @@ nfs4frlock_final_cleanup(nfs4_lock_call_type_t ctype, COMPOUND4args_clnt *argsp,
  * NFS4_LCK_CTYPE_NORM: normal lock request.
  *
  * NFS4_LCK_CTYPE_RECLAIM:  bypass the usual calls for synchronizing with client
- * recovery, get the pid from flk instead of curproc, and don't reregister
- * the lock locally.
+ * recovery.
  *
  * NFS4_LCK_CTYPE_RESEND: same as NFS4_LCK_CTYPE_RECLAIM, with the addition
  * that we will use the information passed in via resend_rqstp to setup the
@@ -14154,8 +14258,8 @@ nfs4frlock_final_cleanup(nfs4_lock_call_type_t ctype, COMPOUND4args_clnt *argsp,
  */
 void
 nfs4frlock(nfs4_lock_call_type_t ctype, vnode_t *vp, int cmd, flock64_t *flk,
-    int flag, u_offset_t offset, cred_t *cr, nfs4_error_t *ep,
-    nfs4_lost_rqst_t *resend_rqstp, int *did_reclaimp)
+    cred_t *cr, nfs4_error_t *ep, nfs4_lost_rqst_t *resend_rqstp,
+    int *did_reclaimp)
 {
 	COMPOUND4args_clnt	args, *argsp = NULL;
 	COMPOUND4res_clnt	res, *resp = NULL;
@@ -14164,7 +14268,6 @@ nfs4frlock(nfs4_lock_call_type_t ctype, vnode_t *vp, int cmd, flock64_t *flk,
 	rnode4_t	*rp;
 	int		doqueue = 1;
 	clock_t		tick_delay;  /* delay in clock ticks */
-	struct lm_sysid	*ls;
 	LOCK4args	*lock_args = NULL;
 	LOCKU4args	*locku_args = NULL;
 	LOCKT4args	*lockt_args = NULL;
@@ -14173,7 +14276,6 @@ nfs4frlock(nfs4_lock_call_type_t ctype, vnode_t *vp, int cmd, flock64_t *flk,
 	nfs4_lock_owner_t *lop = NULL;
 	bool_t		needrecov = FALSE;
 	nfs4_recov_state_t recov_state;
-	short		whence;
 	nfs4_op_hint_t	op_hint;
 	nfs4_lost_rqst_t lost_rqst;
 	bool_t		retry = FALSE;
@@ -14191,29 +14293,24 @@ nfs4frlock(nfs4_lock_call_type_t ctype, vnode_t *vp, int cmd, flock64_t *flk,
 #ifdef DEBUG
 	name = fn_name(VTOSV(vp)->sv_name);
 	NFS4_DEBUG(nfs4_client_lock_debug, (CE_NOTE, "nfs4frlock: "
-	    "%s: cmd %d, type %d, offset %llu, start %"PRIx64", "
+	    "%s: cmd %d, type %d, start %"PRIx64", "
 	    "length %"PRIu64", pid %d, sysid %d, call type %s, "
-	    "resend request %s", name, cmd, flk->l_type, offset, flk->l_start,
-	    flk->l_len, ctype == NFS4_LCK_CTYPE_NORM ? curproc->p_pid :
-	    flk->l_pid, flk->l_sysid, nfs4frlock_get_call_type(ctype),
+	    "resend request %s", name, cmd, flk->l_type, flk->l_start,
+	    flk->l_len, flk->l_pid, flk->l_sysid,
+	    nfs4frlock_get_call_type(ctype),
 	    resend_rqstp ? "TRUE" : "FALSE"));
 	kmem_free(name, MAXNAMELEN);
 #endif
 
 	nfs4_error_zinit(ep);
-	ep->error = nfs4frlock_validate_args(cmd, flk, flag, vp, offset);
-	if (ep->error)
-		return;
-	ep->error = nfs4frlock_get_sysid(&ls, vp, flk);
-	if (ep->error)
-		return;
-	nfs4frlock_pre_setup(&tick_delay, &recov_state, flk, &whence,
-	    vp, cr, &cred_otw);
+
+	nfs4frlock_pre_setup(&tick_delay, &recov_state, vp, cr, &cred_otw);
+
+	rp = VTOR4(vp);
 
 recov_retry:
 	nfs4frlock_call_init(&args, &argsp, &argop, &op_hint, flk, cmd,
 	    &retry, &did_start_fop, &resp, &skip_get_err, &lost_rqst);
-	rp = VTOR4(vp);
 
 	ep->error = nfs4frlock_start_call(ctype, vp, op_hint, &recov_state,
 	    &did_start_fop, &recovonly);
@@ -14231,7 +14328,7 @@ recov_retry:
 
 		nfs4_error_init(ep, EINTR);
 		needrecov = TRUE;
-		lop = find_lock_owner(rp, curproc->p_pid, LOWN_ANY);
+		lop = find_lock_owner(rp, flk->l_pid, LOWN_ANY);
 		if (lop != NULL) {
 			nfs4frlock_save_lost_rqst(ctype, ep->error, READ_LT,
 			    NULL, NULL, lop, flk, &lost_rqst, cr, vp);
@@ -14243,8 +14340,6 @@ recov_retry:
 			lock_owner_rele(lop);
 			lop = NULL;
 		}
-		flk->l_pid = curproc->p_pid;
-		nfs4_register_lock_locally(vp, flk, flag, offset);
 		goto out;
 	}
 
@@ -14268,16 +14363,16 @@ recov_retry:
 
 		switch (cmd) {
 		case F_GETLK:
-			nfs4frlock_setup_lockt_args(ctype, &argop[1],
-			    &lockt_args, argsp, flk, rp);
+			ASSERT(ctype == NFS4_LCK_CTYPE_NORM);
+			nfs4frlock_setup_lockt_args(&argop[1], &lockt_args,
+			    argsp, flk, rp);
 			break;
 		case F_SETLKW:
 		case F_SETLK:
 			if (flk->l_type == F_UNLCK)
 				nfs4frlock_setup_locku_args(ctype,
 				    &argop[1], &locku_args, flk,
-				    &lop, ep, argsp,
-				    vp, flag, offset, cr,
+				    &lop, ep, argsp, vp, cr,
 				    &skip_get_err, &go_otw);
 			else
 				nfs4frlock_setup_lock_args(ctype,
@@ -14319,19 +14414,6 @@ recov_retry:
 
 		if (!go_otw)
 			goto out;
-	}
-
-	/* XXX should we use the local reclock as a cache ? */
-	/*
-	 * Unregister the lock with the local locking code before
-	 * contacting the server.  This avoids a potential race where
-	 * another process gets notified that it has been granted a lock
-	 * before we can unregister ourselves locally.
-	 */
-	if ((cmd == F_SETLK || cmd == F_SETLKW) && flk->l_type == F_UNLCK) {
-		if (ctype == NFS4_LCK_CTYPE_NORM)
-			flk->l_pid = ttoproc(curthread)->p_pid;
-		nfs4_register_lock_locally(vp, flk, flag, offset);
 	}
 
 	/*
@@ -14439,8 +14521,6 @@ recov_retry:
 	switch (resp->status) {
 	case NFS4_OK:
 		resop = &resp->array[1];
-		nfs4frlock_results_ok(ctype, cmd, flk, vp, flag, offset,
-		    resend_rqstp);
 		/*
 		 * Have a successful lock operation, now update state.
 		 */
@@ -14453,7 +14533,7 @@ recov_retry:
 		retry = nfs4frlock_results_denied(ctype, lock_args, lockt_args,
 		    &oop, &osp, &lop, cmd, vp, flk, op_hint,
 		    &recov_state, needrecov, &argsp, &resp,
-		    &tick_delay, &whence, &ep->error, resop, cr,
+		    &tick_delay, &ep->error, resop, cr,
 		    &did_start_fop, &skip_get_err);
 
 		if (retry) {
@@ -14494,7 +14574,7 @@ out:
 	 * client recovery code.
 	 */
 	nfs4frlock_final_cleanup(ctype, argsp, resp, vp, op_hint, &recov_state,
-	    needrecov, oop, osp, lop, flk, whence, offset, ls, &ep->error,
+	    needrecov, oop, osp, lop, &ep->error,
 	    lock_args, locku_args, did_start_fop,
 	    skip_get_err, cred_otw, cr);
 
@@ -14557,63 +14637,6 @@ nfs4_safelock(vnode_t *vp, const struct flock64 *bfp, cred_t *cr)
 	}
 
 	return (1);
-}
-
-
-/*
- * Register the lock locally within Solaris.
- * As the client, we "or" the sysid with LM_SYSID_CLIENT when
- * recording locks locally.
- *
- * This should handle conflicts/cooperation with NFS v2/v3 since all locks
- * are registered locally.
- */
-void
-nfs4_register_lock_locally(vnode_t *vp, struct flock64 *flk, int flag,
-    u_offset_t offset)
-{
-	int oldsysid;
-	int error;
-#ifdef DEBUG
-	char *name;
-#endif
-
-	ASSERT(nfs_zone() == VTOMI4(vp)->mi_zone);
-
-#ifdef DEBUG
-	name = fn_name(VTOSV(vp)->sv_name);
-	NFS4_DEBUG(nfs4_client_lock_debug,
-	    (CE_NOTE, "nfs4_register_lock_locally: %s: type %d, "
-	    "start %"PRIx64", length %"PRIx64", pid %ld, sysid %d",
-	    name, flk->l_type, flk->l_start, flk->l_len, (long)flk->l_pid,
-	    flk->l_sysid));
-	kmem_free(name, MAXNAMELEN);
-#endif
-
-	/* register the lock with local locking */
-	oldsysid = flk->l_sysid;
-	flk->l_sysid |= LM_SYSID_CLIENT;
-	error = reclock(vp, flk, SETFLCK, flag, offset, NULL);
-#ifdef DEBUG
-	if (error != 0) {
-		NFS4_DEBUG(nfs4_client_lock_debug, (CE_NOTE,
-		    "nfs4_register_lock_locally: could not register with"
-		    " local locking"));
-		NFS4_DEBUG(nfs4_client_lock_debug, (CE_CONT,
-		    "error %d, vp 0x%p, pid %d, sysid 0x%x",
-		    error, (void *)vp, flk->l_pid, flk->l_sysid));
-		NFS4_DEBUG(nfs4_client_lock_debug, (CE_CONT,
-		    "type %d off 0x%" PRIx64 " len 0x%" PRIx64,
-		    flk->l_type, flk->l_start, flk->l_len));
-		(void) reclock(vp, flk, 0, flag, offset, NULL);
-		NFS4_DEBUG(nfs4_client_lock_debug, (CE_CONT,
-		    "blocked by pid %d sysid 0x%x type %d "
-		    "off 0x%" PRIx64 " len 0x%" PRIx64,
-		    flk->l_pid, flk->l_sysid, flk->l_type, flk->l_start,
-		    flk->l_len));
-	}
-#endif
-	flk->l_sysid = oldsysid;
 }
 
 /*
@@ -14709,8 +14732,14 @@ nfs4_lockrelease(vnode_t *vp, int flag, offset_t offset, cred_t *cr)
 			 * If VOP_FRLOCK fails, make sure we unregister
 			 * local locks before we continue.
 			 */
-			ld.l_pid = ttoproc(curthread)->p_pid;
-			nfs4_register_lock_locally(vp, &ld, flag, offset);
+			struct lm_sysid *lmsid = nfs4_find_sysid(VTOMI4(vp));
+
+			if (lmsid != NULL) {
+				cleanlocks(vp, curproc->p_pid,
+				    lm_sysidt(lmsid) | LM_SYSID_CLIENT);
+				lm_rel_sysid(lmsid);
+			}
+
 			NFS4_DEBUG(nfs4_client_lock_debug, (CE_NOTE,
 			    "nfs4_lockrelease: lock release error on vp"
 			    " %p: error %d.\n", (void *)vp, ret));
