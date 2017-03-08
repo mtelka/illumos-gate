@@ -45,6 +45,91 @@
 #include <stdlib.h>
 #include <syslog.h>
 
+/*
+ * The FIRST group
+ * ---------------
+ *
+ * ipsec - this subsystem uses the following locks:
+ *   rwlock_t proto_rw - there is no interaction with other subsystems when this lock is held/acquired
+ *
+ * key - this subsystem uses the following locks:
+ *   mutex_t mod_192_0_lck - there is no interaction with other subsystems when this lock is held/acquired
+ *
+ * nis - this subsystem uses the following locks (all locks okay, some other subsystems are called with these locks held):
+ *   mutex_t nis_sec_cf_lock
+ *   mutex_t mech_file_lock
+ *   mutex_t gss_load_lock
+ *   mutex_t ln_lock
+ *   mutex_t __nis_ss_used_lock
+ *
+ * The MIDDLE group
+ * ----------------
+ *
+ * yp - this subsystem uses the following locks:
+ *   mutex_t default_domain_lock	first OK, last OK
+ *   mutex_t bound_domains_lock		!!! TODO
+ *   mutex_t server_name_lock		first OK, last OK
+ *   mutex_t cache_lock			last OK, first TODO
+ *
+ * rpc - this subsystem uses the following locks:
+ *   mutex_t authdes_lock	!!! TODO
+ *   mutex_t authnone_lock	!!! TODO
+ *   mutex_t authsvc_lock	last OK, first TODO
+ *   mutex_t clntraw_lock	!!! TODO
+ *   mutex_t dname_lock		last OK, after serialize_netname
+ *   mutex_t dupreq_lock	!!! TODO
+ *   mutex_t loopnconf_lock	!!! TODO
+ *   mutex_t ops_lock		last OK, first TODO
+ *   mutex_t portnum_lock	last OK, after rpcsoc_lock
+ *   mutex_t proglst_lock	first OK, last TODO
+ *   mutex_t rpcsoc_lock	!!! TODO
+ *   mutex_t svcraw_lock	!!! TODO
+ *   mutex_t xprtlist_lock	!!! TODO
+ *   mutex_t svc_thr_mutex	first OK, last TODO
+ *   mutex_t svc_mutex		!!! TODO
+ *   mutex_t svc_exit_mutex	first OK, last TODO
+ *   mutex_t rpcgss_calls_mutex	last OK, first TODO
+ *   rwlock_t svc_fd_lock	!!! TODO
+ *   rwlock_t svc_lock		!!! TODO
+ *   mutex_t svc_door_mutex	before ops_lock, first TODO
+ *   mutex_t svc_userfds_lock	last OK, first TODO
+ *   mutex_t initdc_lock	first OK, last OK
+ *   mutex_t vctbl_lock		last OK, first TODO
+ *   mutex_t nb_list_mutex	last OK, first TODO
+ *   mutex_t serialize_netname_r	!!! TODO
+ *   mutex_t td_opt_lock	last OK, first TODO
+ *   rwlock_t rpcbaddr_cache_lock	!!! TODO
+ *   mutex_t serialize_netname	first OK, before dname_lock
+ *   mutex_t dgtbl_lock		last OK, fist TODO
+ *   rwlock_t dc_lock		first OK, last OK
+ *   mutex_t rpc_fd_list_lock	last OK, first TODO
+ *   mutex_t lock		!!! TODO
+ *   send_mutex			!!! TODO
+ *
+ * The LAST group
+ * --------------
+ *
+ * nss - this subsystem uses the following locks (the nss does not call other subsystems with locks held):
+ *   rwlock_t iflock
+ *   mutex_t _nsw_exec_lock
+ *   mutex_t nd_addr_lock
+ *   mutex_t nd6_addr_lock
+ *   mutex_t checksortcfg_lock
+ *   rwlock_t localinfo_lock
+ *
+ * netdir - this subsystem uses the following locks (the netdir does not call other subsystems with locks held):
+ *   mutex_t xlate_lock
+ *   mutex_t xlist_lock
+ *
+ * netselect - this subsystem uses the following locks (the netselect does not call other subsystems with locks held):
+ *   mutex_t netpp_mutex
+ *
+ * nsl (TLI/XTI) - this subsystem uses the following locks (the nsl does not call other subsystems with locks held):
+ *   mutex_t _ti_userlock
+ *   mutex_t ti_lock	(_ti_userlock is held first)
+ * The lock order is _ti_userlock -> ti_lock
+ */
+
 sigset_t fillset;		/* from sigfillset() */
 
 rwlock_t	svc_lock;	/* protects the services list (svc.c) */

@@ -1,0 +1,1402 @@
+/*
+ * Lock order:
+
+ * rpc_fd_lock() -> authdes_lock (2 paths)
+
+ * clntraw_lock -> authnone_lock (clnt_raw_create/authnone_create)
+ * authdes_lock -> authnone_lock (__svcauth_des/key_decryptsession_pk/key_call/key_call_ext/authnone_create)
+ * rpcbaddr_cache_lock -> authnone_lock (_getclnthandle_timed/_clnt_tli_create_timed/...)
+ * bound_domains_lock -> authnone_lock (__yp_add_binding_netid/load_dom_binding/clnt_tli_create/_clnt_tli_create_timed/...)
+ * bound_domains_lock -> authnone_lock (__yp_dobind_cflookup/load_dom_binding/clnt_tli_create/_clnt_tli_create_timed/...
+ * bound_domains_lock -> authnone_lock (__yp_dobind_cflookup/check_binding/load_dom_binding/clnt_tli_create/_clnt_tli_create_timed/...)
+ * bound_domains_lock -> authnone_lock (__yp_dobind_rsvdport_cflookup/check_binding/load_dom_binding/clnt_tli_create/_clnt_tli_create_timed/...)
+ * bound_domains_lock -> authnone_lock (__yp_dobind_cflookup/__clnt_create_loopback/getclnt/clnt_tli_create/_clnt_tli_create_timed/...)
+ * bound_domains_lock -> authnone_lock (__yp_dobind_rsvdport_cflookup/__clnt_create_loopback/getclnt/clnt_tli_create/_clnt_tli_create_timed/...)
+ * bound_domains_lock -> authnone_lock (__yp_dobind_rsvdport_cflookup/load_dom_binding_rsvdport/clnt_tli_create/_clnt_tli_create_timed/...)
+ * rpcsoc_lock -> authnone_lock (clnt_com_create/clnt_tli_create/_clnt_tli_create_timed/_clnt_vc_create_timed/authnone_create)
+ * xprtlist_lock -> loopnconf_lock (svc_create/svc_reg/rpcb_set/local_rpcb)
+ * xprtlist_lock -> loopnconf_lock (svc_create/rpcb_unset/local_rpcb)
+ * svc_lock -> loopnconf_lock (svc_unregister/pmap_unset/rpcb_unset/local_rpcb)
+ * proglst_lock -> loopnconf_lock (rpc_reg/rpcb_unset/local_rpcb)
+ */
+
+mutex_t authdes_lock	!!!	(rpc|nis|rpc)
+	__svcauth_des	!!!	(rpc|nis|rpc)
+		__gss_authenticate	!!!	(rpc|nis|rpc)
+			__authenticate	OK - no callers	(rpc)
+			svc_door_dispatch	OK	(rpc)
+				door_server	OK - door_create()	(rpc)
+			_svc_prog_dispatch	!!!	(rpc|nis|rpc)
+				_svc_run_mt	OK	(rpc)
+					svc_run	OK - API, no callers in libnsl	(rpc)
+					OK - thr_create()
+				svc_getreq_common	!!!	(rpc|nis|rpc)
+					clnt_raw_call	!!!	(rpc|nis|rpc)
+						CLNT_CALL	!!!	(.|rpc|nis|rpc)
+							pmap_getport	!!!	(rpc|nis|rpc)
+								clnt_com_create	!!!	(rpc)
+									clntudp_bufcreate	!!!	(rpc)
+										clntudp_create	OK	(rpc)
+											pmap_rmtcall	OK - API, no callers in libnsl	(rpc)
+										pmap_getport	!!! recursive	(rpc)
+									clnttcp_create	OK	(rpc)
+										pmap_getmaps	OK - API, no callers in libnsl	(rpc)
+								getrpcport	OK - API, no callers in libnsl	(rpc)
+								__map_addr	!!!	(nis|rpc)
+									__nis_clnt_create	!!!	(nis|rpc)
+										__map_addr	!!! recursive (it cannot be called recursive with this stack)	(nis)
+										__rpc_get_time_offset	!!!	(rpc)
+											authdes_refresh	!!!	(rpc)
+												authdes_pk_seccreate	OK	(rpc)
+													authdes_seccreate	OK	(rpc)
+														yp_update	OK - API, no callers in libnsl	(yp)
+														authdes_create	OK - API, no callers in libnsl	(rpc)
+												AUTH_REFRESH	!!!
+													clnt_raw_call	!!! recursive	(rpc)
+													clnt_door_call	!!!
+														CLNT_CALL	!!! recursive
+														clnt_call	!!! ^
+													clnt_dg_call	!!! this function calls rpc_fd_lock() before AUTH_REFRESH()
+													clnt_vc_call	!!! this function calls rpc_fd_lock() before AUTH_REFRESH()
+												auth_refresh	OK - no callers
+							pmap_getmaps	OK - ^
+							pmap_rmtcall	OK - ^
+							rpc_call	OK
+								callrpc	OK - API, no callers in libnsl
+							key_call_ext	!!!
+								key_removesecret_g_ext	OK
+									key_removesecret_g	OK - no callers in libnsl
+									key_removesecret_g_ruid	OK - no callers
+								key_secretkey_is_set_ext	OK
+									key_secretkey_is_set	OK - no callers in libnsl
+									key_secretkey_is_set_ruid	OK - no callers
+									key_secretkey_is_set_g_ext	OK
+										key_secretkey_is_set_g	OK - no callers in libnsl
+										key_secretkey_is_set_g_ruid	OK - no callers
+								key_secretkey_is_set_g_ext	OK - ^
+								key_setnet_ext	OK
+									key_setnet	OK
+										key_setsecret	OK
+											key_setsecret_g	OK - no callers
+										key_setnet_g_ext	OK
+											key_setnet_g	OK - no callers in libnsl
+											key_setnet_g_ruid	OK - no callers
+									key_setnet_ruid	OK - no callers
+								key_setnet_g_ext	OK - ^
+								key_call	!!!
+									key_setsecret_g	OK - ^
+									key_encryptsession_pk	!!!
+										authdes_refresh	!!! ^
+										key_encryptsession_pk_g	OK - no callers in libnsl
+									key_encryptsession_pk_g	OK - ^
+									key_decryptsession_pk	!!!
+										__svcauth_des	!!! recursive and holds authdes_lock
+										key_decryptsession_pk_g	OK - no callers in libnsl
+									key_decryptsession_pk_g	OK - ^
+									key_encryptsession	OK
+										key_encryptsession_g	OK - no callers
+									key_encryptsession_g	OK - ^
+									key_decryptsession	OK
+										key_decryptsession_g	OK - no callers
+									key_decryptsession_g	OK - ^
+									key_gendes	OK
+										authdes_pk_seccreate	OK - ^
+									key_gendes_g	OK - no callers in libnsl
+									key_get_conv	OK
+										key_get_conv_g	OK - no callers
+									key_get_conv_g	OK - ^
+								key_call_ruid	OK - no callers
+							getclnt	!!!	(yp)
+								__clnt_create_loopback	!!!	(yp)
+									__yp_dobind_cflookup	!!! holds bound_domains_lock	(yp)
+									__yp_dobind_rsvdport_cflookup	!!! holds bound_domains_lock	(yp)
+							rpcb_set	!!!
+								pmap_set	OK
+									svc_register	OK - no callers in libnsl
+								svc_reg	!!!
+									svc_create	!!! holds xprtlist_lock
+									svc_tp_create	OK
+										svc_create	OK - no callers in libnsl
+									rpc_reg		!!! holds proglst_lock
+							rpcb_unset	!!!
+								pmap_unset	!!!
+									svc_unregister	!!! holds svc_lock
+								svc_create	!!! holds xprtlist_lock
+								svc_tp_create	OK - ^
+								rpc_reg		!!! holds proglst_lock
+								svc_unreg	OK - no callers in libnsl
+							__rpcb_findaddr_timed	OK
+								clnt_tp_create_timed	OK
+									clnt_create_timed	OK
+										clnt_create_vers_timed	OK
+											clnt_create_vers	OK - no callers in libnsl
+										clnt_create	OK
+											__yp_clnt_create_rsvdport_netid_req	OK
+												__yp_clnt_create_rsvdport	OK
+													__yp_all_rsvdport	OK - no callers in libnsl
+											yp_update	OK - ^
+											__yp_all_cflookup	OK
+												yp_all	OK - no callers in libnsl
+											rpc_call	OK - ^
+									clnt_tp_create	OK - no callers in libnsl
+								rpcb_getaddr	OK
+									__yp_clnt_create_rsvdport_netid_req	OK - ^
+									__yp_add_binding_netid	OK
+										__yp_add_binding	OK - no callers
+							rpcb_getmaps	OK - no callers in libnsl
+							rpcb_rmtcall	OK - no callers
+							rpcb_gettime	OK - no callers in libnsl
+							rpcb_taddr2uaddr	OK - no callers
+							rpcb_uaddr2taddr	OK - no callers
+						clnt_call	!!!
+							ypbindproc_null_3	OK - no callers in libnsl
+							ypbindproc_domain_3	!!!
+								__yp_dobind_cflookup	!!! holds bound_domains_lock
+								__yp_dobind_rsvdport_cflookup	!!! holds bound_domains_lock
+							ypbindproc_setdom_3	OK - no callers in libnsl
+							doorder	OK
+								yp_order	OK - no callers in libnsl
+							yp_update	OK - ^
+							domaster	OK
+								yp_master	OK
+									yp_update	OK - ^
+								__yp_master_rsvdport	OK
+									yp_master	OK - ^
+							__yp_all_cflookup	OK - ^
+							__yp_all_rsvdport	OK - ^
+							dofirst	OK
+								__yp_first_cflookup	OK
+									yp_first	OK - no callers in libnsl
+							donext	OK
+								__yp_next_cflookup	OK
+									yp_next	OK - no callers in libnsl
+							clnt_create_vers_timed	OK - ^
+							clnt_create_service_timed	OK - no callers in libnsl
+							rpc_nullproc	OK - no callers
+							__rpc_get_time_offset	!!! ^
+							domatch	!!!
+								__yp_match_cflookup	!!!
+									getkeys_nis	!!!
+										__getpublickey_cached_g	!!!
+											__getpublickey_cached	!!!
+												__svcauth_des	!!! recursive and holds authdes_lock
+												getpublickey	OK
+													authdes_seccreate	OK - ^
+											getpublickey_g	OK - no callers in libnsl
+										getsecretkey_g	OK
+											getsecretkey	OK - no callers in libnsl
+									yp_match	!!!
+										netname2user_nis	!!!
+											netname2user	!!! holds serialize_netname_r
+										usingypmap	OK - no callers	in libnsl
+								__yp_match_rsvdport_cflookup	!!!
+									yp_match_rsvdport	!!!
+										__yp_match_cflookup	!!! ^
+							__map_addr	!!! ^
+					clnt_raw_send	OK
+						CLNT_SEND	OK - no callers
+						clnt_send	OK - no callers
+					svc_getreqset	OK
+						svc_getreq	OK - no callers in libnsl
+					svc_getreq_poll	OK
+						_svc_run	OK
+							svc_run	OK - ^
+						read_vc (clnt_vc.c)	TODO	this is used as the "readit" function in the xdrrec stream - see _clnt_vc_create_timed()
+	authdes_getucred	OK - no callers
+mutex_t authnone_lock	!!!	(rpc)
+	authnone_create	!!!
+		clnt_raw_create	!!! holds clntraw_lock
+		clnt_door_create	!!!
+			clnt_create_timed	OK - ^
+			clnt_create_service_timed	OK - ^
+			getkeyserv_handle	!!!
+				key_call_ext	!!! ^
+		key_call_ext	!!! ^
+		clnt_dg_create	!!!
+			_clnt_tli_create_timed	!!!
+				clnt_create_service_timed	OK - ^
+				clnt_tp_create_timed	OK - ^
+				clnt_tli_create	!!!
+					__yp_clnt_create_rsvdport_netid_req	OK - ^
+					load_dom_binding	!!!
+						check_binding	!!!
+							__yp_dobind_cflookup	!!! holds bound_domains_lock
+							__yp_dobind_rsvdport_cflookup	!!! holds bound_domains_lock
+						__yp_add_binding_netid	!!! holds bound_domains_lock
+						__yp_dobind_cflookup	!!! holds bound_domains_lock
+					load_dom_binding_rsvdport	!!!
+						__yp_dobind_rsvdport_cflookup	!!! holds bound_domains_lock
+					getclnt	!!! ^
+					clnt_com_create	!!! holds rpcsoc_lock
+					__nis_clnt_create	!!! ^
+				_getclnthandle_timed	!!! holds rpcbaddr_cache_lock
+				_getclnthandle_timed	!!!
+					getclnthandle	!!!
+						local_rpcb	!!!
+							rpcb_set	!!! ^
+							rpcb_unset	!!! ^
+							rpcb_taddr2uaddr	OK - ^
+							rpcb_uaddr2taddr	OK - ^
+						rpcb_getmaps	OK - ^
+						rpcb_rmtcall	OK - ^
+						rpcb_gettime	OK - ^
+					__rpcb_findaddr_timed	OK - ^
+		_clnt_vc_create_timed	!!!
+			_clnt_tli_create_timed	!!! ^
+			clnt_vc_create	OK - no callers
+	authnone_marshal	!!!
+		AUTH_MARSHALL	!!!
+			clnt_raw_call	!!! ^
+			clnt_raw_send	OK - ^
+			clnt_door_call	!!! ^
+			clnt_dg_call	!!! this function calls rpc_fd_lock() before AUTH_MARSHALL()
+			clnt_dg_send	!!! this function calls rpc_fd_lock() before AUTH_MARSHALL()
+			clnt_vc_call	!!! this function calls rpc_fd_lock() before AUTH_MARSHALL()
+			clnt_vc_send	!!! this function calls rpc_fd_lock() before AUTH_MARSHALL()
+		auth_marshall	OK - no callers
+mutex_t authsvc_lock	!!!	(rpc)
+	__gss_authenticate	!!! ^
+	svc_auth_reg	OK - no callers
+mutex_t clntraw_lock	!!!	(rpc)
+	clnt_raw_create	OK
+		clntraw_create	OK - no callers
+	clnt_raw_call	!!! ^
+	clnt_raw_send	OK - ^
+	clnt_raw_freeres	!!!
+		CLNT_FREERES	!!!
+			doorder	OK - ^
+			domaster	OK - ^
+			dofirst	OK - ^
+			donext	OK - ^
+			domatch	!!! ^
+		clnt_freeres	OK - no callers in libnsl
+mutex_t dname_lock	!!!	(rpc)
+	get_default_domain	!!!
+		__rpc_get_default_domain	!!!
+			user2netname_nis	!!!
+				user2netname	!!! holds serialize_netname
+mutex_t dupreq_lock	!!!	(rpc)
+	svc_dg_enablecache	OK - no callers
+	cache_set	!!!
+		svc_dg_reply	!!!
+			SVC_REPLY	!!!
+				svcerr_noproc	OK - no callers in libnsl
+				svcerr_decode	!!!
+					universal	!!! holds proglst_lock
+				svcerr_systemerr	OK - no callers in libnsl
+				svcerr_auth	!!!
+					svcerr_weakauth	OK - no callers in libnsl
+					_svc_prog_dispatch	!!! ^
+					svc_door_dispatch	OK - ^
+				svcerr_noprog	!!!
+					svc_door_dispatch	OK - ^
+					_svc_prog_dispatch	!!! ^
+				svcerr_progvers	!!!
+					svc_door_dispatch	OK - ^
+					_svc_prog_dispatch	!!! ^
+			svc_reply	OK - no callers
+	cache_get	!!!
+		svc_dg_recv	!!!
+			SVC_RECV	!!!
+				_svc_run_mt	OK - ^
+				svc_getreq_common	!!! ^
+			svc_recv	OK - no callers
+mutex_t loopnconf_lock	!!!	(rpc)
+	local_rpcb	!!! ^
+mutex_t ops_lock	!!!	(rpc)
+	authnone_ops	!!!
+		authnone_create	!!! holds authnone_lock
+	svc_raw_ops	!!!
+		svc_raw_create	!!! holds svcraw_lock
+	xdrstdio_ops	!!!
+		xdrstdio_create	!!!
+			nis_read_obj	OK - no callers
+			nis_write_obj	OK - no callers
+			get_cached_domain	!!!
+				check_binding	!!! ^
+	clnt_raw_ops	!!!
+		clnt_raw_create	!!! holds clntraw_lock
+	xdrmem_ops	!!!
+		xdrmem_create	!!!
+			authsys_create	!!!
+				authsys_create_default	OK
+					rpc_broadcast_exp	OK
+						rpc_broadcast	OK
+							clnt_broadcast	OK - no callers
+				authsys_create_ruid	!!!
+					key_call_ext	!!! ^
+			authsys_validate	!!!
+				AUTH_VALIDATE	!!!
+					clnt_raw_call	!!! ^
+					clnt_door_call	!!! ^
+					clnt_dg_call	!!! this function calls rpc_fd_lock() before AUTH_VALIDATE()
+					clnt_vc_call	!!! this function calls rpc_fd_lock() before AUTH_VALIDATE()
+				auth_validate	OK - no callers
+			authsys_refresh	!!!
+				AUTH_REFRESH	!!! ^
+				auth_refresh	OK - ^
+			marshal_new_auth	!!!
+				authsys_create	!!! ^
+				authsys_validate	!!! ^
+				authsys_refresh	!!! ^
+			authnone_create	!!! holds authnone_lock
+			__svcauth_loopback	!!!
+				__gss_authenticate	!!! ^
+			__svcauth_sys	OK
+				__gss_authenticate	!!! ^
+				__svcauth_unix	OK - no callers
+			clnt_raw_create	!!! holds clntraw_lock
+			clnt_door_create	!!! ^
+			clnt_door_call	!!! ^
+			svc_raw_create	!!! holds svcraw_lock
+			rpc_broadcast_exp	OK - ^
+			svc_door_recv	!!!
+				door_server	OK - ^
+				SVC_RECV	!!! ^
+				svc_recv	OK - ^
+			svc_door_reply	!!!
+				SVC_REPLY	!!! ^
+				svc_reply	OK - ^
+			svc_dg_create_private	!!!
+				svc_tli_create_common	!!!
+					svc_tp_create	OK - ^
+					svc_tli_create	!!!
+						rpc_reg	!!! holds proglst_lock
+						svc_com_create	OK
+							svctcp_create	OK - no callers in libnsl
+							svcudp_bufcreate	OK - no callers in libnsl
+							svcudp_create	OK - no callers in libnsl
+				svc_dg_create	OK - no callers
+			svc_dg_xprtcopy	!!!
+				svc_copy	!!!
+					make_xprt_copy	!!! asserted the holding of svc_mutex
+						_svc_run_mt	!!! holds svc_mutex
+			cache_set	!!! holds dupreq_lock
+			clnt_dg_create	!!! ^
+			clnt_dg_call	!!! this function calls rpc_fd_lock() before xdrmem_create()
+			nis_clone_object_r	OK
+				nis_clone_object	OK - no callers in libnsl
+			_clnt_vc_create_timed	!!! ^
+	authsys_ops	!!!
+		authsys_create	!!! ^
+	authdes_ops	OK
+		authdes_pk_seccreate	OK - ^
+	clnt_door_ops	!!!
+		clnt_door_create	!!! ^
+	svc_door_ops	!!!
+		svc_door_create	!!! holds svc_door_mutex
+		svc_door_xprtcopy	!!!
+			get_xprt_copy	!!!
+				door_server	!!! holds svc_door_mutex
+	svc_vc_ops	!!!
+		makefd_xprt	!!!
+			svc_fd_create_private	!!!
+				svc_tli_create_common	!!! ^
+				svc_fd_create	OK
+					svcfd_create	OK - no callers
+			do_accept	!!!
+				rendezvous_request	!!!
+					SVC_RECV	!!! ^
+					svc_recv	OK - ^
+		svc_fd_xprtcopy	!!!
+			svc_copy	!!! ^
+	svc_vc_rendezvous_ops	!!!
+		svc_vc_create_private	!!!
+			svc_tli_create_common	!!! ^
+			svc_vc_create	OK - no callers
+		svc_vc_xprtcopy	!!!
+			svc_copy	!!! ^
+	svc_dg_ops	!!!
+		svc_dg_create_private	!!! ^
+		svc_dg_xprtcopy	!!! ^
+	xdrrec_ops	!!!
+		xdrrec_create	!!!
+			makefd_xprt	!!! ^
+			makefd_xprt	!!! holds svc_fd_lock
+			svc_fd_xprtcopy	!!! ^
+			_clnt_vc_create_timed	!!! ^
+	clnt_dg_ops	!!!
+		clnt_dg_create	!!! ^
+	clnt_vc_ops	!!!
+		_clnt_vc_create_timed	!!! ^
+mutex_t portnum_lock	!!!	(rpc)
+	__rpc_bindresvport_ipv6	!!!
+		__rpc_bindresvport	!!!
+			clnt_com_create	!!! holds rpcsoc_lock
+			svc_com_create	OK - ^
+mutex_t proglst_lock	OK	(rpc)
+	rpc_reg	OK
+		registerrpc	OK - no callers
+	universal	OK - svc_reg()
+mutex_t rpcsoc_lock	!!!	(rpc)
+	clnt_com_create	!!! ^
+mutex_t svcraw_lock	!!!	(rpc)
+	svc_raw_create	OK
+		svcraw_create	OK - no callers
+	svc_raw_recv	!!!
+		SVC_RECV	!!! ^
+		svc_recv	OK - ^
+	svc_raw_reply	!!!
+		SVC_REPLY	!!! ^
+		svc_reply	OK - ^
+	svc_raw_getargs	!!!
+		SVC_GETARGS	OK - no callers in libnsl
+		svc_getargs	!!!
+			universal	!!! holds proglst_lock
+	svc_raw_freeargs	!!!
+		SVC_FREEARGS	OK - no callers in libnsl
+		svc_freeargs	!!!
+			universal	!!! holds proglst_lock
+mutex_t prtlist_lock	!!!	(rpc)
+	__svc_free_xprtlist	!!!
+		svc_exit	!!! holds svc_exit_mutex
+	svc_create	OK - ^
+	__xprt_unregister_private	!!!
+		xprt_unregister	!!!
+			_svc_dg_destroy_private	!!!
+				svc_dg_destroy	!!! holds svc_mutex
+				_svc_destroy_private	!!!
+					_svc_done_private	!!! asserted the holding of svc_mutex
+						svc_done	!!! holds svc_mutex
+						_svc_run_mt	!!! holds svc_mutex
+		_svc_vc_destroy_private	!!!
+			svc_vc_destroy	!!! holds svc_mutex
+			svc_timeout_nonblock_xprt_and_LRU	!!! holds svc_fd_lock
+			_svc_destroy_private	!!! ^
+mutex_t svc_thr_mutex	OK	(rpc)
+	_svc_run_mt	OK - ^
+mutex_t svc_mutex	!!!	(rpc)
+	do_accept	!!! ^
+	svc_vc_destroy	!!!
+		do_accept	!!! ^
+		SVC_DESTROY	!!!
+			rpc_reg	!!! holds proglst_lock
+			svc_tp_create	OK - ^
+			svc_tli_create_common	!!! ^
+			svc_exit	!!! holds svc_exit_mutex
+			svc_getreq_common	!!! ^
+		svc_destroy	OK - no callers in libnsl
+	svc_dg_destroy	OK
+		SVC_DESTROY	!!! ^
+		svc_destroy	OK - ^
+	svc_exit	OK - no callers in libnsl
+	_svc_run_mt	!!! holds svc_thr_mutex
+	_svc_run_mt	OK - ^
+	svc_done	OK - no callers in libnsl
+	svc_args_done	!!!
+		_svc_run_mt	OK - ^
+		svc_done	OK - ^
+		svc_dg_getargs	!!!
+			SVC_GETARGS	OK - ^
+			svc_getargs	!!! ^
+		svc_vc_getargs	!!!
+			SVC_GETARGS	OK - ^
+			svc_getargs	!!! ^
+	rpc_control	!!!
+		svc_tli_create_common	!!! ^
+mutex_t svc_exit_mutex	OK	(rpc)
+	svc_exit	OK - ^
+mutex_t default_domain_lock	OK	(yp)
+	__default_domain	OK
+		yp_get_default_domain	OK - no callers in libnsl
+		usingypmap	OK - ^
+mutex_t bound_domains_lock	!!!	(yp)
+	yp_unbind	!!!
+		yp_master	OK - ^
+		__yp_master_rsvdport	OK - ^
+		yp_order	OK - ^
+		__yp_first_cflookup	OK - ^
+		__yp_next_cflookup	OK - ^
+		__yp_match_cflookup	!!! ^
+		__yp_match_rsvdport_cflookup	!!! ^
+		__yp_dobind_cflookup	!!!
+			__yp_first_cflookup	OK - ^
+			__yp_next_cflookup	OK - ^
+			__yp_all_cflookup	OK - ^
+			__yp_match_cflookup	!!! ^
+			__yp_dobind	OK
+				yp_order	OK - ^
+				yp_master	OK - ^
+				yp_bind	OK - no callers in libnsl
+	__yp_add_binding_netid	OK - ^
+	__yp_dobind_cflookup	!!! ^
+	__yp_rel_binding	!!!
+		yp_master	OK - ^
+		__yp_master_rsvdport	OK - ^
+		__yp_all_cflookup	OK - ^
+		__yp_all_rsvdport	OK - ^
+		yp_order	OK - ^
+		__yp_first_cflookup	OK - ^
+		__yp_next_cflookup	OK - ^
+		__yp_match_cflookup	!!! ^
+		__yp_match_rsvdport_cflookup	!!! ^
+		yp_bind	OK - ^
+	__yp_dobind_rsvdport_cflookup	!!!
+		__yp_match_rsvdport_cflookup	!!! ^
+		__yp_dobind_rsvdport	OK
+			__yp_master_rsvdport	OK - ^
+			__yp_all_rsvdport	OK - ^
+mutex_t server_name_lock	OK	(struct dom_binding:server_name_lock)	(yp)
+	__yp_all_cflookup	OK - ^
+	__yp_all_rsvdport	OK - ^
+mutex_t cache_lock	!!!	(yp)
+	__yp_match_cflookup	!!! ^
+	__empty_yp_cache	OK - no callers
+	__yp_match_rsvdport_cflookup	!!! ^
+mutex_t xlate_lock	!!!	(netdir)
+	__classic_netdir_getbyname	!!!
+		netdir_getbyname	!!!
+			rtime_tli	OK - no callers
+			get_server	!!!
+				__rpc_get_time_offset	!!! ^
+			rpc_broadcast_exp	OK - ^
+			clnt_create_service_timed	OK - ^
+			_getclnthandle_timed	!!! ^
+			getclnt	!!! ^	(yp)
+		_get_hostserv_inetnetdir_byname	!!!
+			gethostbyname_r	OK
+				gethostbyname	OK
+					getrpcport	OK - no callers in libnsl
+				__inet_netdir_is_my_host	OK
+					__rpc_is_local_host	OK
+						clnt_create_timed	OK - ^
+						clnt_create_service_timed	OK - ^
+			getipnodebyname	OK - no callers in libnsl
+			_get_hostserv_inetnetdir_byname	!!! recursive
+			netdir_getbyname	!!! ^
+	__classic_netdir_getbyaddr	OK
+		netdir_getbyaddr	OK
+			__yp_all_cflookup	OK - ^
+			__yp_all_rsvdport	OK - ^
+			authdes_create	OK - ^
+		__netdir_getbyaddr_nosrv	OK - no callers in libnsl
+		_get_hostserv_inetnetdir_byaddr	OK
+			netdir_getbyaddr	OK - ^
+			__netdir_getbyaddr_nosrv	OK - ^
+			gethostbyaddr_r	OK
+				gethostbyaddr	OK - no callers in libnsl
+				getipnodebyaddr	OK
+					gethostbyaddr	OK - ^
+			getipnodebyaddr	OK - ^
+			_get_hostserv_inetnetdir_byaddr	OK - recursive
+	netdir_options	!!!
+		__yp_clnt_create_rsvdport_netid_req	OK - ^
+		tli_open_rsvdport	!!!
+			load_dom_binding_rsvdport	!!! ^
+		rpc_broadcast_exp	OK - ^
+	uaddr2taddr	!!!
+		pmap_set	OK - ^
+		got_entry	OK
+			__rpcb_findaddr_timed	OK - ^
+		__rpcbind_is_up	OK
+			__rpcb_findaddr_timed	OK - ^
+		__rpcb_findaddr_timed	OK - ^
+		rpcb_rmtcall	OK - ^
+		__rpc_get_time_offset	!!! ^
+		rpc_broadcast_exp	OK - ^
+		__nis_clnt_create	!!! ^
+		getclnt	!!! ^
+		__inet_uaddr_is_local	OK - no callers
+	taddr2uaddr	!!!
+		_getclnthandle_timed	!!! ^
+		rpcb_set	!!! ^
+		get_server	!!! ^
+		cache_set	!!! holds dupreq_lock
+		cache_get	!!! holds dupreq_lock
+		__inet_get_uaddr	OK - no callers
+mutex_t xlist_lock	!!!	(netdir)
+	load_xlate	!!!
+		__classic_netdir_getbyname	!!! ^
+		__classic_netdir_getbyaddr	OK - ^
+		netdir_options	!!! ^
+		uaddr2taddr	!!! ^
+		taddr2uaddr	!!! ^
+rwlock_t iflock	!!!	(nss)
+	update_if_cache	!!!
+		is_my_address	OK
+			__inet_netdir_is_my_host	OK - ^
+		inet_netdir_mergeaddr	!!!
+			__inet_netdir_options	!!!
+				netdir_options	!!! ^
+	is_my_address	OK - ^
+	inet_netdir_mergeaddr	!!! ^
+mutex_t _nsw_exec_lock	OK	(nss)
+	_getexecprof	OK - no callers in libnsl
+mutex_t nd_addr_lock	!!!	(nss)
+	_get_hostserv_inetnetdir_byname	!!! ^
+	_get_hostserv_inetnetdir_byaddr	OK - ^
+mutex_t nd6_addr_lock	!!!	(nss)
+	_get_hostserv_inetnetdir_byname	!!! ^
+mutex_t checksortcfg_lock	OK	(nss)
+	order_haddrlist_af	OK
+		_switch_gethostbyname_r	OK
+			_door_gethostbyname_r	OK - no callers
+			_uncached_gethostbyname_r	OK - no callers
+		_switch_getipnodebyname_r	OK
+			_door_getipnodebyname_r	OK - no callers
+			_uncached_getipnodebyname	OK - no callers
+		getipnodebyname	OK - ^
+rwlock_t localinfo_lock	OK	(nss)
+	order_haddrlist_inet	OK
+		order_haddrlist_af	OK - ^
+rwlock_t proto_rw	OK	(ipsec)
+	_build_internal_algs	OK
+		_real_getipsecprotos	OK - no callers in libnsl
+		_real_getipsecalgs	OK - no callers in libnsl
+		getipsecalgbyname	OK - no callers in libnsl
+		getipsecalgbynum	OK - no callers in libnsl
+		getipsecprotobyname	OK - no callers in libnsl
+		getipsecprotobynum	OK - no callers in libnsl
+	_real_getipsecprotos	OK - ^
+	_real_getipsecalgs	OK - ^
+	getipsecalgbyname	OK - ^
+	getipsecalgbynum	OK - ^
+	getipsecprotobyname	OK - ^
+	getipsecprotobynum	OK - ^
+mutex_t netpp_mutex	!!!	(netselect)
+	setnetconfig	!!!	(netselect)
+		__rpc_getconfip	!!!
+			gethostbyname_r	OK - ^
+			gethostbyaddr_r	OK - ^
+			getipnodebyname	OK - ^
+			getipnodebyaddr	OK - ^
+			pmap_set	OK - ^
+			pmap_unset	!!! ^
+			clnt_com_create	!!! holds rpcsoc_lock
+			svc_com_create	OK - ^
+			authdes_create	OK - ^
+			rtime_tli	OK - ^
+		__rpc_setconf	OK
+			rpc_reg	OK - ^
+			clnt_create_timed	OK - ^
+			clnt_create_service_timed	OK - ^
+			__rpcb_findaddr_timed	OK - ^
+			rpcb_gettime	OK - ^
+			svc_create	OK - ^
+			rpc_broadcast_exp	OK - ^
+		__rpcfd_to_nconf	!!!
+			_clnt_tli_create_timed	!!! ^
+			svc_reg	!!! ^
+			svc_register	OK - ^
+			rendezvous_request	!!! ^
+		get_server	!!! ^
+		__rpc_get_time_offset	!!! ^
+		local_rpcb	!!! holds loopnconf_lock
+		__clnt_create_loopback	!!! ^
+	endnetconfig	!!!	(netselect)
+		__rpc_getconfip	!!! ^
+		__rpc_endconf	!!!
+			__rpcb_findaddr_timed	OK - ^
+			rpcb_gettime	OK - ^
+			rpc_reg	!!! holds proglst_lock
+			clnt_create_timed	OK - ^
+			clnt_create_service_timed	OK - ^
+			svc_create	OK - ^
+			rpc_broadcast_exp	OK - ^
+		__rpcfd_to_nconf	!!! ^
+		get_server	!!! ^
+		__rpc_get_time_offset	!!! ^
+		local_rpcb	!!! holds loopnconf_lock
+		__clnt_create_loopback	!!! ^
+	getnetconfig	!!!	(netselect)
+		__rpc_getconfip	!!! ^
+		__rpc_getconf	!!!
+			rpc_reg	!!! holds proglst_lock
+			clnt_create_timed	OK - ^
+			clnt_create_service_timed	OK - ^
+			__rpcb_findaddr_timed	OK - ^
+			rpcb_gettime	OK - ^
+			svc_create	OK - ^
+			rpc_broadcast_exp	OK - ^
+		__rpcfd_to_nconf	!!! ^
+		get_server	!!! ^
+		__rpc_get_time_offset	!!! ^
+		local_rpcb	!!! holds loopnconf_lock
+		__clnt_create_loopback	!!! ^
+	getnetconfigent	!!!	(netselect)
+		__yp_clnt_create_rsvdport_netid_req	OK - ^
+		__rpc_getconfip	!!! ^
+		__rpcfd_to_nconf	!!! ^
+		__rpc_get_time_offset	!!! ^
+		svc_dg_recv	!!! ^
+		cache_set	!!! holds dupreq_lock
+		cache_get	!!! holds dupreq_lock
+		local_rpcb	!!! holds loopnconf_lock
+		__rpcbind_is_up	OK - ^
+		__yp_add_binding_netid	OK - ^
+	setnetpath	OK
+		__rpc_setconf	OK - ^
+	endnetpath	!!!
+		__rpc_endconf	!!! ^
+	getnetpath	!!!
+		__rpc_getconf	!!! ^
+mutex_t rpcgss_calls_mutex	!!!	(rpc)
+	rpcgss_calls_init	!!!
+		rpc_gss_seccreate	OK - no callers in libnsl
+		rpc_gss_set_defaults	OK - no callers in libnsl
+		rpc_gss_get_principal_name	OK - no callers in libnsl
+		rpc_gss_get_mechanisms	OK - no callers in libnsl
+		rpc_gss_get_mech_info	OK - no callers in libnsl
+		rpc_gss_get_versions	OK - no callers in libnsl
+		rpc_gss_is_installed	!!!
+			__nis_get_mechanisms	!!! holds nis_sec_cf_lock
+		rpc_gss_set_svc_name	OK - no callers in libnsl
+		rpc_gss_set_callback	OK - no callers in libnsl
+		rpc_gss_getcred		OK - no callers in libnsl
+		rpc_gss_mech_to_oid	OK - no callers in libnsl
+		rpc_gss_qop_to_num	OK - no callers in libnsl
+		__svcrpcsec_gss	!!!
+			__gss_authenticate	!!! ^
+		__rpc_gss_wrap	!!!
+			clnt_dg_call	!!! this function calls rpc_fd_lock() before __rpc_gss_wrap()
+			clnt_dg_send	!!! this function calls rpc_fd_lock() before __rpc_gss_wrap()
+			clnt_vc_call	!!! this function calls rpc_fd_lock() before __rpc_gss_wrap()
+			clnt_vc_send	!!! this function calls rpc_fd_lock() before __rpc_gss_wrap()
+		__rpc_gss_unwrap	!!!
+			clnt_dg_call	!!! this function calls rpc_fd_lock() before __rpc_gss_unwrap()
+			clnt_vc_call	!!! this function calls rpc_fd_lock() before __rpc_gss_unwrap()
+		rpc_gss_max_data_length	OK - no callers in libnsl
+		rpc_gss_svc_max_data_length	OK - no callers in libnsl
+		rpc_gss_get_error	OK - no callers in libnsl
+rwlock_t svc_fd_lock	!!!	(rpc)
+	_svc_run	OK - ^
+	_svc_run_mt	!!! holds svc_mutex
+	make_xprt_copy	!!! asserted the holding of svc_mutex
+		_svc_run_mt	!!! holds svc_mutex
+	svc_args_done	!!! ^
+	xprt_register	!!!
+		svc_raw_create	!!! holds svcraw_lock
+		svc_tli_create_common	!!! ^
+		svc_vc_create	OK - ^
+		svc_fd_create	OK - ^
+		do_accept	!!! ^
+		svc_dg_create	OK - ^
+	__xprt_unregister_private	!!! ^
+	svc_getreq_poll	OK - ^
+	svc_getreq_common	!!! ^
+	makefd_xprt	!!! ^
+	svc_timeout_nonblock_xprt_and_LRU	!!!
+		do_accept	!!! holds svc_mutex
+		svc_vc_destroy	!!! holds svc_mutex
+	read_vc (clnt_vc.c)	TODO
+rwlock_t svc_lock	!!!	(rpc)
+	svc_reg	!!! ^
+	svc_unreg	OK - ^
+	svc_register	OK - ^
+	svc_unregister	OK - no callers in libnsl
+	_svc_prog_dispatch	!!! ^
+mutex_t svc_door_mutex	!!!	(rpc)
+	__svc_cleanup_door_xprts	!!!
+		svc_exit	!!! holds svc_exit_mutex
+	door_server	OK - ^
+	svc_door_create	OK
+		svc_create	OK - ^
+	return_xprt_copy	OK
+		door_server	OK - ^
+	svc_door_destroy	!!!
+		SVC_DESTROY	!!! ^
+		svc_destroy	OK - ^
+	svc_run	OK - ^
+	svc_exit	OK - ^
+	xprt_register	!!! holds svc_fd_lock
+mutex_t svc_userfds_lock	!!!	(rpc)
+	__svc_getreq_user	!!!
+		_svc_run_mt	!!! holds svc_mutex
+		svc_getreq_poll	!!! holds svc_fd_lock
+		svc_getreq_common	!!! holds svc_fd_lock
+	svc_add_input	OK - no callers in libnsl
+	svc_remove_input	OK - no callers
+mutex_t initdc_lock	OK	(rpc)
+	__svc_dupcache_init	OK
+		__svc_vc_dupcache_init	OK - no callers
+mutex_t vctbl_lock	!!!	(rpc)
+	_clnt_vc_create_timed	!!! ^
+mutex_t nb_list_mutex	!!!	(rpc)
+	register_nb	!!!
+		set_io_mode	!!!
+			clnt_vc_control	!!! this function calls rpc_fd_lock() before set_io_mode()
+	unregister_nb	!!!
+		clnt_vc_destroy	!!! this function calls rpc_fd_lock() before unregister_nb()
+		set_io_mode	!!! ^
+mutex_t serialize_netname_r	!!!	(rpc)
+	netname2user	!!!
+		authdes_getucred	!!! holds authdes_lock
+mutex_t td_opt_lock	!!!	(rpc)
+	__td_setnodelay	!!!
+		_clnt_tli_create_timed	!!! ^
+		do_accept	!!! ^
+rwlock_t rpcbaddr_cache_lock	!!!	(rpc)
+	_getclnthandle_timed	!!! ^
+	add_cache	!!!
+		_getclnthandle_timed	!!! ^
+mutex_t serialize_netname	OK	(rpc)
+	user2netname	OK
+		getnetname	OK - ^
+		__getnetnamebyuid	OK - ^
+mutex_t dgtbl_lock	!!!	(rpc)
+	clnt_dg_create	!!! ^
+mutex_t nis_sec_cf_lock	OK	(nis)
+	__nis_get_mechanisms	OK
+		__nis_translate_mechanism	OK - no callers
+		__nis_mechname2alias	OK - no callers
+		__nis_keyalg2mechalias	OK
+			__nis_keyalg2authtype	OK - no callers in libnsl
+mutex_t mech_file_lock	OK	(nis)
+	mf_get_mechs	OK
+		mechfile_name2lib	OK
+			__nis_get_mechanism_library	OK
+				__nis_get_mechanism_symbol	OK
+					__gen_dhkeys_g	OK - no callers in libnsl
+					__gen_common_dhkeys_g	OK - no calles in libnsl
+mutex_t gss_load_lock	OK	(nis)
+	gss_OID_load	OK
+		__nis_gssprin2netname	OK - no callers
+mutex_t ln_lock	OK	(nis)
+	__get_local_names	OK
+		nis_local_group	OK - no callers
+		nis_name_of_r	OK
+			nis_name_of	OK - no callers
+		nis_local_directory	OK - no callers in libnsl
+		__nis_rpc_domain	OK - no callers in libnsl
+		nis_local_host	OK
+			host2netname	OK
+				getnetname	OK
+					authdes_pk_seccreate	OK - ^
+					key_setsecret	OK - ^
+				__getnetnamebyuid	OK - no callers in libnsl
+				yp_update	OK - ^
+mutex_t __nis_ss_used_lock	OK	(nis)
+	nis_get_static_storage	OK
+		nis_clone_object_r	OK - ^
+mutex_t mod_192_0_lck	OK	(key)
+	setmodulus_192_0	OK
+		__gen_common_dhkeys_g	OK - ^
+mutex_t _ti_userlock	!!!	(nsl)
+	_tx_close	!!!
+		t_close	!!!
+			__yp_clnt_create_rsvdport_netid_req	OK - ^
+			tli_open_rsvdport	!!! ^
+			getclnt	!!! ^
+			tlicall	OK
+				processdev	OK
+					getto	OK
+						dial	OK - no callers in libnsl
+						conn	OK
+							dial	OK - ^
+			tteardown	OK - no callers in libnsl
+			rpc_broadcast_exp	OK - ^
+			rtime_tli	OK - ^
+			clnt_create_service_timed	OK - ^
+			_clnt_tli_create_timed	!!! ^
+			__rpc_raise_fd	!!!
+				RPC_RAISEFD	!!!
+					clnt_create_service_timed	OK - ^
+					_clnt_tli_create_timed	!!! ^
+					clnt_com_create	!!! holds rpcsoc_lock
+			clnt_com_create	!!! holds rpcsoc_lock
+			svc_com_create	OK - ^
+			authdes_create	OK - ^
+			do_accept	!!! ^
+			_svc_vc_destroy_private	!!! ^
+			__rpcbind_is_up	OK - ^
+			__rpc_get_time_offset	!!! ^
+			svc_tli_create_common	!!! ^
+			_svc_dg_destroy_private	!!! ^
+			clnt_dg_destroy	!!! this function calls rpc_fd_lock() before t_close()
+			clnt_vc_destroy	!!! this function calls rpc_fd_lock() before t_close()
+		_xti_close	!!!
+			t_close	!!! ^
+	_tx_open	!!!
+		t_open	!!!
+			__yp_clnt_create_rsvdport_netid_req	OK - ^
+			rtime_tli	OK - ^
+			clnt_com_create	!!! holds rpcsoc_lock
+			svc_com_create	OK - ^
+			authdes_create	OK - ^
+			clnt_create_service_timed	OK - ^
+			_clnt_tli_create_timed	!!! ^
+			__rpc_get_time_offset	!!! ^
+			tlicall	OK - ^
+			svc_tli_create_common	!!! ^
+			rpc_broadcast_exp	OK - ^
+			do_accept	!!! ^
+			__rpcbind_is_up	OK - ^
+			tli_open_rsvdport	!!! ^
+			getclnt	!!! ^
+		_xti_open	!!!
+			t_open	!!! ^
+	_t_checkfd	!!!
+		_tx_getstate	!!!
+			t_getstate	!!!
+				__td_setnodelay	!!! ^
+				__rpc_bindresvport_ipv6	!!! ^
+				set_up_connection	!!!
+					_clnt_vc_create_timed	!!! ^
+					clnt_vc_control	!!! this function calls rpc_fd_lock() before set_up_connection()
+				do_accept	!!! ^
+				twrite	OK
+					Write	OK (variable)
+						sendthem	OK
+							chat	OK
+								conn	OK - ^
+								processdev	OK - ^
+						wrstr	OK
+							FLUSH	OK (local define)
+								sendthem	OK - ^
+							sendthem	OK - ^
+						wrchr	OK
+							wrstr	OK - ^
+				show_tlook	OK
+					tfaillog	OK
+						twrite	OK - ^
+						tsetup	OK
+							Setup	OK (variable)
+								processdev	OK - ^
+						tlicall	OK - ^
+				bindresvport	!!!
+					__inet_netdir_options	!!! ^
+			_xti_getstate	!!!
+				t_getstate	!!! ^
+		_tx_sync	!!!
+			t_sync	!!!
+				tsetup	OK - ^
+				_clnt_tli_create_timed	!!! ^
+				__rpc_raise_fd	!!! ^
+				svc_tli_create_common	!!! ^
+			_xti_sync	!!!
+				t_sync	!!! ^
+		_tx_close	!!! ^
+		_tx_rcvconnect	!!!
+			t_rcvconnect	!!!
+				set_up_connection	!!! ^
+			_xti_rcvconnect	!!!
+				t_rcvconnect	!!! ^
+		_tx_sndrel	!!!
+			t_sndrel	!!!
+				do_accept	!!! ^
+				t_rcvnonblock	OK
+					read_vc (svc_vc.c)	TODO
+				t_rcvall (svc_vc.c)	OK
+					read_vc (svc_vc.c)	TODO
+				write_vc (svc_vc.c)	TODO
+				svc_tli_create_common	!!! ^
+				t_rcvall (clnt_vc.c)	OK
+					read_vc (clnt_vc.c)	TODO
+			_xti_sndrel	!!!
+				t_sndrel	!!! ^
+		_tx_sndreldata	OK
+			_xti_sndreldata	OK
+				t_sndreldata	OK - no callers
+		_tx_getname	!!!
+			t_getname	!!!
+				svc_tli_create_common	!!! ^
+				svc_fd_create_private	!!! ^
+				do_accept	!!! ^
+		_tx_getprotaddr	OK
+			_xti_getprotaddr	OK
+				t_getprotaddr	OK - no callers
+		_tx_connect	!!!
+			t_connect	!!!
+				rtime_tli	OK - ^
+				__rpc_get_time_offset	!!! ^
+				__rpcbind_is_up	OK - ^
+				set_up_connection	!!! ^
+				tlicall	OK - ^
+				getclnt	!!! ^
+			_xti_connect	!!!
+				t_connect	!!! ^
+		_tx_unbind	!!!
+			t_unbind	!!!
+				tteardown	OK - ^
+				__rpc_bindresvport_ipv6	!!! holds portnum_lock
+				bindresvport	!!! ^
+			_xti_unbind	!!!
+				t_unbind	!!! ^
+		_tx_getinfo	!!!
+			t_getinfo	!!!
+				clnt_com_create	!!! holds rpcsoc_lock
+				__rpc_bindresvport_ipv6	!!! ^
+				rpc_reg	!!! holds proglst_lock
+				_clnt_tli_create_timed	!!! ^
+				__rpcfd_to_nconf	!!! ^
+				svc_tli_create_common	!!! ^
+				svc_vc_create_private	!!! ^
+				svc_fd_create_private	!!! ^
+				svc_dg_create_private	!!! ^
+				clnt_dg_create	!!! ^
+				twrite	OK - ^
+				bindresvport	!!! ^
+				_clnt_vc_create_timed	!!! ^
+			_xti_getinfo	!!!
+				t_getinfo	!!! ^
+		_tx_look	!!!
+			t_look	!!!
+				show_tlook	OK - ^
+				tlicall	OK - ^
+				rendezvous_request	!!! ^
+				do_accept	!!! ^
+				t_rcvnonblock	OK - ^
+				t_rcvall (svc_vc.c)	OK - ^
+				write_vc (svc_vc.c)	TODO
+				rpc_broadcast_exp	OK - ^
+				set_up_connection	!!! ^
+				t_rcvall (clnt_vc.c)	OK - ^
+				svc_dg_recv	!!! ^
+			_xti_look	!!!
+				t_look	!!! ^
+		_tx_accept	!!!
+			_xti_accept	!!!
+				t_accept	!!! ^
+			_xti_xns5_accept	!!!
+				t_accept	!!! ^
+			t_accept	!!!
+				do_accept	!!! ^
+		_tx_bind	!!!
+			t_bind	!!!
+				svc_tli_create_common	!!! ^
+				tlicall	OK - ^
+				rtime_tli	OK - ^
+				__rpc_bindresvport_ipv6	!!! holds portnum_lock
+				do_accept	!!! ^
+				_clnt_tli_create_timed	!!! ^
+				__rpc_get_time_offset	!!! ^
+				bindresvport	!!! ^
+				tli_open_rsvdport	!!! ^
+				getclnt	!!! ^
+				rpc_broadcast_exp	OK - ^
+				__rpcbind_is_up	OK - ^
+			_xti_bind	!!!
+				t_bind	!!! ^
+		_tx_optmgmt	!!!
+			t_optmgmt	!!!
+				__td_setnodelay	!!! holds td_opt_lock
+				__rpc_tli_set_options	!!!
+					svc_tli_create_common	!!! ^
+					__rpc_negotiate_uid	OK
+						svc_fd_negotiate_ucred	OK - no callers in libnsl
+					__rpc_set_mac_options	!!!
+						clnt_create_service_timed	OK - ^
+						_clnt_tli_create_timed	!!! ^
+						rpc_broadcast_exp	OK - ^
+					clnt_dg_create	!!! ^
+				_set_tcp_conntime	!!!
+					set_up_connection	!!! ^
+				_get_tcp_conntime	!!!
+					set_up_connection	!!! ^
+				do_accept	!!! ^
+				bindresvport	!!! ^
+			_xti_optmgmt	!!!
+				t_optmgmt	!!! ^
+		_tx_rcvdis	!!!
+			t_rcvdis	!!!
+				show_tlook	OK - ^
+				tlicall	OK - ^
+				rendezvous_request	!!! ^
+				do_accept	!!! ^
+				t_rcvnonblock	OK - ^
+				t_rcvall (svc_vc.c)	OK - ^
+				write_vc (svc_vc.c)	TODO
+				set_up_connection	!!! ^
+				t_rcvall (clnt_vc.c)	OK - ^
+			_xti_rcvdis	!!!
+				t_rcvdis	!!! ^
+		_tx_rcvrel	!!!
+			t_rcvrel	!!!
+				do_accept	!!! ^
+				t_rcvnonblock	OK - ^
+				t_rcvall (svc_vc.c)	OK - ^
+				write_vc (svc_vc.c)	TODO
+				svc_tli_create_common	!!! ^
+				t_rcvall (clnt_vc.c)	OK - ^
+			_xti_rcvrel	!!!
+				t_rcvrel	!!! ^
+		_tx_rcvreldata	OK
+			_xti_rcvreldata	OK
+				t_rcvreldata	OK - no callers
+		_tx_rcvudata	!!!
+			t_rcvudata	!!!
+				rtime_tli	OK - ^
+				__rpc_get_time_offset	!!! ^
+				rpc_broadcast_exp	OK - ^
+				svc_dg_recv	!!! ^
+				clnt_dg_call	!!! this function calls rpc_fd_lock() before t_rcvudata()
+			_xti_rcvudata	!!!
+				t_rcvudata	!!! ^
+		_tx_rcvuderr	!!!
+			t_rcvuderr	!!!
+				rpc_broadcast_exp	OK - ^
+				svc_dg_recv	!!! ^
+				_rcv_unitdata_err	!!!
+					clnt_dg_call	!!! this function calls rpc_fd_lock() before _rcv_unitdata_err()
+			_xti_rcvuderr	!!!
+				t_rcvuderr	!!! ^
+		_tx_snd	!!!
+			_xti_snd	!!!
+				t_snd	!!! ^
+			_xti_xns5_snd	!!!
+				t_snd	!!! ^
+			t_snd	!!!
+				nlsrequest	OK - no callers
+				twrite	OK - ^
+				write_vc (clnt_vc.c)	TODO
+				do_flush	!!!
+					clnt_vc_call	!!! this function calls rpc_fd_lock() before do_flush()
+					clnt_vc_control	!!! this function calls rpc_fd_lock() before do_flush()
+					clnt_vc_destroy	!!! this function calls rpc_fd_lock() before do_flush()
+					set_io_mode	!!! ^
+					nb_send	OK
+						write_vc (clnt_vc.c)	TODO
+					flush_registered_clients	!!! (atexit)
+				nb_send	OK - ^
+				write_vc (svc_vc.c)	TODO
+		_tx_snddis	!!!
+			t_snddis	!!!
+				do_accept	!!! ^
+				clnt_vc_control	!!! this function calls rpc_fd_lock() before t_snddis()
+				t_rcvall (clnt_vc.c)	OK - ^
+			_xti_snddis	!!!
+				t_snddis	!!! ^
+		_tx_sndudata	!!!
+			t_sndudata	!!!
+				rtime_tli	OK - ^
+				rpc_broadcast_exp	OK - ^
+				__rpc_get_time_offset	!!! ^
+				svc_dg_recv	!!! ^
+				svc_dg_reply	!!! ^
+				clnt_dg_call	!!! this function calls rpc_fd_lock() before t_sndudata()
+				clnt_dg_send	!!! this function calls rpc_fd_lock() before t_sndudata()
+			_xti_sndudata	!!!
+				t_sndudata	!!! ^
+		_tx_sndv	OK
+			_xti_sndv	OK
+				t_sndv	OK - no callers
+		_tx_sndvudata	OK
+			_xti_sndvudata	OK
+				t_sndvudata	OK - no callers
+		_tx_alloc	!!!
+			t_alloc	!!!
+				__yp_clnt_create_rsvdport_netid_req	OK - ^
+				tlicall	OK - ^
+				show_tlook	OK - ^
+				svc_vc_create_private	!!! ^
+				svc_vc_xprtcopy	!!! ^
+				do_accept	!!! ^
+				__rpc_bindresvport_ipv6	!!! ^
+				svc_tli_create_common	!!! ^
+				clnt_dg_create	!!! ^
+				_rcv_unitdata_err	!!! ^
+				clnt_create_service_timed	OK - ^
+				__rpcbind_is_up	OK - ^
+				set_up_connection	!!! ^
+				bindresvport	!!! ^
+			_xti_alloc	!!!
+				t_alloc	!!! ^
+		_tx_listen	!!!
+			t_listen	!!!
+				rendezvous_request	!!! ^
+				do_accept	!!! ^
+			_xti_listen	!!!
+				t_listen	!!! ^
+		_tx_rcv	!!!
+			t_rcv	!!!
+				nlsrequest	OK - ^
+				rtime_tli	OK - ^
+				__rpc_get_time_offset	!!! ^
+				t_rcvnonblock	OK - ^
+				t_rcvall (svc_vc.c)	OK - ^
+				t_rcvall (clnt_vc.c)	OK - ^
+				tread	OK
+					Read (variable)	OK
+						expect_str	OK
+							expect	OK
+								chat	OK - ^
+						wrchr	OK - ^
+			_xti_rcv	!!!
+				t_rcv	!!! ^
+		_tx_rcvv	OK
+			_xti_rcvv	OK
+				t_rcvv	OK - no callers
+		_tx_rcvvudata	OK
+			_xti_rcvvudata	OK
+				t_rcvvudata	OK - no callers
+	
+/* struct dupcache -> dc_lock */
+rwlock_t dc_lock	OK	(rpc)
+	__svc_dupcache_check	OK
+		__svc_dup	OK
+			__svc_vc_dup	OK - no callers
+	__svc_dupcache_victim	OK
+		__svc_dup	OK - ^
+	__svc_dupcache_enter	OK
+		__svc_dup	OK - ^
+	__svc_dupcache_update	OK
+		__svc_dupdone	OK
+			__svc_vc_dupdone	OK - no callers
+
+/* struct _ti_user -> ti_lock */
+mutex_t ti_lock	!!!	(nsl)
+	_tx_sndreldata	OK - ^
+	_tx_sndrel	!!! ^
+	_tx_sndvudata	OK - ^
+	_tx_rcvrel	!!! ^
+	_tx_rcvreldata	OK - ^
+	_tx_rcvudata	!!! ^
+	_tx_snddis	!!! ^
+	_tx_sndudata	!!! ^
+	_tx_sndv	OK - ^
+	_tx_rcvconnect	!!! ^
+	_tx_connect	!!! ^
+	_tx_rcvv	OK - ^
+	_tx_rcvdis	!!! ^
+	_tx_snd	!!! ^
+	_tx_accept	!!! ^
+	_tx_alloc	!!! ^
+	_tx_listen	!!! ^
+	_tx_rcv	!!! ^
+	_tx_getname	!!! ^
+	_tx_getprotaddr	OK - ^
+	_tx_rcvvudata	OK - ^
+	_tx_rcvuderr	!!! ^
+	_tx_unbind	!!! ^
+	_tx_getinfo	!!! ^
+	_tx_bind	!!! ^
+	_tx_look	!!! ^
+	_tx_optmgmt	!!! ^
+	_t_create	!!! asserted the holding of _ti_userlock
+		_tx_open	!!! holds _ti_userlock
+		_t_checkfd	!!! holds _ti_userlock
+	_t_rcv_conn_con	!!! releases and holds ti_lock
+		_tx_rcvconnect	!!! holds ti_lock
+		_tx_connect	!!! holds ti_lock
+
+
+mutex_t rpc_fd_list_lock	!!!	(rpc)
+	rpc_fd_lock	!!!
+		clnt_dg_call	!!!
+			CLNT_CALL	!!! ^
+			clnt_call	!!! ^
+		clnt_dg_send	OK
+			CLNT_SEND	OK - ^
+			clnt_send	OK - ^
+		clnt_dg_freeres	!!!
+			CLNT_FREERES	!!! ^
+			clnt_freeres	OK - ^
+		clnt_dg_control	!!!
+			CLNT_CONTROL	!!!
+				rpc_call	OK - ^
+				__rpcb_findaddr_timed	OK - ^
+				rpcb_getmaps	OK - ^
+				rpcb_rmtcall	OK - ^
+				rpcb_gettime	OK - ^
+				clnt_create_vers_timed	OK - ^
+				clnt_create_service_timed	OK - ^
+				clnt_tp_create_timed	OK - ^
+				_clnt_tli_create_timed	!!! ^
+				clnt_com_create	!!! holds rpcsoc_lock
+				clntudp_bufcreate	!!! ^
+				load_dom_binding_rsvdport	!!! ^
+			clnt_control	!!!
+				getkeyserv_handle	!!! ^
+				set_rdev (key_call.c)	!!!
+					getkeyserv_handle	!!! ^
+				check_rdev (key_call.c)	!!!
+					key_call_destroy	OK
+						_key_call_fini	OK
+							_libnsl_fini	OK
+						getkeyserv_handle
+					getkeyserv_handle	!!! ^
+				_update_did	!!!
+					getkeyserv_handle	!!! ^
+				__yp_clnt_create_rsvdport_netid_req	OK - ^
+				yp_update	OK - ^
+				load_dom_binding	!!! ^
+				set_rdev (yp_bind.c)	!!!
+					load_dom_binding	!!! ^
+					load_dom_binding_rsvdport	!!! ^
+				check_rdev (yp_bind.c)	!!!
+					free_dom_binding	!!!
+						__yp_all_rsvdport	OK - ^
+						__yp_master_rsvdport	OK - ^
+						__yp_match_rsvdport_cflookup	!!! ^
+						__yp_unbind_nolock	!!!
+							yp_unbind	!!! holds bound_domains_lock
+							__yp_dobind_cflookup	!!! holds bound_domains_lock
+							__yp_dobind_rsvdport_cflookup	!!! holds bound_domains_lock
+						newborn	!!!
+							__yp_add_binding_netid	!!! holds bound_domains_lock
+							__yp_dobind_cflookup	!!! holds bound_domains_lock
+							__yp_dobind_rsvdport_cflookup	!!! holds bound_domains_lock
+						__yp_rel_binding	!!! holds bound_domains_lock
+					__yp_dobind_cflookup	!!! holds bound_domains_lock
+				__map_addr	!!! ^
+				__nis_clnt_create	!!! ^
+		clnt_dg_destroy	!!!
+			CLNT_DESTROY	!!!
+				rpc_call_destroy	OK
+					rpc_call	OK - ^
+				rpc_call	OK - ^
+				pmap_getport	!!! ^
+				pmap_getmaps	OK - ^
+				pmap_rmtcall	OK - ^
+				rpcb_set	!!! ^
+				rpcb_unset	!!! ^
+				__rpcb_findaddr_timed	OK - ^
+				rpcb_getmaps	OK - ^
+				rpcb_rmtcall	OK - ^
+				rpcb_gettime	OK - ^
+				rpcb_taddr2uaddr	OK - ^
+				rpcb_uaddr2taddr	OK - ^
+				clnt_tp_create_timed	OK - ^
+<mark add this once 4802 is integrated (TODO)>
+				_clnt_tli_create_timed	!!! ^
+</mark>
+			clnt_destroy	!!!
+				yp_update	OK - ^
+				free_dom_binding	!!! ^
+				load_dom_binding	!!! ^
+				load_dom_binding_rsvdport	!!! ^
+				__yp_dobind_cflookup	!!! holds bound_domains_lock
+				__yp_dobind_rsvdport_cflookup	!!! holds bound_domains_lock
+				getclnt	!!! ^
+				__yp_all_cflookup	OK - ^
+				__yp_all_rsvdport	OK - ^
+				__rpc_get_time_offset	!!! ^
+				__map_addr	!!! ^
+				clnt_create_vers_timed	OK - ^
+				clnt_create_service_timed	OK - ^
+				key_call_destroy	OK - ^
+				getkeyserv_handle	!!! ^
+		clnt_vc_call	!!!
+			CLNT_CALL	!!! ^
+			clnt_call	!!! ^
+		clnt_vc_send	OK
+			CLNT_SEND	OK - ^
+			clnt_send	OK - ^
+		clnt_vc_freeres	!!!
+			CLNT_FREERES	!!! ^
+			clnt_freeres	OK - ^
+		clnt_vc_control	!!!
+			CLNT_CONTROL	!!! ^
+			clnt_control	!!! ^
+		clnt_vc_destroy	!!!
+			CLNT_DESTROY	!!! ^
+			clnt_destroy	!!! ^
+	rpc_fd_unlock	!!!
+		clnt_dg_call	!!! this function calls rpc_fd_lock() before rpc_fd_unlock()
+		clnt_dg_send	!!! this function calls rpc_fd_lock() before rpc_fd_unlock()
+		clnt_dg_freeres	!!! this function calls rpc_fd_lock() before rpc_fd_unlock()
+		clnt_dg_control	!!! this function calls rpc_fd_lock() before rpc_fd_unlock()
+		clnt_dg_destroy	!!! this function calls rpc_fd_lock() before rpc_fd_unlock()
+		clnt_vc_call	!!! this function calls rpc_fd_lock() before rpc_fd_unlock()
+		clnt_vc_send	!!! this function calls rpc_fd_lock() before rpc_fd_unlock()
+		clnt_vc_freeres	!!! this function calls rpc_fd_lock() before rpc_fd_unlock()
+		clnt_vc_control	!!! this function calls rpc_fd_lock() before rpc_fd_unlock()
+		clnt_vc_destroy	!!! this function calls rpc_fd_lock() before rpc_fd_unlock()
+
+mutex_t lock (in fdsync.c)	!!! (via search())	(rpc)
+	rpc_fd_lock	!!! ^
+
+mutex_t send_mutex	!!!	(svcxprt_ext_t->send_mutex)
+	svc_vc_reply	!!!
+		SVC_REPLY	!!! ^
+		svc_reply	OK - ^
