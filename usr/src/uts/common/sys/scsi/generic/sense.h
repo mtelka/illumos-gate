@@ -41,8 +41,8 @@ extern "C" {
 
 struct scsi_sense {
 #if defined(_BIT_FIELDS_LTOH)
-	uchar_t	ns_code		: 4,	/* Vendor Uniqe error code 	*/
-		ns_class	: 3,	/* Error class 			*/
+	uchar_t	ns_code		: 4,	/* Vendor Uniqe error code	*/
+		ns_class	: 3,	/* Error class			*/
 		ns_valid	: 1;	/* Logical Block Address is val */
 	uchar_t	ns_lba_hi	: 5,	/* High Logical Block Address */
 		ns_vu		: 3;	/* Vendor Unique value */
@@ -74,17 +74,17 @@ struct scsi_sense {
 
 struct scsi_extended_sense {
 #if defined(_BIT_FIELDS_LTOH)
-	uchar_t	es_code		: 4,	/* Vendor Unique error code 	*/
-		es_class	: 3,	/* Error Class- fixed at 0x7 	*/
-		es_valid	: 1;	/* sense data is valid 		*/
+	uchar_t	es_code		: 4,	/* Vendor Unique error code	*/
+		es_class	: 3,	/* Error Class- fixed at 0x7	*/
+		es_valid	: 1;	/* sense data is valid		*/
 
 	uchar_t	es_segnum;		/* segment number: for COPY cmd */
 
-	uchar_t	es_key		: 4,	/* Sense key (see below) 	*/
-				: 1,	/* reserved 			*/
-		es_ili		: 1,	/* Incorrect Length Indicator 	*/
-		es_eom		: 1,	/* End of Media 		*/
-		es_filmk	: 1;	/* File Mark Detected 		*/
+	uchar_t	es_key		: 4,	/* Sense key (see below)	*/
+				: 1,	/* reserved			*/
+		es_ili		: 1,	/* Incorrect Length Indicator	*/
+		es_eom		: 1,	/* End of Media			*/
+		es_filmk	: 1;	/* File Mark Detected		*/
 #elif defined(_BIT_FIELDS_HTOL)
 	uchar_t	es_valid	: 1,	/* sense data is valid */
 		es_class	: 3,	/* Error Class- fixed at 0x7 */
@@ -174,12 +174,12 @@ struct scsi_extended_sense {
 
 struct scsi_descr_sense_hdr {
 #if defined(_BIT_FIELDS_LTOH)
-	uchar_t	ds_code		: 4,	/* Vendor Unique error code 	*/
-		ds_class	: 3,	/* Error Class- fixed at 0x7 	*/
-		ds_reserved	: 1;	/* sense data is valid 		*/
+	uchar_t	ds_code		: 4,	/* Vendor Unique error code	*/
+		ds_class	: 3,	/* Error Class- fixed at 0x7	*/
+		ds_reserved	: 1;	/* sense data is valid		*/
 
-	uchar_t	ds_key		: 4,	/* Sense key 			*/
-		ds_reserved2	: 4;	/* reserved 			*/
+	uchar_t	ds_key		: 4,	/* Sense key			*/
+		ds_reserved2	: 4;	/* reserved			*/
 #elif defined(_BIT_FIELDS_HTOL)
 	uchar_t	ds_reserved	: 1,	/* sense data is valid */
 		ds_class	: 3,	/* Error Class- fixed at 0x7 */
@@ -207,11 +207,11 @@ struct scsi_information_sense_descr {
 	uchar_t isd_descr_type;		/* Descriptor type (0x00)	*/
 	uchar_t isd_addl_length;	/* Additional byte count (0x0A)	*/
 #if defined(_BIT_FIELDS_LTOH)
-	uchar_t	isd_reserved1	: 7,	/* reserved 			*/
-		isd_valid	: 1;	/* Always set to 1 		*/
+	uchar_t	isd_reserved1	: 7,	/* reserved			*/
+		isd_valid	: 1;	/* Always set to 1		*/
 #elif defined(_BIT_FIELDS_HTOL)
-	uchar_t	isd_valid	: 1,	/* Always set to 1 		*/
-		isd_reserved1	: 7;	/* reserved 			*/
+	uchar_t	isd_valid	: 1,	/* Always set to 1		*/
+		isd_reserved1	: 7;	/* reserved			*/
 #else
 #error	One of _BIT_FIELDS_LTOH or _BIT_FIELDS_HTOL must be defined
 #endif	/* _BIT_FIELDS_LTOH */
@@ -222,7 +222,7 @@ struct scsi_information_sense_descr {
 struct scsi_cmd_specific_sense_descr {
 	uchar_t css_descr_type;		/* Descriptor type (0x01)	*/
 	uchar_t css_addl_length;	/* Additional byte count (0x0A)	*/
-	uchar_t css_reserved[2];	/* reserved 			*/
+	uchar_t css_reserved[2];	/* reserved			*/
 	uchar_t css_cmd_specific_info[8]; /* Command specific info	*/
 };
 
@@ -289,9 +289,9 @@ union scsi_sk_specific_data {
 };
 
 struct scsi_sk_specific_sense_descr {
-	uchar_t sss_descr_type;		/* Descriptor type 		*/
+	uchar_t sss_descr_type;		/* Descriptor type		*/
 	uchar_t sss_addl_length;	/* Additional byte count (0x06)	*/
-	uchar_t sss_reserved[2];	/* reserved 			*/
+	uchar_t sss_reserved[2];	/* reserved			*/
 	union	scsi_sk_specific_data sss_data;
 	uchar_t sss_reserved2;
 };
@@ -299,8 +299,8 @@ struct scsi_sk_specific_sense_descr {
 struct scsi_fru_sense_descr {
 	uchar_t fs_descr_type;		/* Descriptor type (0x03)	*/
 	uchar_t fs_addl_length;		/* Additional byte count (0x02)	*/
-	uchar_t fs_reserved;		/* reserved 			*/
-	uchar_t fs_fru_code; 		/* Field Replaceable Unit Code	*/
+	uchar_t fs_reserved;		/* reserved			*/
+	uchar_t fs_fru_code;		/* Field Replaceable Unit Code	*/
 };
 
 struct scsi_stream_cmd_data {
@@ -322,14 +322,14 @@ struct scsi_stream_cmd_data {
 struct scsi_stream_cmd_sense_descr {
 	uchar_t scs_descr_type;		/* Descriptor type (0x04)	*/
 	uchar_t scs_addl_length;	/* Additional byte count (0x02)	*/
-	uchar_t scs_reserved;		/* reserved 			*/
+	uchar_t scs_reserved;		/* reserved			*/
 	struct scsi_stream_cmd_data scs_data;
 };
 
 struct scsi_block_cmd_sense_descr {
 	uchar_t bcs_descr_type;		/* Descriptor type (0x05)	*/
 	uchar_t bcs_addl_length;	/* Additional byte count (0x02)	*/
-	uchar_t bcs_reserved;		/* reserved 			*/
+	uchar_t bcs_reserved;		/* reserved			*/
 #if defined(_BIT_FIELDS_LTOH)
 	uchar_t	bcs_reserved2	: 5,
 		bcs_ili		: 1,
@@ -348,9 +348,9 @@ struct scsi_ata_status_ret_sense_descr {
 	uchar_t ars_addl_length;	/* Additional byte count (0x0c)	*/
 #if defined(_BIT_FIELDS_LTOH)
 	uchar_t	ars_extend	: 1,
-		ars_reserved1	: 7;	/* reserved 			*/
+		ars_reserved1	: 7;	/* reserved			*/
 #elif defined(_BIT_FIELDS_HTOL)
-	uchar_t	ars_reserved1	: 7,	/* reserved 			*/
+	uchar_t	ars_reserved1	: 7,	/* reserved			*/
 		ars_extend	: 1;
 #else
 #error	One of _BIT_FIELDS_LTOH or _BIT_FIELDS_HTOL must be defined

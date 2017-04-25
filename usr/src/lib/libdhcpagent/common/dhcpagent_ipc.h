@@ -92,7 +92,7 @@ typedef enum {
 
 typedef enum {
 	DHCP_DROP,	DHCP_EXTEND,  DHCP_PING,    DHCP_RELEASE,
-	DHCP_START,  	DHCP_STATUS,  DHCP_INFORM,  DHCP_GET_TAG,
+	DHCP_START,	DHCP_STATUS,  DHCP_INFORM,  DHCP_GET_TAG,
 	DHCP_NIPC,	/* number of supported requests */
 	DHCP_PRIMARY = 0x100,
 	DHCP_V6 = 0x200

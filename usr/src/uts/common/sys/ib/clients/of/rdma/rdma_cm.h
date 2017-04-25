@@ -155,7 +155,7 @@ struct rdma_cm_id *rdma_create_id(rdma_cm_event_handler event_handler,
 
 /*
  * rdma_map_id2clnthdl -
- * 	Maps RDMA identifier with IBTF and / or ROF client handles. Either
+ *	Maps RDMA identifier with IBTF and / or ROF client handles. Either
  *	of the handles can be NULL, but both should not be NULL. This API
  *	is called just after calling rdma_create_id() on the passive side.
  *

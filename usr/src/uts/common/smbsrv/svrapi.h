@@ -26,8 +26,6 @@
 #ifndef _SMBSRV_SVRAPI_H
 #define	_SMBSRV_SVRAPI_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * This file provides definitions for the SMB Net interface. On Windows
  * this would be NetAccess, NetConnection, NetFile, NetServer,
@@ -58,7 +56,7 @@ extern "C" {
  */
 
 struct server_info_0 {
-    char sv0_name[CNLEN + 1]; 	/* Server name */
+    char sv0_name[CNLEN + 1];	/* Server name */
 };	 /* server_info_0 */
 
 
@@ -67,7 +65,7 @@ struct server_info_1 {
     unsigned char	sv1_version_major;	/* Major version # of net */
     unsigned char	sv1_version_minor;	/* Minor version # of net */
     uint32_t		sv1_type;		/* Server type */
-    char		*sv1_comment; 		/* Exported server comment */
+    char		*sv1_comment;		/* Exported server comment */
 };	 /* server_info_1 */
 
 
@@ -186,7 +184,7 @@ struct server_info_3 {
 				/* (tenths of a percent) */
     uint16_t	sv3_maxauditsz;	/* Maximum audit file size (KB)	*/
     char	*sv3_srvheuristics; /* performance related server switches */
-    uint32_t 	sv3_auditedevents; /* Audit event control mask */
+    uint32_t	sv3_auditedevents; /* Audit event control mask */
     uint16_t	sv3_autoprofile; /* (0,1,2,3) = (NONE,LOAD,SAVE,or BOTH) */
     char	*sv3_autopath;	/* file pathname (where to load & save) */
 };	/* server_info_3 */

@@ -27,8 +27,6 @@
 #ifndef _SYS_IB_MGT_IBMF_IBMF_H
 #define	_SYS_IB_MGT_IBMF_IBMF_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * This file defines the IBMF client interface.
  */
@@ -48,7 +46,7 @@ extern "C" {
 /* IBMF API function return values */
 #define	IBMF_SUCCESS			0	/* successful call */
 #define	IBMF_FAILURE			-1	/* ibmf internal error */
-#define	IBMF_PORT_IN_USE 		-2	/* class already registered */
+#define	IBMF_PORT_IN_USE		-2	/* class already registered */
 #define	IBMF_BAD_CLASS			-3	/* bad class specified */
 #define	IBMF_BAD_HANDLE			-4	/* bad ibmf handle */
 #define	IBMF_BAD_QP_HANDLE		-5	/* bad QP handle */
@@ -243,7 +241,7 @@ typedef	enum _ibmf_client_type_t {
 typedef struct _ibmf_retrans_t {
 	uint32_t	retrans_retries;	/* number of retries */
 	uint32_t	retrans_rtv;		/* response time value */
-	uint32_t	retrans_rttv; 		/* round trip travel time */
+	uint32_t	retrans_rttv;		/* round trip travel time */
 	uint32_t	retrans_trans_to;	/* transaction timeout */
 } ibmf_retrans_t;
 
@@ -333,7 +331,7 @@ typedef void (*ibmf_async_event_cb_t)(
  *	The recipient is expected to not call any routines in the callback
  *	that may block.
  *
- * 	Blocking within the callback is not allowed, but ibmf doesn't enforce
+ *	Blocking within the callback is not allowed, but ibmf doesn't enforce
  *	this.
  *
  *	This routine may be called before ibmf_setup_async_cb() returns.

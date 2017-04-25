@@ -99,10 +99,10 @@ typedef struct ftstk {
  */
 typedef struct ftevnt {
 	hrtime_t	ts;		/* event timestamp, per gethrtime() */
-	char 		*mid;		/* module/driver name */
-	char		*midnext; 	/* next module/driver name */
-	ushort_t 	evnt;		/* FTEV_* value above */
-	ushort_t 	data;		/* event data */
+	char		*mid;		/* module/driver name */
+	char		*midnext;	/* next module/driver name */
+	ushort_t	evnt;		/* FTEV_* value above */
+	ushort_t	data;		/* event data */
 	ftstk_t		*stk;		/* optional event callstack */
 } ftevnt_t;
 
@@ -185,7 +185,7 @@ extern int str_ftnever, str_ftstack;
 	if (str_ftnever == 0) {						\
 		fthdr_t *_hp;						\
 									\
-		if ((mp) != NULL && ((_hp = DB_FTHDR(mp)) != NULL)) 	\
+		if ((mp) != NULL && ((_hp = DB_FTHDR(mp)) != NULL))	\
 			str_ftevent(_hp, (p), (e), (d));		\
 	}								\
 }

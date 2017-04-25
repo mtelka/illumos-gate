@@ -422,12 +422,12 @@ idm_bufpat_check(idm_buf_t *idb, int check_len, idm_bufpat_check_type_t type);
 
 extern boolean_t idm_pattern_checking;
 
-#define	IDM_BUFPAT_SET(CHK_BUF) 				\
+#define	IDM_BUFPAT_SET(CHK_BUF)					\
 	if (idm_pattern_checking && (CHK_BUF)->idb_bufalloc) {	\
 		idm_bufpat_set(CHK_BUF);			\
 	}
 
-#define	IDM_BUFPAT_CHECK(CHK_BUF, CHK_LEN, CHK_TYPE) 		\
+#define	IDM_BUFPAT_CHECK(CHK_BUF, CHK_LEN, CHK_TYPE)		\
 	if (idm_pattern_checking) {				\
 		(void) idm_bufpat_check(CHK_BUF, CHK_LEN, CHK_TYPE);	\
 	}

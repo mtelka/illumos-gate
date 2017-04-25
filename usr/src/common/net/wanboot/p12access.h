@@ -27,8 +27,6 @@
 #ifndef	_P12ACCESS_H
 #define	_P12ACCESS_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -50,7 +48,7 @@ extern "C" {
  *   passwd     - Pass phrase for pkcs12 data.
  *
  * Returns:
- *   -1 	- Error occurred.  Check the error stack for specifics.
+ *   -1		- Error occurred.  Check the error stack for specifics.
  *   0          - Success.  Cert was successfully added.
  */
 int sunw_p12_use_certfile(SSL_CTX *, char *, char *);
@@ -69,7 +67,7 @@ int sunw_p12_use_certfile(SSL_CTX *, char *, char *);
  *   passwd     - Pass phrase for pkcs12 data.
  *
  * Returns:
- *   -1 	- Error occurred.  Check the error stack for specifics.
+ *   -1		- Error occurred.  Check the error stack for specifics.
  *   0          - Success.
  */
 int sunw_p12_use_keyfile(SSL_CTX *, char *, char *);
@@ -88,7 +86,7 @@ int sunw_p12_use_keyfile(SSL_CTX *, char *, char *);
  *   passwd     - Pass phrase for pkcs12 data.
  *
  * Returns:
- *   -1 	- Error occurred.  Check the error stack for specifics.
+ *   -1		- Error occurred.  Check the error stack for specifics.
  *   0          - Success.  Trust anchors were successfully added.
  */
 int sunw_p12_use_trustfile(SSL_CTX *, char *, char *);

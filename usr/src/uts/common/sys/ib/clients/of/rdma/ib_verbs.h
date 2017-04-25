@@ -68,7 +68,7 @@ union ib_gid {
 
 enum rdma_node_type {
 	/* IB values map to NodeInfo:NodeType. */
-	RDMA_NODE_IB_CA 	= 1,
+	RDMA_NODE_IB_CA		= 1,
 	RDMA_NODE_IB_SWITCH,
 	RDMA_NODE_IB_ROUTER,
 	RDMA_NODE_RNIC
@@ -289,7 +289,7 @@ struct ib_event {
 
 struct ib_event_handler {
 	struct ib_device	*device;
-	void 			(*handler)(struct ib_event_handler *,
+	void			(*handler)(struct ib_event_handler *,
 				    struct ib_event *);
 	llist_head_t	list;
 };
@@ -614,7 +614,7 @@ struct ib_qp {
 	uint32_t		qp_num;
 	enum ib_qp_type		qp_type;
 	ibt_qp_hdl_t		ibt_qp;
-	kmutex_t 		lock;
+	kmutex_t		lock;
 };
 
 #define	IB_DEVICE_NAME_MAX	64
@@ -633,9 +633,9 @@ typedef struct ib_device {
 				IB_DEV_CLOSE = 100,
 				IB_DEV_OPEN
 	} reg_state;
-	void 			*data;
-	ofs_client_p_t 		clnt_hdl;
-	struct llist_head 	list;
+	void			*data;
+	ofs_client_p_t		clnt_hdl;
+	struct llist_head	list;
 } ib_device_t;
 
 typedef struct ib_client {
@@ -643,7 +643,7 @@ typedef struct ib_client {
 	void		(*add)   (struct ib_device *);
 	void		(*remove)(struct ib_device *);
 	dev_info_t	*dip;
-	ofs_client_p_t 	clnt_hdl;
+	ofs_client_p_t	clnt_hdl;
 	enum {
 			IB_CLNT_UNINITIALIZED,
 			IB_CLNT_INITIALIZED

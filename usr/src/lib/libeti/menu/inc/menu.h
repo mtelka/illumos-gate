@@ -20,7 +20,7 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1988 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 /*
@@ -30,8 +30,6 @@
 
 #ifndef	_MENU_H
 #define	_MENU_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"	/* SVr4.0 1.15	*/
 
 #include <curses.h>
 #include <eti.h>
@@ -95,7 +93,7 @@ typedef struct MENU {
 	WINDOW		*userwin;	/* User's window */
 	WINDOW		*usersub;	/* User's subwindow */
 	ITEM		**items;
-	int 		nitems;		/* Total number of items in menu */
+	int		nitems;		/* Total number of items in menu */
 	ITEM		*curitem;	/* Current item */
 	int		toprow;		/* Top row of menu */
 	int		pad;		/* Pad character */

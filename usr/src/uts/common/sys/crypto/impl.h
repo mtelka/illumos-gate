@@ -201,9 +201,9 @@ typedef enum {
  * pd_flags:		bitwise OR of pi_flags from crypto_provider_info_t
  *			and other internal flags defined above.
  * pd_hash_limit:	Maximum data size that hash mechanisms of this provider
- * 			can support.
+ *			can support.
  * pd_hmac_limit:	Maximum data size that HMAC mechanisms of this provider
- * 			can support.
+ *			can support.
  * pd_kcf_prov_handle:	KCF-private handle assigned by KCF
  * pd_prov_id:		Identification # assigned by KCF to provider
  * pd_kstat:		kstat associated with the provider
@@ -479,8 +479,8 @@ extern kcf_mech_entry_tab_t kcf_mech_tabs_tab[];
 
 #define	KCF_MECH2INDEX(mech_type) ((int)(mech_type))
 
-#define	KCF_TO_PROV_MECH_INDX(pd, mech_type) 			\
-	((pd)->pd_mech_indx[KCF_MECH2CLASS(mech_type)] 		\
+#define	KCF_TO_PROV_MECH_INDX(pd, mech_type)			\
+	((pd)->pd_mech_indx[KCF_MECH2CLASS(mech_type)]		\
 	[KCF_MECH2INDEX(mech_type)])
 
 #define	KCF_TO_PROV_MECHINFO(pd, mech_type)			\

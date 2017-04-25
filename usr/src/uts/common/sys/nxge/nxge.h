@@ -479,7 +479,7 @@ typedef struct _nxge_stats_t {
 
 typedef struct _nxge_intr_t {
 	boolean_t		intr_registered; /* interrupts are registered */
-	boolean_t		intr_enabled; 	/* interrupts are enabled */
+	boolean_t		intr_enabled;	/* interrupts are enabled */
 	boolean_t		niu_msi_enable;	/* debug or configurable? */
 	int			intr_types;	/* interrupt types supported */
 	int			intr_type;	/* interrupt type to add */
@@ -489,7 +489,7 @@ typedef struct _nxge_intr_t {
 	int			intr_added;	/* # ints actually needed */
 	int			intr_cap;	/* interrupt capabilities */
 	size_t			intr_size;	/* size of array to allocate */
-	ddi_intr_handle_t 	*htable;	/* For array of interrupts */
+	ddi_intr_handle_t	*htable;	/* For array of interrupts */
 	/* Add interrupt number for each interrupt vector */
 	int			pri;
 } nxge_intr_t, *p_nxge_intr_t;
@@ -669,7 +669,7 @@ struct _nxge_t {
 				param_en_10fdx:1,
 				param_pad_to_32:27;
 
-	nxge_hw_list_t		*nxge_hw_p; 	/* pointer to per Neptune */
+	nxge_hw_list_t		*nxge_hw_p;	/* pointer to per Neptune */
 	niu_type_t		niu_type;
 	platform_type_t		platform_type;
 	boolean_t		os_addr_mode32;	/* set to 1 for 32 bit mode */
@@ -677,8 +677,8 @@ struct _nxge_t {
 	uint8_t			def_rdc;
 
 	nxge_intr_t		nxge_intr_type;
-	nxge_dma_pt_cfg_t 	pt_config;
-	nxge_class_pt_cfg_t 	class_config;
+	nxge_dma_pt_cfg_t	pt_config;
+	nxge_class_pt_cfg_t	class_config;
 
 	/* Logical device and group data structures. */
 	p_nxge_ldgv_t		ldgvp;
@@ -714,60 +714,60 @@ struct _nxge_t {
 	p_nxge_dma_pool_t	tx_cntl_pool_p;
 
 	/* Receive buffer block ring and completion ring. */
-	p_rx_rbr_rings_t 	rx_rbr_rings;
-	p_rx_rcr_rings_t 	rx_rcr_rings;
-	p_rx_mbox_areas_t 	rx_mbox_areas_p;
+	p_rx_rbr_rings_t	rx_rbr_rings;
+	p_rx_rcr_rings_t	rx_rcr_rings;
+	p_rx_mbox_areas_t	rx_mbox_areas_p;
 
 	uint32_t		rdc_mask;
 
 	/* Transmit descriptors rings */
-	p_tx_rings_t 		tx_rings;
+	p_tx_rings_t		tx_rings;
 	p_tx_mbox_areas_t	tx_mbox_areas_p;
 
-	ddi_dma_handle_t 	dmasparehandle;
+	ddi_dma_handle_t	dmasparehandle;
 
-	ulong_t 		sys_page_sz;
-	ulong_t 		sys_page_mask;
-	int 			suspended;
+	ulong_t			sys_page_sz;
+	ulong_t			sys_page_mask;
+	int			suspended;
 
-	mii_bmsr_t 		bmsr;		/* xcvr status at last poll. */
-	mii_bmsr_t 		soft_bmsr;	/* xcvr status kept by SW. */
+	mii_bmsr_t		bmsr;		/* xcvr status at last poll. */
+	mii_bmsr_t		soft_bmsr;	/* xcvr status kept by SW. */
 
-	kmutex_t 		mif_lock;	/* Lock to protect the list. */
+	kmutex_t		mif_lock;	/* Lock to protect the list. */
 
-	void 			(*mii_read)();
-	void 			(*mii_write)();
-	void 			(*mii_poll)();
-	filter_t 		filter;		/* Current instance filter */
-	p_hash_filter_t 	hash_filter;	/* Multicast hash filter. */
+	void			(*mii_read)();
+	void			(*mii_write)();
+	void			(*mii_poll)();
+	filter_t		filter;		/* Current instance filter */
+	p_hash_filter_t		hash_filter;	/* Multicast hash filter. */
 	krwlock_t		filter_lock;	/* Lock to protect filters. */
 
-	ulong_t 		sys_burst_sz;
+	ulong_t			sys_burst_sz;
 
-	uint8_t 		cache_line;
+	uint8_t			cache_line;
 
-	timeout_id_t 		nxge_link_poll_timerid;
-	timeout_id_t 		nxge_timerid;
+	timeout_id_t		nxge_link_poll_timerid;
+	timeout_id_t		nxge_timerid;
 
-	uint_t 			need_periodic_reclaim;
-	timeout_id_t 		reclaim_timer;
+	uint_t			need_periodic_reclaim;
+	timeout_id_t		reclaim_timer;
 
-	uint8_t 		msg_min;
-	uint8_t 		crc_size;
+	uint8_t			msg_min;
+	uint8_t			crc_size;
 
-	boolean_t 		hard_props_read;
+	boolean_t		hard_props_read;
 
-	uint32_t 		nxge_ncpus;
-	uint16_t 		intr_timeout;
-	uint16_t 		intr_threshold;
+	uint32_t		nxge_ncpus;
+	uint16_t		intr_timeout;
+	uint16_t		intr_threshold;
 
 	int			fm_capabilities; /* FMA capabilities */
 
-	uint32_t 		nxge_port_rbr_size;
-	uint32_t 		nxge_port_rbr_spare_size;
-	uint32_t 		nxge_port_rcr_size;
+	uint32_t		nxge_port_rbr_size;
+	uint32_t		nxge_port_rbr_spare_size;
+	uint32_t		nxge_port_rcr_size;
 	uint32_t		nxge_port_rx_cntl_alloc_size;
-	uint32_t 		nxge_port_tx_ring_size;
+	uint32_t		nxge_port_tx_ring_size;
 	nxge_mmac_t		nxge_mmac_info;
 #if	defined(sun4v)
 	boolean_t		niu_hsvc_available;
@@ -826,7 +826,7 @@ struct _nxge_t {
 #define	STATE_MDIO_LOCK_INIT	0x000000020	/* mdio lock initialized */
 #define	STATE_MII_LOCK_INIT	0x000000040	/* mii lock initialized */
 
-#define	STOP_POLL_THRESH 	9
+#define	STOP_POLL_THRESH	9
 #define	START_POLL_THRESH	2
 
 typedef struct _nxge_port_kstat_t {

@@ -27,8 +27,6 @@
 #ifndef _SYS_FS_UFS_LOCKFS_H
 #define	_SYS_FS_UFS_LOCKFS_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/lockfs.h>
 
 #ifdef	__cplusplus
@@ -39,7 +37,7 @@ extern "C" {
  * Sun ufs file system locking (lockfs)
  *
  * ufs file system supports the following lock types:
- * 	unlock		- releasing existing locks, or do a file system flush
+ *	unlock		- releasing existing locks, or do a file system flush
  *	name lock	- no delete, no rename
  *	write lock	- no update to file system, including delete
  *	delete lock	- no delete, rename is allowed
@@ -201,7 +199,7 @@ struct ulockfs {
 	ulong_t		ul_fs_mod;	/* for test; fs was modified */
 	ulong_t		ul_vnops_cnt;	/* # of active ufs vnops outstanding */
 	kmutex_t	ul_lock;	/* mutex to protect ulockfs structure */
-	kcondvar_t 	ul_cv;
+	kcondvar_t	ul_cv;
 	kthread_id_t	ul_sbowner;	/* thread than can write superblock */
 	struct lockfs	ul_lockfs;	/* ioctl lock struct */
 	ulong_t		ul_falloc_cnt;	/* # of on-going fallocate ops */

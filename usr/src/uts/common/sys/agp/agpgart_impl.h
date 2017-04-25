@@ -83,7 +83,7 @@ typedef struct agp_kmem_handle {
 } agp_kmem_handle_t;
 
 typedef struct keytable_ent {
-	int		kte_type; 	/* agp memory type */
+	int		kte_type;	/* agp memory type */
 	int		kte_key;	/* memory key */
 	uint32_t	kte_pgoff;	/* aperture offset bound in pages */
 	pgcnt_t		kte_pages;	/* user-requested size in pages */
@@ -146,7 +146,7 @@ typedef struct	agpgart_softstate {
 	/* resource handles */
 	ldi_ident_t	asoft_li;	/* for ldi ops */
 	keytable_ent_t	*asoft_table;	/* key table for all allocated table */
-	ddi_dma_handle_t	gart_dma_handle; 	/* for GATT table */
+	ddi_dma_handle_t	gart_dma_handle;	/* for GATT table */
 	ddi_acc_handle_t	gart_dma_acc_handle;	/* for GATT table */
 
 	/* gart table info */

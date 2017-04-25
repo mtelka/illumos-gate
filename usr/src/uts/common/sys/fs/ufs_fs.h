@@ -39,8 +39,6 @@
 #ifndef	_SYS_FS_UFS_FS_H
 #define	_SYS_FS_UFS_FS_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/isa_defs.h>
 #include <sys/types32.h>
 #include <sys/t_lock.h>		/* for kmutex_t */
@@ -330,7 +328,7 @@ struct  fs {
 	 * in 5.6 and expect fs_u.fs_csp to be used instead.
 	 * We no longer limit fs_cssize based on MAXCSBUFS.
 	 */
-	union { 			/* fs_cs (csum) info */
+	union {				/* fs_cs (csum) info */
 		uint32_t fs_csp_pad[MAXCSBUFS];
 		struct csum *fs_csp;
 	} fs_u;

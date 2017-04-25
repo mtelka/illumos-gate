@@ -193,8 +193,8 @@ typedef struct ct_kevent {
 	int		cte_refs;
 	ct_member_t	cte_nodes[CTEL_MAX]; /* event queue membership */
 	int		cte_flags;	/* see above */
-	nvlist_t 	*cte_data;	/* event data */
-	nvlist_t 	*cte_gdata;	/* global-zone only data */
+	nvlist_t	*cte_data;	/* event data */
+	nvlist_t	*cte_gdata;	/* global-zone only data */
 
 	struct contract	*cte_contract;	/* contract */
 } ct_kevent_t;

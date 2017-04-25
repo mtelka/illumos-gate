@@ -116,7 +116,7 @@ typedef enum {
 /*
  * Expand CFI data size to support the Intel Expanded Command Set.
  */
-#define	HERMON_CFI_INFO_SIZE 			0x100
+#define	HERMON_CFI_INFO_SIZE			0x100
 #define	HERMON_CFI_INFO_QSIZE			HERMON_CFI_INFO_SIZE >> 2
 
 /*

@@ -96,7 +96,7 @@ extern "C" {
 					0x04
 #define	IEEE80211_KEY_SWCRYPT		0x10	/* host-based encrypt/decrypt */
 #define	IEEE80211_KEY_SWMIC		0x20	/* host-based enmic/demic */
-#define	IEEE80211_KEY_COMMON 		/* common flags passed in by apps */ \
+#define	IEEE80211_KEY_COMMON		/* common flags passed in by apps */ \
 	(IEEE80211_KEY_XMIT | IEEE80211_KEY_RECV | IEEE80211_KEY_GROUP)
 
 #define	IEEE80211_KEY_DEFAULT		0x80	/* default xmit key */

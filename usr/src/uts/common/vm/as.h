@@ -72,7 +72,7 @@ extern "C" {
  * underlying generic segment data (seg.h) along with some fields in the
  * address space structure as shown below:
  *
- *	address space structure 	segment structure
+ *	address space structure		segment structure
  *
  *	a_segtree			s_base
  *	a_size				s_size
@@ -185,7 +185,7 @@ typedef void (*callback_func_t)(struct as *, void *, uint_t);
 struct as_callback {
 	struct as_callback	*ascb_next;		/* list link */
 	uint_t			ascb_events;		/* event types */
-	callback_func_t		ascb_func;   		/* callback function */
+	callback_func_t		ascb_func;		/* callback function */
 	void			*ascb_arg;		/* callback argument */
 	caddr_t			ascb_saddr;		/* start address */
 	size_t			ascb_len;		/* address range */

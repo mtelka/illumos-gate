@@ -135,7 +135,7 @@ extern struct vnode *rwsconsvp;	/* vnode for underlying workstation console */
  * Set the type simulated by hardwares
  * ioctl(fd, CONSSETKBDTYPE, kbdtype)
  * kbdtype:
- * 	KB_PC or KB_USB
+ *	KB_PC or KB_USB
  */
 #define	CONSSETKBDTYPE		(_CONSIOC|4)
 

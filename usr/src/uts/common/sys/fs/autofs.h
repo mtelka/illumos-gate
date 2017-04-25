@@ -72,7 +72,7 @@ typedef struct fninfo {
 	struct knetconfig fi_knconf;		/* netconfig */
 	struct netbuf	fi_addr;		/* daemon address */
 	char		*fi_path;		/* autofs mountpoint */
-	char 		*fi_map;		/* context/map-name */
+	char		*fi_map;		/* context/map-name */
 	char		*fi_subdir;		/* subdir within map */
 	char		*fi_key;		/* key to use on direct maps */
 	char		*fi_opts;		/* default mount options */
@@ -92,11 +92,11 @@ typedef struct fninfo {
  * The AUTOFS locking scheme:
  *
  * The locks:
- * 	fn_lock: protects the fn_node. It must be grabbed to change any
+ *	fn_lock: protects the fn_node. It must be grabbed to change any
  *		 field on the fn_node, except for those protected by
  *		 fn_rwlock.
  *
- * 	fn_rwlock: readers/writers lock to protect the subdirectory and
+ *	fn_rwlock: readers/writers lock to protect the subdirectory and
  *		   top level list traversal.
  *		   Protects: fn_dirents
  *			     fn_next
@@ -122,8 +122,8 @@ typedef struct fninfo {
  *		- Set by a thread when it puts itself to sleep waiting for
  *		  the ongoing operation on this fnnode to be done.
  *
- * 	MF_LOOKUP:
- * 		- Indicates a lookup request has been sent to the daemon.
+ *	MF_LOOKUP:
+ *		- Indicates a lookup request has been sent to the daemon.
  *		- If this flag is set, the thread sets MF_WAITING on the
  *                fnnode and sleeps.
  *
@@ -143,11 +143,11 @@ typedef struct fninfo {
  *		  as a cred match in order to be returned from the directory
  *		  hierarchy.
  *
- * 	MF_MOUNTPOINT:
- * 		- At some point automountd mounted a filesystem on this node.
- * 		If fn_trigger is non-NULL, v_vfsmountedhere is NULL and this
- * 		flag is set then the filesystem must have been forcibly
- * 		unmounted.
+ *	MF_MOUNTPOINT:
+ *		- At some point automountd mounted a filesystem on this node.
+ *		If fn_trigger is non-NULL, v_vfsmountedhere is NULL and this
+ *		flag is set then the filesystem must have been forcibly
+ *		unmounted.
  */
 
 /*
@@ -172,7 +172,7 @@ typedef struct fnnode {
 	struct fnnode	*fn_parent;
 	struct fnnode	*fn_next;		/* sibling */
 	struct fnnode	*fn_dirents;		/* children */
-	struct fnnode	*fn_trigger; 		/* pointer to next level */
+	struct fnnode	*fn_trigger;		/* pointer to next level */
 						/* AUTOFS trigger nodes */
 	struct action_list *fn_alp;		/* Pointer to mount info */
 						/* used for remounting */

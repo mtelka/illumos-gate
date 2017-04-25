@@ -89,8 +89,8 @@ typedef struct _lwp_mutex {
 typedef struct _lwp_cond {
 	struct {
 		uint8_t		flag[4];
-		uint16_t 	type;
-		uint16_t 	magic;
+		uint16_t	type;
+		uint16_t	magic;
 	} flags;
 	upad64_t data;
 } lwp_cond_t;
@@ -100,8 +100,8 @@ typedef struct _lwp_cond {
  */
 typedef struct _lwp_sema {
 	uint32_t	count;		/* semaphore count */
-	uint16_t 	type;
-	uint16_t 	magic;
+	uint16_t	type;
+	uint16_t	magic;
 	uint8_t		flags[8];	/* last byte reserved for waiters */
 	upad64_t	data;		/* optional data */
 } lwp_sema_t;

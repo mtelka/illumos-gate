@@ -105,7 +105,7 @@ typedef struct _rdc_ioctl32_s {
 
 #define	RDC_LINK_DOWN		_RDCI_(4)
 /*
- *	char 		*rdc_host;
+ *	char		*rdc_host;
  */
 
 #define	RDC_SYNC_EVENT		_RDCI_(5)
@@ -327,7 +327,7 @@ typedef struct rdc_readgen32 {
 #define	RDC_CMD_INITQ		14	/* initialise the disk queue */
 #define	RDC_CMD_FLUSHQ		15	/* flush queue for set */
 #define	RDC_CMD_ADDQ		16	/* add diskq to a set/group */
-#define	RDC_CMD_REMQ		17 	/* nice remove a diskq from set/grp */
+#define	RDC_CMD_REMQ		17	/* nice remove a diskq from set/grp */
 #define	RDC_CMD_KILLQ		18	/* forced disgard of queue */
 #define	RDC_CMD_REPQ		19	/* replace queue */
 

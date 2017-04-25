@@ -27,8 +27,6 @@
 #ifndef	_SYS_IB_MGT_IBMF_IBMF_SAA_H
 #define	_SYS_IB_MGT_IBMF_IBMF_SAA_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -75,7 +73,7 @@ typedef struct ibmf_saa_handle *ibmf_saa_handle_t;
  * none
  */
 typedef void (*ibmf_saa_cb_t) (
-    void 	*callback_arg,
+    void	*callback_arg,
     size_t	length,
     char	*result,
     int		status);
@@ -88,7 +86,7 @@ typedef struct ibmf_saa_access_args_s {
 	uint16_t		sq_attr_id;
 
 	/* retrieve, update, or delete */
-	ibmf_saa_access_type_t 	sq_access_type;
+	ibmf_saa_access_type_t	sq_access_type;
 
 	/* SA MAD component mask indicating fields in template to query on */
 	uint64_t		sq_component_mask;
@@ -183,16 +181,16 @@ typedef enum ibmf_saa_subnet_event_e {
  * Only some of the structure members are valid for a given event as given
  * below:
  *
- * member              		event type
- * ------              		----------
- * ie_gid               	IBMF_SAA_EVENT_GID_AVAILABLE,
+ * member			event type
+ * ------			----------
+ * ie_gid			IBMF_SAA_EVENT_GID_AVAILABLE,
  *					IBMF_SAA_EVENT_GID_UNAVAILABLE,
- *                              	IBMF_SAA_EVENT_MCG_CREATED, and
- *                              	IBMF_SAA_EVENT_MCG_DELETED
- * ie_lid               	IBMF_SAA_EVENT_CAP_MASK_CHG and
- *                              	IBMF_SAA_EVENT_SYS_IMG_GUID_CHG
- * ie_capability_mask   	IBMF_SAA_EVENT_CAP_MASK_CHG
- * ie_sysimg_guid       	IBMF_SAA_EVENT_SYS_IMG_GUID_CHG
+ *					IBMF_SAA_EVENT_MCG_CREATED, and
+ *					IBMF_SAA_EVENT_MCG_DELETED
+ * ie_lid			IBMF_SAA_EVENT_CAP_MASK_CHG and
+ *					IBMF_SAA_EVENT_SYS_IMG_GUID_CHG
+ * ie_capability_mask		IBMF_SAA_EVENT_CAP_MASK_CHG
+ * ie_sysimg_guid		IBMF_SAA_EVENT_SYS_IMG_GUID_CHG
  * ie_producer_type_status_mask	IBMF_SAA_EVENT_SUBSCRIBER_STATUS_CHG
  *
  */
@@ -267,7 +265,7 @@ typedef struct ibmf_saa_subnet_event_args_s {
  * IBMF_SUCCESS         - registration succeeded
  * IBMF_BAD_PORT	- registration failed; active port not found
  * IBMF_BAD_PORT_STATE  - registration failed; port found but not active or
- * 			previous registration failed
+ *			previous registration failed
  * IBMF_NO_MEMORY	- registration failed; could not allocate memory
  * IBMF_NO_RESOURCES    - registration failed due to a resource issue
  * IBMF_BUSY            - registration failed; too many clients registered
@@ -316,8 +314,8 @@ int	ibmf_sa_session_close(
  *
  * Input Arguments:
  * ibmf_saa_handle	- handle returned from ibmf_sa_session_open()
- * access_args 		- structure containing various parameters for the query
- * flags 		- unsused
+ * access_args		- structure containing various parameters for the query
+ * flags		- unsused
  *
  * Output Arguments:
  * length		- size of buffer returned
@@ -326,7 +324,7 @@ int	ibmf_sa_session_close(
  *			  the record types in sa_recs.h
  *
  * Return values:
- * IBMF_SUCCESS 	- query succeeded
+ * IBMF_SUCCESS		- query succeeded
  * IBMF_BAD_HANDLE	- sa session handle is invalid
  * IBMF_BAD_PORT_STATE	- port in incorrect state
  * IBMF_INVALID_ARG	- one of the pointer parameters was NULL
@@ -362,24 +360,24 @@ int	ibmf_sa_access(
 /*
  * Helper Functions.
  *	Ease of use functions so that the consumer doesn't
- * 	have to do the overhead of calling ibmf_sa_access() for
+ *	have to do the overhead of calling ibmf_sa_access() for
  *	commonly used queries
  */
 
 /*
  * ibmf_saa_gid_to_pathrecords
- * 	Given a source gid and a destination gid, return paths
+ *	Given a source gid and a destination gid, return paths
  *	between the gids.
  *
  * This interface blocks.
  *
  * Input Arguments:
  * ibmf_saa_handle	- handle returned from ibmf_sa_session_open()
- * sgid 		- source gid of path
+ * sgid			- source gid of path
  * dgid			- destination gid of path
  * p_key		- partition of path.  This value may be wildcarded with
  *			  IBMF_SAA_PKEY_WC.
- * mtu 			- preferred MTU of the path.  This argument may be
+ * mtu			- preferred MTU of the path.  This argument may be
  *			  wildcarded with IBMF_SAA_MTU_WC.
  * reversible		- if B_TRUE, ibmf will query only reversible paths
  *			  see Infiniband Specification table 171
@@ -424,7 +422,7 @@ int	ibmf_saa_gid_to_pathrecords(
  *
  * Arguments:
  * ibmf_saa_handle	- handle returned from ibmf_sa_session_open()
- * sgid 		- source gid of path
+ * sgid			- source gid of path
  * pkey			- paritition of path.  This value may be wildcarded with
  *			  IBMF_SAA_PKEY_WC.
  * reversible		- if B_TRUE, ibmf will query only reversible paths;

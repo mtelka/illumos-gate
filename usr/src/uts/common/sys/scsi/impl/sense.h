@@ -26,8 +26,6 @@
 #ifndef	_SYS_SCSI_IMPL_SENSE_H
 #define	_SYS_SCSI_IMPL_SENSE_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -143,7 +141,7 @@ int scsi_validate_sense(uint8_t *sense_buffer, int sense_buf_len, int *flags);
  */
 
 #define	SNS_BUF_OVERFLOW	1	/* Sense buffer too small */
-#define	SNS_BUF_DEFERRED 	2 	/* Sense data is for prior operation */
+#define	SNS_BUF_DEFERRED	2	/* Sense data is for prior operation */
 
 #ifdef	__cplusplus
 }

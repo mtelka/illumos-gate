@@ -27,8 +27,6 @@
 #ifndef _SYS_DCAM_DCAM1394_IO_H
 #define	_SYS_DCAM_DCAM1394_IO_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/time.h>
 
 #ifdef __cplusplus
@@ -199,9 +197,9 @@ extern "C" {
 #define	DCAM1394_STATUS_CAM_UNPLUG			0x10
 
 typedef struct dcam1394_param_list_entry_s {
-	int 		flag;
-	int 		err;
-	unsigned int 	val;
+	int		flag;
+	int		err;
+	unsigned int	val;
 
 } dcam1394_param_list_entry_t;
 
@@ -220,7 +218,7 @@ typedef struct dcam1394_frame_s {
 
 typedef struct dcam1394_reg_io_s {
 	unsigned int	offs;
-	unsigned int 	val;
+	unsigned int	val;
 
 } dcam1394_reg_io_t;
 

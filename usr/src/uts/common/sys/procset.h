@@ -25,7 +25,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _SYS_PROCSET_H
@@ -96,7 +96,7 @@ typedef enum idop {
 	POP_OR,		/* Set conjunction.  The processes	*/
 			/* which are in either the left or the	*/
 			/* right operand sets (or both).	*/
-	POP_XOR		/* Set exclusive or.  The processes 	*/
+	POP_XOR		/* Set exclusive or.  The processes	*/
 			/* which are in either the left or	*/
 			/* right operand sets but not in both.	*/
 } idop_t;

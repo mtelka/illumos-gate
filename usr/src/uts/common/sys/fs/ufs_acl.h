@@ -41,7 +41,7 @@ extern "C" {
 
 typedef struct ufs_acl {
 	union {
-		uint32_t 	acl_next;	/* Pad for old structure */
+		uint32_t	acl_next;	/* Pad for old structure */
 		ushort_t	acl_tag;	/* Entry type */
 	} acl_un;
 	o_mode_t	acl_perm;		/* Permission bits */
@@ -93,7 +93,7 @@ typedef	struct si {
 	ino_t	s_shadow;		/* shadow inode number */
 	dev_t	s_dev;			/* device (major,minor) */
 	int	s_signature;		/* signature for all ACLs */
-	int 	s_use;			/* on disk use count */
+	int	s_use;			/* on disk use count */
 	int	s_ref;			/* in core reference count */
 	krwlock_t s_lock;		/* lock for this structure */
 

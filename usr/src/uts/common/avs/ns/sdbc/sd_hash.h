@@ -37,9 +37,9 @@ extern "C" {
 typedef struct _sd_hash_hd {
 	unsigned short hh_hashed;		/* Is this block in hash */
 	unsigned short hh_cd;			/* The cache descriptor */
-	nsc_off_t hh_blk_num;			/* Cache block number 	*/
+	nsc_off_t hh_blk_num;			/* Cache block number	*/
 	struct _sd_hash_hd *hh_prev;		/* for chaining withing */
-	struct _sd_hash_hd *hh_next;		/* hash table 		*/
+	struct _sd_hash_hd *hh_next;		/* hash table		*/
 } _sd_hash_hd_t;
 
 

@@ -27,8 +27,6 @@
 #ifndef	_INET_NCADOORHDR_H
 #define	_INET_NCADOORHDR_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -192,7 +190,7 @@ typedef struct nca_direct_cd_s {	/* Direct i/o connection descriptor */
  *	preempted connection), the meta data specifiers direct/direct_len
  *	point to a nca_direct_cd_t (a cid/tag pair connection descriptor)
  *	used to specify the named connection. Note, no repsonse data is
- * 	delivered to the current connection.
+ *	delivered to the current connection.
  *
  *    NCA_IO_DIRECT_TEE - tee a connection, response data from the current
  *	connection is output to the named connection (previously preempted

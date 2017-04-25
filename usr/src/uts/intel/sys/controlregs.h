@@ -86,8 +86,8 @@ extern "C" {
 
 /* CR3 Register */
 
-#define	CR3_PCD	0x00000010		/* cache disable 		*/
-#define	CR3_PWT 0x00000008		/* write through 		*/
+#define	CR3_PCD	0x00000010		/* cache disable		*/
+#define	CR3_PWT 0x00000008		/* write through		*/
 
 #define	FMT_CR3	"\20\5pcd\4pwt"
 

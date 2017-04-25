@@ -27,8 +27,6 @@
 #ifndef	_SYS_RSM_RSMKA_PATH_INT_H
 #define	_SYS_RSM_RSMKA_PATH_INT_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -165,7 +163,7 @@ typedef struct path {
 	int64_t			remote_incn;
 #define	RSM_UNKNOWN_INCN	0
 	int			ref_cnt;
-	kcondvar_t 		hold_cv;
+	kcondvar_t		hold_cv;
 } path_t;
 
 
@@ -233,13 +231,13 @@ typedef struct ipc_info {
 } ipc_info_t;
 
 
-#define	SQ_TOKEN_TO_PATH(token) 	\
+#define	SQ_TOKEN_TO_PATH(token)		\
 	((path_t *)((char *)(token) - ((char *)(&((path_t *)0)->sendq_token))))
 
 
 
 #define	WORK_TOKEN_TO_PATH(token, index) \
-	((path_t *)((char *)(token) - 	\
+	((path_t *)((char *)(token) -	\
 		((char *)(&((path_t *)0)->work_token[(index)]))))
 
 
@@ -250,14 +248,14 @@ typedef struct ipc_info {
  */
 
 #define	ADAPTER_HOLD(adapter)	{	\
-		mutex_enter(&((adapter)->mutex)); 	\
+		mutex_enter(&((adapter)->mutex));	\
 		(adapter)->ref_cnt++;		\
 		ASSERT((adapter)->ref_cnt != 0);	\
 		mutex_exit(&((adapter)->mutex));	\
 }
 
 #define	ADAPTER_RELE(adapter)	{			\
-		mutex_enter(&((adapter)->mutex)); 	\
+		mutex_enter(&((adapter)->mutex));	\
 		(adapter)->ref_cnt--;			\
 		ASSERT((adapter)->ref_cnt >= 0);	\
 		mutex_exit(&((adapter)->mutex));	\
@@ -270,7 +268,7 @@ typedef struct ipc_info {
 }
 
 #define	PATH_HOLD(path)	{			\
-		mutex_enter(&(path)->mutex); 	\
+		mutex_enter(&(path)->mutex);	\
 		(path)->ref_cnt++;		\
 		ASSERT((path)->ref_cnt != 0);	\
 		mutex_exit(&(path)->mutex);	\
@@ -283,7 +281,7 @@ typedef struct ipc_info {
 }
 
 #define	PATH_RELE(path)	{				\
-		mutex_enter(&(path)->mutex); 		\
+		mutex_enter(&(path)->mutex);		\
 		(path)->ref_cnt--;			\
 		ASSERT((path)->ref_cnt >= 0);		\
 		if ((path)->ref_cnt == 0)		\
@@ -312,29 +310,29 @@ typedef struct ipc_info {
 }
 
 #define	IPCINFO_HOLD(ipc_info)	{			\
-		mutex_enter(&ipc_info_lock); 		\
+		mutex_enter(&ipc_info_lock);		\
 		(ipc_info)->ref_cnt++;			\
-		ASSERT((ipc_info)->ref_cnt != 0); 	\
+		ASSERT((ipc_info)->ref_cnt != 0);	\
 		mutex_exit(&ipc_info_lock);		\
 }
 
 #define	IPCINFO_HOLD_NOLOCK(ipc_info)	{		\
 		ASSERT(MUTEX_HELD(&ipc_info_lock));	\
 		(ipc_info)->ref_cnt++;			\
-		ASSERT((ipc_info)->ref_cnt != 0); 	\
+		ASSERT((ipc_info)->ref_cnt != 0);	\
 }
 
 #define	IPCINFO_RELE(ipc_info)	{			\
-		mutex_enter(&ipc_info_lock); 		\
+		mutex_enter(&ipc_info_lock);		\
 		(ipc_info)->ref_cnt--;			\
-		ASSERT((ipc_info)->ref_cnt >= 0); 	\
+		ASSERT((ipc_info)->ref_cnt >= 0);	\
 		mutex_exit(&ipc_info_lock);		\
 }
 
 #define	IPCINFO_RELE_NOLOCK(ipc_info)	{		\
 		ASSERT(MUTEX_HELD(&ipc_info_lock));	\
 		(ipc_info)->ref_cnt--;			\
-		ASSERT((ipc_info)->ref_cnt >= 0); 	\
+		ASSERT((ipc_info)->ref_cnt >= 0);	\
 }
 /*
  * Topology data structures - The primary structure is struct rsm_topology_t

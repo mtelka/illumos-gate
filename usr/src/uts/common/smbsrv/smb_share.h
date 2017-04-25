@@ -57,17 +57,17 @@ extern "C" {
  * name			Advertised name of the share
  *
  * ad-container		Active directory container in which the share
- * 			will be published
+ *			will be published
  *
  * abe			Determines whether Access Based Enumeration is applied
  *			to a share
  *
  * csc			Client-side caching (CSC) options applied to this share
- * 	disabled	The client MUST NOT cache any files
- * 	manual		The client should not automatically cache every file
- * 			that it	opens
- * 	auto		The client may cache every file that it opens
- * 	vdo		The client may cache every file that it opens
+ *	disabled	The client MUST NOT cache any files
+ *	manual		The client should not automatically cache every file
+ *			that it	opens
+ *	auto		The client may cache every file that it opens
+ *	vdo		The client may cache every file that it opens
  *			and satisfy file requests from its local cache.
  *
  * catia		CATIA character substitution

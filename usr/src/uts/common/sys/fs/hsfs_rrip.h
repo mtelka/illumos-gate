@@ -29,8 +29,6 @@
 #ifndef	_SYS_FS_HSFS_RRIP_H
 #define	_SYS_FS_HSFS_RRIP_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -158,7 +156,7 @@ FOR CONTACT INFORMATION."
  * Check if TF Bits are set.
  *
  * Note : IS_TIME_BIT_SET(x, y)  must be kept returning 1 and 0.
- * 	see RRIP_tf_*(x) Macros
+ *	see RRIP_tf_*(x) Macros
  */
 #define	IS_TIME_BIT_SET(x, y)	(((x) & (y))  ? 1 : 0)
 #define	SET_TIME_BIT(x, y)	((x) |= (y))

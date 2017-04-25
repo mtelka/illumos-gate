@@ -24,7 +24,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * University Copyright- Copyright (c) 1982, 1986, 1988
@@ -115,7 +115,7 @@ typedef struct	buf {
 	size_t	b_bufsize;		/* size of allocated buffer */
 	int	(*b_iodone)(struct buf *);	/* function called by iodone */
 	struct	vnode *b_vp;		/* vnode associated with block */
-	struct 	buf *b_chain;		/* chain together all buffers here */
+	struct	buf *b_chain;		/* chain together all buffers here */
 	int	b_obs3;			/* obsolete */
 	int	b_error;		/* expanded error field */
 	void	*b_private;		/* "opaque" driver private area */
@@ -178,7 +178,7 @@ struct biostats {
 #define	B_FREE		0x008000	/* free page when done */
 #define	B_INVAL		0x010000	/* destroy page when done */
 #define	B_FORCE		0x020000	/* semi-permanent removal from cache */
-#define	B_NOCACHE	0x080000 	/* don't cache block when released */
+#define	B_NOCACHE	0x080000	/* don't cache block when released */
 #define	B_TRUNC		0x100000	/* truncate page without I/O */
 #define	B_SHADOW	0x200000	/* is b_shadow field valid? */
 #define	B_RETRYWRI	0x400000	/* retry write til works or bfinval */
@@ -230,7 +230,7 @@ struct biostats {
 /*
  * The hash structure maintains two lists:
  *
- * 	1) The hash list of buffers (b_forw & b_back)
+ *	1) The hash list of buffers (b_forw & b_back)
  *	2) The LRU free list of buffers on this hash bucket (av_forw & av_back)
  *
  * The dwbuf structure keeps a list of delayed write buffers per hash bucket

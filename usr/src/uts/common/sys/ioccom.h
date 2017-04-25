@@ -25,7 +25,7 @@
  */
 
 /*	Copyright (c) 1983, 1984, 1985, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * University Copyright- Copyright (c) 1982, 1986, 1988
@@ -39,8 +39,6 @@
 
 #ifndef _SYS_IOCCOM_H
 #define	_SYS_IOCCOM_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -63,7 +61,7 @@ extern "C" {
  * The 0x20000000 is so we can distinguish new ioctl's from old.
  */
 #define	_IO(x, y)	(IOC_VOID|(x<<8)|y)
-#define	_IOR(x, y, t) 							\
+#define	_IOR(x, y, t)							\
 	    ((int)((uint32_t)						\
 	    (IOC_OUT|(((sizeof (t))&IOCPARM_MASK)<<16)|(x<<8)|y)))
 

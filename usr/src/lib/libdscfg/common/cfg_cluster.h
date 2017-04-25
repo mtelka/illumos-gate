@@ -130,7 +130,7 @@ typedef scstat_statstr_t scstat_node_statstr_t;		/* node status */
 typedef scstat_statstr_t scstat_path_statstr_t;		/* path status */
 typedef scstat_statstr_t scstat_ds_statstr_t;		/* DS status */
 typedef scstat_statstr_t scstat_node_quorum_statstr_t;	/* node quorum status */
-typedef scstat_statstr_t scstat_quorumdev_statstr_t; 	/* quorum device stat */
+typedef scstat_statstr_t scstat_quorumdev_statstr_t;	/* quorum device stat */
 
 /* ha device node status list */
 /* This definition is covered by PSARC/2001/261.  DO NOT change it. */

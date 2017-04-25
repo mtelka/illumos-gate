@@ -88,7 +88,7 @@ extern "C" {
 
 #define	RCTL_USE_RECIPIENT_PID	0x10000000
 
-#define	RCTLSYS_ACTION_MASK 	0xffff0000
+#define	RCTLSYS_ACTION_MASK	0xffff0000
 #define	RCTLSYS_MASK		0x10000003
 
 /*

@@ -96,7 +96,7 @@ typedef struct port_alert {
  * event activities within a port.
  */
 typedef struct port_queue {
-	kmutex_t 	portq_mutex;
+	kmutex_t	portq_mutex;
 	kcondvar_t	portq_closecv;
 	kcondvar_t	portq_block_cv;
 	int		portq_flags;

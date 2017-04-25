@@ -140,10 +140,10 @@ struct ses_softc {
 	void *		ses_private;	/* private data */
 	encobj *	ses_objmap;	/* objects */
 	uchar_t		ses_encstat;	/* overall status */
-	Scsidevp  	ses_devp;	/* backpointer to owning SCSI device */
-	struct buf 	*ses_rqbp;	/* request sense buf pointer */
+	Scsidevp	ses_devp;	/* backpointer to owning SCSI device */
+	struct buf	*ses_rqbp;	/* request sense buf pointer */
 	Scsipktp	ses_rqpkt;	/* SCSI Request Sense Packet */
-	struct buf 	*ses_sbufp;	/* for use in internal io */
+	struct buf	*ses_sbufp;	/* for use in internal io */
 	timeout_id_t	ses_restart_id; /* restart timeout id */
 	kcondvar_t	ses_sbufcv;	/* cv on sbuf */
 	uchar_t		ses_sbufbsy;	/* sbuf busy flag */
@@ -151,8 +151,8 @@ struct ses_softc {
 	uchar_t		ses_present;	/* device present */
 	uchar_t		ses_suspended;	/* nonzero if suspended */
 	uchar_t		ses_arq;	/* auto request sense enabled */
-	uint_t 		ses_lyropen;	/* layered open count */
-	int 		ses_retries;	/* retry count */
+	uint_t		ses_lyropen;	/* layered open count */
+	int		ses_retries;	/* retry count */
 	/*
 	 * Associated storage for the special buf.
 	 * Since we're single threaded on sbuf anyway,

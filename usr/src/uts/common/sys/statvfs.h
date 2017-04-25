@@ -20,7 +20,7 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * Copyright 2014 Garrett D'Amore <garrett@damore.org>
@@ -66,7 +66,7 @@ typedef struct statvfs {
 	unsigned long	f_namemax;	/* maximum file name length */
 	char		f_fstr[32];	/* filesystem-specific string */
 #if !defined(_LP64)
-	unsigned long 	f_filler[16];	/* reserved for future expansion */
+	unsigned long	f_filler[16];	/* reserved for future expansion */
 #endif
 } statvfs_t;
 

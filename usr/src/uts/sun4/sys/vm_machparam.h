@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1988 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * Copyright 2007 Sun Microsystems, Inc.  All rights reserved.
@@ -98,7 +98,7 @@ extern "C" {
  * It is related to human patience and other factors which don't really
  * change over time.
  */
-#define	MAXSLP 		20
+#define	MAXSLP		20
 
 /*
  * A swapped in process is given a small amount of core without being bothered

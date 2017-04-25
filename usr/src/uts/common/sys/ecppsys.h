@@ -27,8 +27,6 @@
 #ifndef	_SYS_ECPPSYS_H
 #define	_SYS_ECPPSYS_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -38,7 +36,7 @@ extern "C" {
 #define	ECPPIOC_GETDEVID	_IOWR('p', 73, struct ecpp_device_id)
 
 /* current_mode values */
-#define	ECPP_CENTRONICS 	0x01 /* non-1284 */
+#define	ECPP_CENTRONICS		0x01 /* non-1284 */
 #define	ECPP_COMPAT_MODE	0x02
 #define	ECPP_BYTE_MODE		0x03
 #define	ECPP_NIBBLE_MODE	0x04

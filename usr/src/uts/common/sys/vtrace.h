@@ -25,7 +25,7 @@
  */
 
 /*	Copyright (c) 1983, 1984, 1985, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * Portions of this source code were derived from Berkeley 4.3 BSD
@@ -34,8 +34,6 @@
 
 #ifndef _SYS_VTRACE_H
 #define	_SYS_VTRACE_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #ifndef	_ASM
 #include <sys/types.h>
@@ -227,10 +225,10 @@ extern "C" {
 #define	TR_SENDSIG		42
 #define	TR_INSERTQ		43
 #define	TR_REMOVEQ		44
-#define	TR_CANPUT_IN    	47
-#define	TR_CANPUT_OUT   	48
-#define	TR_BCANPUT_IN   	49
-#define	TR_BCANPUT_OUT  	50
+#define	TR_CANPUT_IN		47
+#define	TR_CANPUT_OUT		48
+#define	TR_BCANPUT_IN		49
+#define	TR_BCANPUT_OUT		50
 #define	TR_STRWRITE_IN		51
 #define	TR_STRWRITE_OUT		52
 #define	TR_STRWRITE_WAIT	53

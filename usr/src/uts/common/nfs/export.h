@@ -26,7 +26,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 #ifndef	_NFS_EXPORT_H
 #define	_NFS_EXPORT_H
@@ -68,7 +68,7 @@ struct secinfo {
 	int32_t		s_refcnt;	/* reference count for tracking */
 					/* how many children (self included) */
 					/* use this flavor. */
-	int 		s_window;	/* window */
+	int		s_window;	/* window */
 	uint_t		s_rootid;	/* UID to use for authorized roots */
 	int		s_rootcnt;	/* count of root names */
 	caddr_t		*s_rootnames;	/* array of root names */
@@ -83,7 +83,7 @@ struct secinfo32 {
 	int32_t		s_refcnt;	/* reference count for tracking */
 					/* how many children (self included) */
 					/* use this flavor. */
-	int32_t 	s_window;	/* window */
+	int32_t		s_window;	/* window */
 	uint32_t	s_rootid;	/* UID to use for authorized roots */
 	int32_t		s_rootcnt;	/* count of root names */
 	caddr32_t	s_rootnames;	/* array of root names */

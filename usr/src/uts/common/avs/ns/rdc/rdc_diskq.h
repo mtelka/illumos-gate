@@ -37,7 +37,7 @@ extern "C" {
 
 typedef struct qentry {
 	int		magic;
-	int		type; 	/* special data ? io? bitmap? */
+	int		type;	/* special data ? io? bitmap? */
 	nsc_off_t	pos;	/* position it will be in the rdc_aio_t */
 	nsc_off_t	hpos;	/* starting pos of orig nsc_buf_t */
 	nsc_off_t	qpos;	/* where this info is in the queue */
@@ -55,8 +55,8 @@ typedef union io_dat {
 } io_hdr;
 
 #define	RDC_IOHDR_MAGIC		0x494F4844 /* IOHD */
-#define	RDC_IOHDR_DONE  	0xDEADCAFE /* this q entry has been flushed */
-#define	RDC_IOHDR_WAITING  	0xBEEFCAFE /* this q entry is waiting for ack */
+#define	RDC_IOHDR_DONE		0xDEADCAFE /* this q entry has been flushed */
+#define	RDC_IOHDR_WAITING	0xBEEFCAFE /* this q entry is waiting for ack */
 
 /* type */
 #define	RDC_QUEUEIO	0x02
@@ -78,7 +78,7 @@ typedef struct diskqheader1 {
 	int	head_offset; /* offset of meta-info of head (fbas) */
 	int	tail_offset; /* addr of next write (fbas) */
 	int	disk_size; /* allow growing ? (fbas) */
-	long 	nitems; /* items */
+	long	nitems; /* items */
 	long	blocks; /* fbas */
 	int	qwrap; /* where the tail wrapped */
 	int	auxqwrap; /* if the tail wraps again, before head wraps once */
@@ -143,7 +143,7 @@ typedef struct diskqueue { /* the incore info about the diskq */
 	volatile int	inflbls;	/* number of inflight blocks */
 	volatile int	inflitems;	/* number of inflight blocks */
 
-	kmutex_t	disk_qlock; 	/* protects all things in diskq */
+	kmutex_t	disk_qlock;	/* protects all things in diskq */
 					/* and all things in dqheader */
 
 	kmutex_t	head_lock;
@@ -160,7 +160,7 @@ typedef struct diskqueue { /* the incore info about the diskq */
 
 /* diskq macros  (gets) */
 
-#define	QHEAD(q) 		q->disk_hdr.h.head_offset
+#define	QHEAD(q)		q->disk_hdr.h.head_offset
 #define	QNXTIO(q)		q->nxt_io
 #define	QTAIL(q)		q->disk_hdr.h.tail_offset
 #define	QNITEMS(q)		q->disk_hdr.h.nitems

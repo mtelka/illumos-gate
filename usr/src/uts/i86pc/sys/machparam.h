@@ -25,7 +25,7 @@
  */
 
 /*	Copyright (c) 1988 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _SYS_MACHPARAM_H
@@ -73,7 +73,7 @@ extern "C" {
  * The value defined below could grow to 16. hat structure and
  * page_t have room for 16 nodes.
  */
-#define	MAXNODES 	4
+#define	MAXNODES	4
 #define	NUMA_NODEMASK	0x0f
 
 /*

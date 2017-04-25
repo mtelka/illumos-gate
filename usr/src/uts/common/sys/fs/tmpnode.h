@@ -51,10 +51,10 @@ extern "C" {
  *	list of all tmpfs files associated with that file system
  *
  *	The anon array represents the secondary store for tmpfs.
- * 	To grow or shrink the file or fill in holes requires
+ *	To grow or shrink the file or fill in holes requires
  *	manipulation of the anon array. These operations are protected
  *	by a combination of tn_rwlock and tn_contents. Growing or shrinking
- * 	the array requires the write lock on tn_rwlock and tn_contents.
+ *	the array requires the write lock on tn_rwlock and tn_contents.
  *	Filling in a slot in the array requires the write lock on tn_contents.
  *	Reading the array requires the read lock on tn_contents.
  *
@@ -72,14 +72,14 @@ struct tmpnode {
 			struct tdirent	*un_dirlist; /* dirent list */
 			uint_t	un_dirents;	/* number of dirents */
 		} un_dirstruct;
-		char 		*un_symlink;	/* pointer to symlink */
+		char		*un_symlink;	/* pointer to symlink */
 		struct {
 			struct anon_hdr	*un_anon; /* anon backing for file */
 			pgcnt_t	un_size;	/* size repres. by array */
 		} un_anonstruct;
 	} un_tmpnode;
-	struct vnode 	*tn_vnode;		/* vnode for this tmpnode */
-	int 		tn_gen;			/* pseudo gen number for tfid */
+	struct vnode	*tn_vnode;		/* vnode for this tmpnode */
+	int		tn_gen;			/* pseudo gen number for tfid */
 	struct vattr	tn_attr;		/* attributes */
 	krwlock_t	tn_contents;		/* vm side -serialize mods */
 	krwlock_t	tn_rwlock;		/* rw,trunc size - serialize */

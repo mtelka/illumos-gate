@@ -24,7 +24,7 @@
  */
 
 /*	Copyright (c) 1983, 1984, 1985, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 #ifndef	_NFS_NFSSYS_H
 #define	_NFS_NFSSYS_H
@@ -314,7 +314,7 @@ extern int	lm_svc(struct lm_svc_args *uap);
 extern int	lm_shutdown(void);
 extern int	nfsl_flush(struct nfsl_flush_args *, model_t);
 extern int	nfs4_svc(struct nfs4_svc_args *, model_t);
-extern int 	rdma_start(struct rdma_svc_args *);
+extern int	rdma_start(struct rdma_svc_args *);
 extern void	rfs4_clear_client_state(struct nfs4clrst_args *);
 extern void	nfs_idmap_args(struct nfsidmap_args *);
 extern void	nfs4_ephemeral_set_mount_to(uint_t);

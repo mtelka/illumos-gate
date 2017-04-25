@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 /*
@@ -110,15 +110,15 @@ typedef struct cpu_sysinfo {
 	uint_t	idlethread;	/* times idle thread scheduled		*/
 	uint_t	inv_swtch;	/* involuntary context switches		*/
 	uint_t	nthreads;	/* thread_create()s			*/
-	uint_t	cpumigrate;	/* cpu migrations by threads 		*/
-	uint_t	xcalls;		/* xcalls to other cpus 		*/
+	uint_t	cpumigrate;	/* cpu migrations by threads		*/
+	uint_t	xcalls;		/* xcalls to other cpus			*/
 	uint_t	mutex_adenters;	/* failed mutex enters (adaptive)	*/
 	uint_t	rw_rdfails;	/* rw reader failures			*/
 	uint_t	rw_wrfails;	/* rw writer failures			*/
 	uint_t	modload;	/* times loadable module loaded		*/
-	uint_t	modunload;	/* times loadable module unloaded 	*/
+	uint_t	modunload;	/* times loadable module unloaded	*/
 	uint_t	bawrite;	/* physical block writes (async)	*/
-/* Following are gathered only under #ifdef STATISTICS in source 	*/
+/* Following are gathered only under #ifdef STATISTICS in source	*/
 	uint_t	rw_enters;	/* tries to acquire rw lock		*/
 	uint_t	win_uo_cnt;	/* reg window user overflows		*/
 	uint_t	win_uu_cnt;	/* reg window user underflows		*/
@@ -139,7 +139,7 @@ typedef struct sysinfo {	/* (update freq) update action		*/
 typedef struct cpu_syswait {
 	int	iowait;		/* procs waiting for block I/O		*/
 	int	swap;		/* XXX: UNUSED				*/
-	int	physio;		/* XXX: UNUSED 				*/
+	int	physio;		/* XXX: UNUSED				*/
 } cpu_syswait_t;
 
 typedef struct cpu_vminfo {
@@ -177,7 +177,7 @@ typedef struct cpu_vminfo {
 } cpu_vminfo_t;
 
 typedef struct vminfo {		/* (update freq) update action		*/
-	uint64_t freemem; 	/* (1 sec) += freemem in pages		*/
+	uint64_t freemem;	/* (1 sec) += freemem in pages		*/
 	uint64_t swap_resv;	/* (1 sec) += reserved swap in pages	*/
 	uint64_t swap_alloc;	/* (1 sec) += allocated swap in pages	*/
 	uint64_t swap_avail;	/* (1 sec) += unreserved swap in pages	*/
@@ -193,7 +193,7 @@ typedef struct cpu_stat {
 } cpu_stat_t;
 
 typedef struct cpu_sys_stats {
-	uint64_t cpu_ticks_idle; 	/* CPU utilization */
+	uint64_t cpu_ticks_idle;	/* CPU utilization */
 	uint64_t cpu_ticks_user;
 	uint64_t cpu_ticks_kernel;
 	uint64_t cpu_ticks_wait;
@@ -240,9 +240,9 @@ typedef struct cpu_sys_stats {
 	uint64_t rw_rdfails;		/* rw reader failures */
 	uint64_t rw_wrfails;		/* rw writer failures */
 	uint64_t modload;		/* times loadable module loaded */
-	uint64_t modunload; 		/* times loadable module unloaded */
+	uint64_t modunload;		/* times loadable module unloaded */
 	uint64_t bawrite;		/* physical block writes (async) */
-	uint64_t iowait; 		/* count of waiters for block I/O */
+	uint64_t iowait;		/* count of waiters for block I/O */
 } cpu_sys_stats_t;
 
 typedef struct cpu_vm_stats {

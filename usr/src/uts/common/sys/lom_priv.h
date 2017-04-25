@@ -27,8 +27,6 @@
 #ifndef	_SYS_LOM_PRIV_H
 #define	_SYS_LOM_PRIV_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * Project private LOMlite definitions.
  * The definitions here are not used by the end user.
@@ -162,7 +160,7 @@ typedef struct {
  * Event "detail" information - bscv only
  */
 #define	LOM_RESET_DETAIL_BYUSER			1
-#define	LOM_RESET_DETAIL_REPROGRAMMING 		2
+#define	LOM_RESET_DETAIL_REPROGRAMMING		2
 
 #define	LOM_WDOGTRIGGER_DETAIL_HARD		0
 #define	LOM_WDOGTRIGGER_DETAIL_SOFT		1

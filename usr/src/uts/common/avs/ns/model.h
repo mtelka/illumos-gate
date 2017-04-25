@@ -126,27 +126,27 @@ typedef unsigned int model_t;
  * converted to the pointer on the LP64 case, thus quieting the compiler.
  */
 #define	STRUCT_FADDR(handle, field)					\
-	((handle).model == DATAMODEL_ILP32 ?			 	\
+	((handle).model == DATAMODEL_ILP32 ?				\
 	    (void *)&(handle).ptr.m32->field :				\
 	    &(handle).ptr.m64->field)
 
 #define	STRUCT_FGET(handle, field)					\
-	(((handle).model == DATAMODEL_ILP32) ?			 	\
+	(((handle).model == DATAMODEL_ILP32) ?				\
 	    (handle).ptr.m32->field :					\
 	    (handle).ptr.m64->field)
 
 #define	STRUCT_FGETP(handle, field)					\
-	((handle).model == DATAMODEL_ILP32 ?			 	\
+	((handle).model == DATAMODEL_ILP32 ?				\
 	    (void *)(handle).ptr.m32->field :				\
 	    (handle).ptr.m64->field)
 
 #define	STRUCT_FSET(handle, field, val)					\
-	((handle).model == DATAMODEL_ILP32 ?			 	\
+	((handle).model == DATAMODEL_ILP32 ?				\
 	    ((handle).ptr.m32->field = (val)) :				\
 	    ((handle).ptr.m64->field = (val)))
 
 #define	STRUCT_FSETP(handle, field, val)				\
-	((handle).model == DATAMODEL_ILP32 ?			 	\
+	((handle).model == DATAMODEL_ILP32 ?				\
 	    (void) ((handle).ptr.m32->field = (caddr32_t)(val)) :	\
 	    (void) ((handle).ptr.m64->field = (val)))
 

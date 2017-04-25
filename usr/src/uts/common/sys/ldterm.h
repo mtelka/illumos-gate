@@ -25,13 +25,11 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _SYS_LDTERM_H
 #define	_SYS_LDTERM_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"	/* SVr4.0 11.5	*/
 
 #ifdef	__cplusplus
 extern "C" {
@@ -45,7 +43,7 @@ extern "C" {
 #define	MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
-#define	V_MIN 		tp->t_modes.c_cc[VMIN]
+#define	V_MIN		tp->t_modes.c_cc[VMIN]
 #define	V_TIME		tp->t_modes.c_cc[VTIME]
 #define	RAW_MODE	!(tp->t_modes.c_lflag & ICANON)
 #define	CANON_MODE	(tp->t_modes.c_lflag & ICANON)

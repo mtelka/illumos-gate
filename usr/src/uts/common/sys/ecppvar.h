@@ -64,11 +64,11 @@ struct ecpp_hw {
 
 /* NSC 87332/97317 and EBus DMAC */
 struct ecpp_ebus {
-	struct config_reg	*c_reg; 	/* configuration registers */
+	struct config_reg	*c_reg;		/* configuration registers */
 	ddi_acc_handle_t	c_handle;	/* handle for conf regs */
 	struct cheerio_dma_reg	*dmac;		/* ebus dmac registers */
 	ddi_acc_handle_t	d_handle;	/* handle for dmac registers */
-	struct config2_reg	*c2_reg; 	/* 97317 2nd level conf regs */
+	struct config2_reg	*c2_reg;	/* 97317 2nd level conf regs */
 	ddi_acc_handle_t	c2_handle;	/* handle for c2_reg */
 };
 
@@ -117,8 +117,8 @@ struct ecppunit {
 	/*
 	 * common SuperIO registers
 	 */
-	struct info_reg		*i_reg; 	/* info registers */
-	struct fifo_reg		*f_reg; 	/* fifo register */
+	struct info_reg		*i_reg;		/* info registers */
+	struct fifo_reg		*f_reg;		/* fifo register */
 	ddi_acc_handle_t	i_handle;
 	ddi_acc_handle_t	f_handle;
 	/*
@@ -138,7 +138,7 @@ struct ecppunit {
 		struct ecpp_ebus	ebus;
 		struct ecpp_m1553	m1553;
 #if defined(__x86)
-		struct ecpp_x86 	x86;
+		struct ecpp_x86		x86;
 #endif
 	} uh;
 	/*
@@ -349,7 +349,7 @@ _NOTE(DATA_READABLE_WITHOUT_LOCK(ecppunit::writeq))
  */
 #define	ECPP_STRUCTIN		0
 #define	ECPP_STRUCTOUT		1
-#define	ECPP_ADDRIN 		2
+#define	ECPP_ADDRIN		2
 #define	ECPP_ADDROUT		3
 
 /*
@@ -407,7 +407,7 @@ struct ecppkstat {
 };
 
 /* Macros for superio programming */
-#define	PP_PUTB(x, y, z)  	ddi_put8(x, y, z)
+#define	PP_PUTB(x, y, z)	ddi_put8(x, y, z)
 #define	PP_GETB(x, y)		ddi_get8(x, y)
 
 #define	DSR_READ(pp)		PP_GETB((pp)->i_handle, &(pp)->i_reg->dsr)
@@ -453,7 +453,7 @@ struct ecppkstat {
 {		\
 	uint8_t tmpval;					\
 	tmpval = ddi_get8(handle, (uint8_t *)addr);	\
-	tmpval &= val; 					\
+	tmpval &= val;					\
 	ddi_put8(handle, (uint8_t *)addr, tmpval);	\
 }
 
@@ -461,7 +461,7 @@ struct ecppkstat {
 {		\
 	uint32_t tmpval;				\
 	tmpval = ddi_get32(handle, (uint32_t *)addr);	\
-	tmpval &= val; 					\
+	tmpval &= val;					\
 	ddi_put32(handle, (uint32_t *)addr, tmpval);	\
 }
 

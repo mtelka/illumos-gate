@@ -94,7 +94,7 @@ typedef enum {
 	ILB_STATUS_GENERIC,	/* generic failure  - no error string */
 	ILB_STATUS_ENOHCINFO,   /* missing healthcheck info */
 	ILB_STATUS_INVAL_HCTESTTYPE,	/* invalid  health check */
-	ILB_STATUS_INVAL_CMD, 	/* unknown command */
+	ILB_STATUS_INVAL_CMD,	/* unknown command */
 	ILB_STATUS_DUP_RULE,	/* rule name exists */
 	ILB_STATUS_ENORULE,	/* rule does not exist */
 	ILB_STATUS_MISMATCHSG,	/* addr family mismatch with sgroup */
@@ -102,8 +102,8 @@ typedef enum {
 	ILB_STATUS_SGUNAVAIL,	/* cannot find sgroup in sggroup list */
 	ILB_STATUS_SGINUSE,	/* server is un use, cannot remove */
 	ILB_STATUS_SGEXISTS,	/* server exists */
-	ILB_STATUS_SGFULL,   	/* cannot add any more servers */
-	ILB_STATUS_SGEMPTY,  	/* sgroup is empty */
+	ILB_STATUS_SGFULL,	/* cannot add any more servers */
+	ILB_STATUS_SGEMPTY,	/* sgroup is empty */
 	ILB_STATUS_NAMETOOLONG,	/* a name is longer than allowed */
 	ILB_STATUS_CFGAUTH,	/* config authoriz denied -no error string */
 	ILB_STATUS_CFGUPDATE,	/* failed to update config! */
@@ -216,7 +216,7 @@ typedef struct {
 } ilb_hc_info_t;
 
 typedef struct rule_data {
-	char		r_name[ILB_NAMESZ]; 	/* name of this rule */
+	char		r_name[ILB_NAMESZ];	/* name of this rule */
 	int32_t		r_flags;	/* opt: ILB_FLAGS_RULE_ENABLED etc. */
 	ilb_ip_addr_t	r_vip;		/* vip, required for rule creation */
 	uint16_t	r_proto;	/* protocol (tcp, udp) */
@@ -242,7 +242,7 @@ typedef struct server_data {
 	in_port_t	sd_minport;	/* port information */
 	in_port_t	sd_maxport;	/* ... if != 0, defines a port range */
 	uint32_t	sd_flags;	/* enabled, dis- */
-	char 		sd_srvID[ILB_NAMESZ];	/* "name" for server */
+	char		sd_srvID[ILB_NAMESZ];	/* "name" for server */
 					/* assigned by system, not user */
 } ilb_server_data_t;
 

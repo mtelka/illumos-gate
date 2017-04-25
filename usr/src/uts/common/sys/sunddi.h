@@ -208,7 +208,7 @@ extern "C" {
 
 #define	DDI_NT_UGEN	"ddi_generic:usb"	/* USB generic drv */
 
-#define	DDI_NT_SMP	"ddi_sas_smp" 		/* smp devcies */
+#define	DDI_NT_SMP	"ddi_sas_smp"		/* smp devcies */
 
 #define	DDI_NT_NEXUS	"ddi_ctl:devctl"	/* nexus drivers */
 
@@ -834,7 +834,7 @@ ddi_prop_op_nblocks_blksize(dev_t dev, dev_info_t *dip, ddi_prop_op_t prop_op,
  *		allocated by property provider via kmem_alloc. Requester
  *		is responsible for freeing returned property via kmem_free.
  *
- * 	Arguments:
+ *	Arguments:
  *
  *	dev:	Input:	dev_t of property.
  *	dip:	Input:	dev_info_t pointer of child.
@@ -845,7 +845,7 @@ ddi_prop_op_nblocks_blksize(dev_t dev, dev_info_t *dip, ddi_prop_op_t prop_op,
  *	valuep:	Output:	Addr of callers buffer pointer.
  *	lengthp:Output:	*lengthp will contain prop length on exit.
  *
- * 	Possible Returns:
+ *	Possible Returns:
  *
  *		DDI_PROP_SUCCESS:	Prop found and returned.
  *		DDI_PROP_NOT_FOUND:	Prop not found

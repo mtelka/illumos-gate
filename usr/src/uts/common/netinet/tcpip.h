@@ -11,15 +11,12 @@
 #ifndef	_NETINET_TCPIP_H
 #define	_NETINET_TCPIP_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-/* tcpip.h 1.7 88/08/19 SMI; from UCB 7.1 6/5/85	*/
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
 struct tcpiphdr {
-	struct 	ipovly ti_i;		/* overlaid ip structure */
+	struct	ipovly ti_i;		/* overlaid ip structure */
 	struct	tcphdr ti_t;		/* tcp header */
 };
 #define	ti_next		ti_i.ih_next

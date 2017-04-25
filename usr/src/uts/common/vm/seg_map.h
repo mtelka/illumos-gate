@@ -24,7 +24,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * University Copyright- Copyright (c) 1982, 1986, 1988
@@ -38,8 +38,6 @@
 
 #ifndef	_VM_SEG_MAP_H
 #define	_VM_SEG_MAP_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -111,7 +109,7 @@ struct	smap {
  * Each queue structure is padded to 64 bytes to avoid false sharing.
  */
 #define	SM_FREEQ_PAD (64 - sizeof (struct smap *) - sizeof (kmutex_t))
-struct 	sm_freeq {
+struct	sm_freeq {
 	struct smap	*smq_free;	/* points into freelist */
 	kmutex_t	smq_mtx;	/* protects smq_free */
 	char		smq_pad[SM_FREEQ_PAD];

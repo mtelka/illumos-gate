@@ -27,18 +27,16 @@
 #ifndef _SYS_IB_IB_PKT_HDRS_H
 #define	_SYS_IB_IB_PKT_HDRS_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct _ib_lrh_hdr_t {
-	uint8_t		VL_LVer; 	/* virtual lane pkt is using & */
+	uint8_t		VL_LVer;	/* virtual lane pkt is using & */
 					/* link level protocol of pkt  */
 	uint8_t		SL_LNH;		/* requested service level */
 					/* & headers following LRH */
-	ib_lid_t	DLID; 		/* dest port and path on subnet */
+	ib_lid_t	DLID;		/* dest port and path on subnet */
 	uint16_t	PktLen;		/* size of packet in four-byte words */
 	ib_lid_t	SLID;		/* source port on subnet */
 } ib_lrh_hdr_t;
@@ -55,7 +53,7 @@ typedef struct _ib_lrh_hdr_t {
 #define	IB_LRH_PACKET_LENGTH_MASK		0x07FF
 
 typedef struct _ib_grh_t {
-	uint32_t	IPVer_TC_Flow; 	/* version, traffic class & */
+	uint32_t	IPVer_TC_Flow;	/* version, traffic class & */
 					/* flow label of the packet */
 	uint16_t	PayLen;		/* len of the pkt following the GRH */
 	uint8_t		NxtHdr;		/* Header following the GRH */
@@ -71,13 +69,13 @@ typedef struct _ib_grh_t {
 #define	IB_GRH_NEXT_HDR_BTH			0x1B
 
 typedef struct _ib_bth_hdr_t {
-	uint8_t 	OpCode;				/* iba packet type */
-	uint8_t 	SE_M_PadCnt_TVer; /* responder should generate event */
+	uint8_t		OpCode;				/* iba packet type */
+	uint8_t		SE_M_PadCnt_TVer; /* responder should generate event */
 				/* & migration state & payload pad count */
 				/* & version of ibta transport headers */
-	uint16_t 	P_Key; 		/* logical partition assoc with pkt */
+	uint16_t	P_Key;		/* logical partition assoc with pkt */
 	uint32_t	Reserved_DestQP; /* queue pair of dest */
-	uint32_t	A_PSN; 		/* responder should generate ack & */
+	uint32_t	A_PSN;		/* responder should generate ack & */
 				/* packet sequence number */
 } ib_bth_hdr_t;
 

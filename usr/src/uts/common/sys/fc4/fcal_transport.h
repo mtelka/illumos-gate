@@ -27,8 +27,6 @@
 #ifndef	_SYS_FC4_FCAL_TRANSPORT_H
 #define	_SYS_FC4_FCAL_TRANSPORT_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/fc4/fcal.h>
 
 #ifdef	__cplusplus
@@ -103,7 +101,7 @@ typedef struct fcal_packet {
 #define	FCALP_MAGIC	0x4750703
 
 typedef struct fcal_transport {
-	void			*fcal_handle; 	/* identifies which FC dev */
+	void			*fcal_handle;	/* identifies which FC dev */
 	ddi_dma_lim_t		*fcal_dmalimp;
 	ddi_iblock_cookie_t	fcal_iblock;
 	ddi_dma_attr_t		*fcal_dmaattr;
@@ -196,7 +194,7 @@ typedef struct fcal_transport_ops {
 #define	FCAL_TRANSPORT_QFULL	0x104
 #define	FCAL_TRANSPORT_TIMEOUT	0x105
 
-#define	FCAL_FAILURE 		0xffffffff
+#define	FCAL_FAILURE		0xffffffff
 /*
  * fc_uc_register() return values
  */

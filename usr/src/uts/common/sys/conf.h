@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * Copyright 2009 Sun Microsystems, Inc.  All rights reserved.
@@ -40,7 +40,7 @@
 extern "C" {
 #endif
 
-#define	FMNAMESZ	8 		/* used by struct fmodsw */
+#define	FMNAMESZ	8		/* used by struct fmodsw */
 
 #if !defined(_XPG4_2) || defined(__EXTENSIONS__)
 

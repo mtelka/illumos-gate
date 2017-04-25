@@ -693,7 +693,7 @@ typedef struct sadb_x_edump {
 #define	SADB_X_IDENTTYPE_KEY_ID		6  /* Generic KEY ID. */
 #define	SADB_X_IDENTTYPE_ADDR_RANGE	7
 
-#define	SADB_IDENTTYPE_MAX 	7
+#define	SADB_IDENTTYPE_MAX	7
 
 /*
  * Protection DOI values for the SENSITIVITY extension.  There are no values

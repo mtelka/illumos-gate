@@ -23,7 +23,7 @@
  */
 
 /*	Copyright (c) 1983, 1984, 1985, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 #ifndef	_NFS_NFS_CLNT_H
 #define	_NFS_NFS_CLNT_H
@@ -360,7 +360,7 @@ typedef struct mntinfo {
 	 *	queue pointed by mi_async_curr[NFS_ASYNC_QUEUE]. Number of
 	 *	active threads in this pool is tracked by
 	 *	mi_threads[NFS_ASYNC_QUEUE].
-	 * 	(ii)Threads which work only on page op async queues.
+	 *	(ii)Threads which work only on page op async queues.
 	 *	Page ops queue comprises of NFS_PUTAPAGE, NFS_PAGEIO &
 	 *	NFS_COMMIT. Default number of threads in this queue is 2
 	 *	(NUM_ASYNC_PGOPS_THREADS). Threads in this pool work on async
@@ -408,7 +408,7 @@ typedef struct mntinfo {
 	 * Client Side Failover stats
 	 */
 	uint_t		mi_noresponse;	/* server not responding count */
-	uint_t		mi_failover; 	/* failover to new server count */
+	uint_t		mi_failover;	/* failover to new server count */
 	uint_t		mi_remap;	/* remap to new server count */
 	/*
 	 * Kstat statistics

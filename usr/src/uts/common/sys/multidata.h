@@ -27,8 +27,6 @@
 #ifndef _SYS_MULTIDATA_H
 #define	_SYS_MULTIDATA_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -74,7 +72,7 @@ struct pld_ary_s {
 	uchar_t *pld_wptr;	/* pointer to end of payload data */
 };
 
-#define	PDESCINFO_STRUCT(elems) 					\
+#define	PDESCINFO_STRUCT(elems)						\
 {									\
 	uint_t	flags;		/* misc. flags */			\
 	uchar_t	*hdr_base;	/* start address of header area */	\

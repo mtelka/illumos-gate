@@ -41,7 +41,7 @@ extern "C" {
 #define	DEVFS_ERR	-1	/* operation not successful */
 #define	DEVFS_INVAL	-2	/* invalid argument */
 #define	DEVFS_NOMEM	-3	/* out of memory */
-#define	DEVFS_PERM	-4 	/* permission denied - not root */
+#define	DEVFS_PERM	-4	/* permission denied - not root */
 #define	DEVFS_NOTSUP	-5	/* operation not supported */
 #define	DEVFS_LIMIT	-6	/* exceeded maximum size of property value */
 #define	DEVFS_NOTFOUND	-7	/* request not found */

@@ -44,7 +44,7 @@ extern "C" {
  *	Event Vendor	- SUNW_VENDOR		(defined in sys/sysevent.h)
  *	Event Publisher - VRRP_EVENT_PUBLISHER	(defined in this file)
  *
- * 	Attribute Name  - VRRP_EVENT_VERSION
+ *	Attribute Name  - VRRP_EVENT_VERSION
  *	Attribute Type  - SE_DATA_TYPE_UINT8
  *	Attribute Value - <version>
  *
@@ -54,11 +54,11 @@ extern "C" {
  *
  *	Attribute Name  - VRRP_EVENT_STATE
  *	Attribute Type  - SE_DATA_TYPE_UINT8
- * 	Attribute Value - <state>
+ *	Attribute Value - <state>
  *
  *	Attribute Name  - VRRP_EVENT_PREV_STATE
  *	Attribute Type  - SE_DATA_TYPE_UINT8
- * 	Attribute Value - <previous-state>
+ *	Attribute Value - <previous-state>
  */
 
 #define	VRRP_EVENT_PUBLISHER	"vrrpd"

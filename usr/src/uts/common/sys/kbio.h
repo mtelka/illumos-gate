@@ -26,8 +26,6 @@
 #ifndef _SYS_KBIO_H
 #define	_SYS_KBIO_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"	/* SunOS4.0 1.23 */
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -51,14 +49,14 @@ extern "C" {
  */
 #define	KIOCTRANS	(KIOC|30)	/* set keyboard translation */
 #define	KIOCGTRANS	(KIOC|35)	/* get keyboard translation */
-#define	KIOCTRANSABLE	(KIOC|36) 	/* set keyboard translatability */
+#define	KIOCTRANSABLE	(KIOC|36)	/* set keyboard translatability */
 #define	KIOCGTRANSABLE	(KIOC|37)	/* get keyboard translatability */
 
 #else	/* __i386 || __i386_COMPAT */
 
 #define	KIOCTRANS	(KIOC|0)	/* set keyboard translation */
 #define	KIOCGTRANS	(KIOC|5)	/* get keyboard translation */
-#define	KIOCTRANSABLE	(KIOC|6) 	/* set keyboard translatability */
+#define	KIOCTRANSABLE	(KIOC|6)	/* set keyboard translatability */
 #define	KIOCGTRANSABLE	(KIOC|7)	/* get keyboard translatability */
 
 #endif	/* __i386 || __i386_COMPAT */

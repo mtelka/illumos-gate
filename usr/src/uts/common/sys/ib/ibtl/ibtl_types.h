@@ -352,8 +352,8 @@ typedef enum ibt_hca_flags_e {
 	IBT_HCA_RNR_NAK		= 1 << 15,	/* RNR-NAK supported for RC */
 	IBT_HCA_CURRENT_QP_STATE = 1 << 16,	/* Does modify_qp support */
 						/* checking of current state? */
-	IBT_HCA_SRQ 		= 1 << 17,	/* Shared Receive Queue (RC) */
-	IBT_HCA_RC_SRQ 		= IBT_HCA_SRQ,
+	IBT_HCA_SRQ		= 1 << 17,	/* Shared Receive Queue (RC) */
+	IBT_HCA_RC_SRQ		= IBT_HCA_SRQ,
 	IBT_HCA_RESIZE_SRQ	= 1 << 18,	/* Is resize SRQ supported? */
 	IBT_HCA_UD_SRQ		= 1 << 19,	/* UD with SRQ */
 
@@ -457,7 +457,7 @@ typedef struct ibt_hca_attr_s {
 						/* mem that can be registered */
 	uint_t		hca_max_mem_win;	/* Max Memory windows in HCA */
 
-	uint_t		hca_max_rsc; 		/* Max Responder Resources of */
+	uint_t		hca_max_rsc;		/* Max Responder Resources of */
 						/* this HCA for RDMAR/Atomics */
 						/* with this HCA as target. */
 	uint8_t		hca_max_rdma_in_chan;	/* Max RDMAR/Atomics in per */
@@ -816,7 +816,7 @@ typedef enum ibt_cep_modify_flags_e {
 	IBT_CEP_SET_PORT		= (1 << 8),
 	IBT_CEP_SET_OPAQUE5		= (1 << 9),
 	IBT_CEP_SET_RETRY		= (1 << 10),
-	IBT_CEP_SET_RNR_NAK_RETRY 	= (1 << 11),
+	IBT_CEP_SET_RNR_NAK_RETRY	= (1 << 11),
 	IBT_CEP_SET_MIN_RNR_NAK		= (1 << 12),
 
 	IBT_CEP_SET_QKEY		= (1 << 13),
@@ -982,7 +982,7 @@ typedef struct ibt_pmr_desc_s {
 	ib_vaddr_t	pmd_iova;	/* Returned I/O Virtual Address */
 	ibt_lkey_t	pmd_lkey;
 	ibt_rkey_t	pmd_rkey;
-	uint_t 		pmd_phys_buf_list_sz;	/* Allocated Phys buf sz */
+	uint_t		pmd_phys_buf_list_sz;	/* Allocated Phys buf sz */
 	boolean_t	pmd_sync_required;
 } ibt_pmr_desc_t;
 

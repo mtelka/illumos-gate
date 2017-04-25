@@ -27,8 +27,6 @@
 #ifndef	_SYS_1394_IEEE1212_H
 #define	_SYS_1394_IEEE1212_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * ieee1212.h
  *     This file contains various defines for config rom entries
@@ -41,13 +39,13 @@ extern "C" {
 #define	IEEE1212_NODE_CAP_QUAD			2	/* node capability */
 #define	IEEE1212_ROOT_DIR_QUAD			5	/* root dir quad */
 
-#define	IEEE1212_DIR_LEN(data) 			(((data) >> 16) & 0xFFFF)
+#define	IEEE1212_DIR_LEN(data)			(((data) >> 16) & 0xFFFF)
 #define	IEEE1212_DIR_CRC(data)			((uint16_t)((data) & 0xFFFF))
 
 #define	CONFIG_ROM_GEN(rom_ptr) \
 	(((rom_ptr)[IEEE1212_NODE_CAP_QUAD] & 0x000000F0) >> 4)
 
-#define	CFGROM_ROOT_DIR(cfgrom) 	(&(cfgrom)[IEEE1212_ROOT_DIR_QUAD])
+#define	CFGROM_ROOT_DIR(cfgrom)		(&(cfgrom)[IEEE1212_ROOT_DIR_QUAD])
 #define	CFGROM_DIR_LEN(dirptr)		(((dirptr)[0] >> 16) & 0xFF)
 #define	CFGROM_TYPE_KEY_VALUE(q, t, k, v) {				     \
 	(t) = (((q) & IEEE1212_KEY_TYPE_MASK) >> IEEE1212_KEY_TYPE_SHIFT);   \

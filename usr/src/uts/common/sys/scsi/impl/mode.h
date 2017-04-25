@@ -27,8 +27,6 @@
 #ifndef	_SYS_SCSI_IMPL_MODE_H
 #define	_SYS_SCSI_IMPL_MODE_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -42,7 +40,7 @@ extern "C" {
 /*
  * Variations to Sequential Access device mode header
  */
-struct 	modeheader_seq {
+struct	modeheader_seq {
 	uchar_t	datalen;	/* sense data length */
 	uchar_t	mediumtype;	/* medium type */
 #if defined(_BIT_FIELDS_LTOH)

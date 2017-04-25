@@ -298,16 +298,16 @@ struct method_context {
  * of the error structure.
  *
  * type - usually will be an errno equivalent but could contain
- * 	defined error types for exampe SCF_ERROR_XXX
+ *	defined error types for exampe SCF_ERROR_XXX
  * msg - must be at the end of the structure as if the message is
- * 	longer than EMSGSIZE we will reallocate the structure to
- * 	handle the overflow
+ *	longer than EMSGSIZE we will reallocate the structure to
+ *	handle the overflow
  */
 typedef struct mc_error {
 	int	destroy;	/* Flag to indicate destruction steps */
 	int	type;		/* Type of error for decision making */
 	int	size;		/* The size of the error message string */
-	char 	msg[RESTARTER_ERRMSGSZ];
+	char	msg[RESTARTER_ERRMSGSZ];
 } mc_error_t;
 
 int restarter_rm_libs_loadable(void);

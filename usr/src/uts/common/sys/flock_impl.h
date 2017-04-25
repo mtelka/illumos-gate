@@ -53,8 +53,8 @@ struct	edge {
 	struct	edge	*edge_adj_prev; /* adjacency list prev */
 	struct	edge	*edge_in_next;	/* incoming edges list next */
 	struct	edge	*edge_in_prev;	/* incoming edges list prev */
-	struct 	lock_descriptor	*from_vertex;	/* edge emanating from lock */
-	struct 	lock_descriptor	*to_vertex;	/* edge pointing to lock */
+	struct	lock_descriptor	*from_vertex;	/* edge emanating from lock */
+	struct	lock_descriptor	*to_vertex;	/* edge pointing to lock */
 };
 
 typedef	struct	edge	edge_t;
@@ -65,9 +65,9 @@ struct lock_descriptor {
 	struct	edge		l_edge;		/* edge for adj and in lists */
 	struct	lock_descriptor	*l_stack;	/* for stack operations */
 	struct	lock_descriptor	*l_stack1;	/* for stack operations */
-	struct 	lock_descriptor *l_dstack;	/* stack for debug functions */
+	struct	lock_descriptor *l_dstack;	/* stack for debug functions */
 	struct	edge		*l_sedge;	/* start edge for graph alg. */
-			int	l_index; 	/* used for barrier count */
+			int	l_index;	/* used for barrier count */
 		struct	graph	*l_graph;	/* graph this belongs to */
 		vnode_t		*l_vnode;	/* vnode being locked */
 			int	l_type;		/* type of lock */
@@ -85,7 +85,7 @@ struct lock_descriptor {
 		file_t		*l_ofd;		/* OFD-style reference */
 };
 
-typedef struct 	lock_descriptor	lock_descriptor_t;
+typedef struct	lock_descriptor	lock_descriptor_t;
 
 /*
  * Each graph holds locking information for some number of vnodes.  The

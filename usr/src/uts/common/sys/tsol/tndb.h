@@ -72,8 +72,8 @@ typedef enum tsol_dbops {
 	TNDB_GET = 5
 } tsol_dbops_t;
 
-#define	TNTNAMSIZ 	ZONENAME_MAX	/* template name size */
-#define	IP_STR_SIZE 	200		/* string ip address size */
+#define	TNTNAMSIZ	ZONENAME_MAX	/* template name size */
+#define	IP_STR_SIZE	200		/* string ip address size */
 
 #define	TNRHDB_NCOL	2		/* # of columns in tnrhdb */
 
@@ -256,7 +256,7 @@ typedef struct tsol_tpc {
 } tsol_tpc_t;
 
 typedef struct tsol_tnrhc {
-	struct tsol_tnrhc 	*rhc_next;	/* link to next entry */
+	struct tsol_tnrhc	*rhc_next;	/* link to next entry */
 	kmutex_t		rhc_lock;	/* lock for structure */
 	tnaddr_t		rhc_host;	/* IPv4/IPv6 host address */
 	tsol_tpc_t		*rhc_tpc;	/* pointer to template */

@@ -26,8 +26,6 @@
 #ifndef _SYS_KICONV_CCK_COMMON_H
 #define	_SYS_KICONV_CCK_COMMON_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -117,21 +115,21 @@ typedef int8_t (*kiconv_utf8tocck_t)(uint32_t utf8, uchar_t **ib,
 	uchar_t *ibtail, uchar_t *ob, uchar_t *obtail, size_t *ret_val);
 
 /* Common open and close function for UTF-8 to CCK conversion. */
-void * 	kiconv_open_to_cck(void);
-int    	kiconv_close_to_cck(void *);
+void *	kiconv_open_to_cck(void);
+int	kiconv_close_to_cck(void *);
 
 /* Binary search funciton. */
 size_t	kiconv_binsearch(uint32_t key, void *tbl, size_t nitems);
 
 /* Wrapper for conversion from UTF-8 to GB18030/BIG5/EUC-TW/UHC... */
-size_t 	kiconv_utf8_to_cck(void *kcd, char **inbuf, size_t *inbytesleft,
+size_t	kiconv_utf8_to_cck(void *kcd, char **inbuf, size_t *inbytesleft,
 	char **outbuf, size_t *outbytesleft, int *errno,
 	kiconv_utf8tocck_t ptr_utf8tocck);
 
 /*
  * Wrapper for string based conversion from UTF-8 to GB18030/BIG5/EUC-TW/UHC...
  */
-size_t 	kiconvstr_utf8_to_cck(uchar_t *inarray, size_t *inlen,
+size_t	kiconvstr_utf8_to_cck(uchar_t *inarray, size_t *inlen,
 	uchar_t *outarray, size_t *outlen, int flag, int *errno,
 	kiconv_utf8tocck_t ptr_utf8tocck);
 

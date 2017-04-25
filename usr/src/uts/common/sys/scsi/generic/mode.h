@@ -101,7 +101,7 @@ struct block_descriptor {
 };
 
 #define	MODE_BLK_DESC_LENGTH	(sizeof (struct block_descriptor))
-#define	MODE_PARAM_LENGTH 	(MODE_HEADER_LENGTH + MODE_BLK_DESC_LENGTH)
+#define	MODE_PARAM_LENGTH	(MODE_HEADER_LENGTH + MODE_BLK_DESC_LENGTH)
 
 /*
  * Define a macro to take an address of a mode header to the address
@@ -153,12 +153,12 @@ struct mode_page {
 /*
  * Page Control field (bits 7 and 6) follows the following specification:
  *
- * 	Value			Meaning
- * 	----------------------------------------------------------------------
- * 	00b			current values
- * 	01b			changeable values
- * 	10b			default values
- * 	11b			saved values
+ *	Value			Meaning
+ *	----------------------------------------------------------------------
+ *	00b			current values
+ *	01b			changeable values
+ *	10b			default values
+ *	11b			saved values
  */
 
 #define	MODEPAGE_CURRENT	0x00

@@ -90,7 +90,7 @@ typedef struct spd_msg
  * Well-known policy db instances, found in spd_msg_spdid
  */
 #define	SPD_ACTIVE		0	/* The currently active instance */
-#define	SPD_STANDBY		1 	/* "on deck" standby SPD */
+#define	SPD_STANDBY		1	/* "on deck" standby SPD */
 
 /*
  * The spd_msg_t is followed by extensions, which start with the
@@ -125,7 +125,7 @@ typedef struct spd_ext
 #define	SPD_EXT_ACTION				6
 #define	SPD_EXT_RULE				7
 #define	SPD_EXT_RULESET				8
-#define	SPD_EXT_ICMP_TYPECODE  			9
+#define	SPD_EXT_ICMP_TYPECODE			9
 
 #define	SPD_EXT_TUN_NAME			10
 
@@ -425,7 +425,7 @@ typedef struct spd_if_s {
 #define	SPD_APPLY_COMP		0x0008	/* compression; NYI */
 #define	SPD_APPLY_UNIQUE	0x0010	/* unique per-flow SA */
 #define	SPD_APPLY_BYPASS	0x0020	/* bypass policy */
-#define	SPD_APPLY_ESPA		0x0040 	/* ESP authentication */
+#define	SPD_APPLY_ESPA		0x0040	/* ESP authentication */
 
 /*
  * SW crypto execution modes.
@@ -489,7 +489,7 @@ typedef struct spd_ruleset_ext
 #define	SPD_DIAGNOSTIC_ADD_BAD_TYPE		8
 #define	SPD_DIAGNOSTIC_ADD_BAD_FLAGS		9
 #define	SPD_DIAGNOSTIC_ADD_INCON_FLAGS		10
-#define	SPD_DIAGNOSTIC_MALFORMED_LCLPORT 	11
+#define	SPD_DIAGNOSTIC_MALFORMED_LCLPORT	11
 #define	SPD_DIAGNOSTIC_DUPLICATE_LCLPORT	12
 #define	SPD_DIAGNOSTIC_MALFORMED_REMPORT	13
 #define	SPD_DIAGNOSTIC_DUPLICATE_REMPORT	14

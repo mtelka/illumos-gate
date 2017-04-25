@@ -65,7 +65,7 @@ extern "C" {
  * register values.  The number of items in pd_nvdata is computed as follows:
  *
  * (pd_msgoff - (sizeof (panic_data_t) - sizeof (panic_nv_t))) /
- * 	sizeof (panic_nv_t);
+ *	sizeof (panic_nv_t);
  *
  * In addition to panicbuf, debuggers can access the panic_* variables shown
  * below to determine more information about the initiator of the panic.

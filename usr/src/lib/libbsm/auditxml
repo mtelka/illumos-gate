@@ -1014,7 +1014,7 @@ sub generateAPIFile {
 	  $line = "/* $comment */\n\t" if defined $comment;
 	  for ($i = 0; $i <= $#type; $i++) {
 	    my ($primitive, $dereference) =
-	        ($type[$i] =~ /([^\*]+)\s*(\**)/);
+	        ($type[$i] =~ /^([^\*]+?)\s*(\**)$/);
 	    $id[$i] .= $1 if ($primitive =~ s/(\[\d+\])//);
 	    $line .= "$primitive\t$dereference$id[$i];\t/*  $option  */";
 	    push (@entryList, $line);
@@ -1033,7 +1033,7 @@ sub generateAPIFile {
 	  }
 	  else {
 	    my ($primitive, $dereference) =
-	        ($dataType =~ /([^\*]+)\s*(\**)/);
+	        ($dataType =~ /^([^\*]+?)\s*(\**)$/);
 	    $entryId .= $1 if ($primitive =~ s/(\[\d+\])//);
 	    $line .= "$primitive\t$dereference$entryId;\t/* $option */";
 	  }

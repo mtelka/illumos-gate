@@ -44,11 +44,11 @@ extern "C" {
  *
  * There are 5 pieces of information stored for each node in an AVL tree
  *
- * 	pointer to less than child
- * 	pointer to greater than child
- * 	a pointer to the parent of this node
+ *	pointer to less than child
+ *	pointer to greater than child
+ *	a pointer to the parent of this node
  *	an indication  [0/1]  of which child I am of my parent
- * 	a "balance" (-1, 0, +1)  indicating which child tree is taller
+ *	a "balance" (-1, 0, +1)  indicating which child tree is taller
  *
  * Since they only need 3 bits, the last two fields are packed into the
  * bottom bits of the parent pointer on 64 bit machines to save on space.

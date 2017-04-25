@@ -36,7 +36,7 @@ extern "C" {
 
 /* Video interface subclass code */
 #define	SC_UNDEFINED			0x00
-#define	SC_VIDEOCONTROL 		0x01
+#define	SC_VIDEOCONTROL			0x01
 #define	SC_VIDEOSTREAMING		0x02
 #define	SC_VIDEO_INTERFACE_COLLECTION	0x03
 
@@ -51,7 +51,7 @@ extern "C" {
 #define	CS_ENDPOINT			0x25
 
 /* Video class specific, video control interface descriptor subtypes */
-#define	VC_DESCRIPTOR_UNDEFINED 	0x00
+#define	VC_DESCRIPTOR_UNDEFINED		0x00
 #define	VC_HEADER			0x01
 #define	VC_INPUT_TERMINAL		0x02
 #define	VC_OUTPUT_TERMINAL		0x03
@@ -61,12 +61,12 @@ extern "C" {
 
 /* Video class specific, video stream interface descriptor subtypes */
 #define	VS_UNDEFINED			0x00
-#define	VS_INPUT_HEADER 		0x01
+#define	VS_INPUT_HEADER			0x01
 #define	VS_OUTPUT_HEADER		0x02
 #define	VS_STILL_IMAGE_FRAME		0x03
 #define	VS_FORMAT_UNCOMPRESSED		0x04
 #define	VS_FRAME_UNCOMPRESSED		0x05
-#define	VS_FORMAT_MJPEG 		0x06
+#define	VS_FORMAT_MJPEG			0x06
 #define	VS_FRAME_MJPEG			0x07
 #define	VS_FORMAT_MPEG2TS		0x0a
 #define	VS_FORMAT_DV			0x0c
@@ -83,14 +83,14 @@ extern "C" {
 
 /* Request codes, bRequest */
 #define	RC_UNDEFINED			0x00
-#define	SET_CUR 			0x01
-#define	GET_CUR 			0x81
-#define	GET_MIN 			0x82
-#define	GET_MAX 			0x83
-#define	GET_RES 			0x84
-#define	GET_LEN 			0x85
+#define	SET_CUR				0x01
+#define	GET_CUR				0x81
+#define	GET_MIN				0x82
+#define	GET_MAX				0x83
+#define	GET_RES				0x84
+#define	GET_LEN				0x85
 #define	GET_INFO			0x86
-#define	GET_DEF 			0x87
+#define	GET_DEF				0x87
 
 /* Control types of Video Control interface */
 #define	VC_CONTROL_UNDEFINED		0x00
@@ -102,7 +102,7 @@ extern "C" {
 
 /* Selector Unit controls */
 #define	SU_CONTROL_UNDEFINED		0x00
-#define	SU_INPUT_SELECT_CONTROL 	0x01
+#define	SU_INPUT_SELECT_CONTROL		0x01
 
 /* Camera Terminal controls */
 #define	CT_CONTROL_UNDEFINED				0x00
@@ -129,8 +129,8 @@ extern "C" {
 #define	PU_BACKLIGHT_COMPENSATION_CONTROL		0x01
 #define	PU_BRIGHTNESS_CONTROL				0x02
 #define	PU_CONTRAST_CONTROL				0x03
-#define	PU_GAIN_CONTROL 				0x04
-#define	PU_POWER_LINE_FREQUENCY_CONTROL 		0x05
+#define	PU_GAIN_CONTROL					0x04
+#define	PU_POWER_LINE_FREQUENCY_CONTROL			0x05
 #define	PU_HUE_CONTROL					0x06
 #define	PU_SATURATION_CONTROL				0x07
 #define	PU_SHARPNESS_CONTROL				0x08
@@ -138,7 +138,7 @@ extern "C" {
 #define	PU_WHITE_BALANCE_TEMPERATURE_CONTROL		0x0a
 #define	PU_WHITE_BALANCE_TEMPERATURE_AUTO_CONTROL	0x0b
 #define	PU_WHITE_BALANCE_COMPONENT_CONTROL		0x0c
-#define	PU_WHITE_BALANCE_COMPONENT_AUTO_CONTROL 	0x0d
+#define	PU_WHITE_BALANCE_COMPONENT_AUTO_CONTROL		0x0d
 #define	PU_DIGITAL_MULTIPLIER_CONTROL			0x0e
 #define	PU_DIGITAL_MULTIPLIER_LIMIT_CONTROL		0x0f
 #define	PU_HUE_AUTO_CONTROL				0x10
@@ -150,7 +150,7 @@ extern "C" {
 #define	VS_PROBE_CONTROL		0x01
 #define	VS_COMMIT_CONTROL		0x02
 #define	VS_STILL_PROBE_CONTROL		0x03
-#define	VS_STILL_COMMIT_CONTROL 	0x04
+#define	VS_STILL_COMMIT_CONTROL		0x04
 #define	VS_STILL_IMAGE_TRIGGER_CONTROL	0x05
 #define	VS_STREAM_ERROR_CODE_CONTROL	0x06
 #define	VS_GENERATE_KEY_FRAME_CONTROL	0x07

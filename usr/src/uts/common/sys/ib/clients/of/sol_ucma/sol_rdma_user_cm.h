@@ -50,7 +50,7 @@ typedef struct rdma_ucm_query_route_resp
 typedef struct rdma_ucm_connect		sol_ucma_connect_t;
 typedef struct rdma_ucm_listen		sol_ucma_listen_t;
 typedef struct rdma_ucm_accept		sol_ucma_accept_t;
-typedef struct rdma_ucm_reject 		sol_ucma_reject_t;
+typedef struct rdma_ucm_reject		sol_ucma_reject_t;
 typedef struct rdma_ucm_disconnect	sol_ucma_disconnect_t;
 typedef struct rdma_ucm_init_qp_attr	sol_ucma_init_qp_attr_t;
 typedef struct rdma_ucm_notify		sol_ucma_notify_t;

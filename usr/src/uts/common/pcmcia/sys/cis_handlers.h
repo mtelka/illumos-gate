@@ -27,8 +27,6 @@
 #ifndef _CIS_HANDLERS_H
 #define	_CIS_HANDLERS_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -82,7 +80,7 @@ typedef struct cistpl_callout_t {
  */
 #define	CISTPL_DEVSPEED_TABLE	0x000000001 /* use the device speed table */
 #define	CISTPL_DEVSPEED_EXT	0x000000002 /* use the extended speed table */
-#define	CISTPL_DEVSPEED_MAX_TBL	8 		/* max devspeed table entries */
+#define	CISTPL_DEVSPEED_MAX_TBL	8		/* max devspeed table entries */
 #define	CISTPL_DEVSPEED_MAX_EXP	8		/* max exponent entries */
 #define	CISTPL_DEVSPEED_MAX_MAN	16		/* max mantissa entries */
 #define	CISTPL_DEVSPEED_TBL(t)	cistpl_devspeed_struct.table[(t) &	\

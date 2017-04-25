@@ -64,7 +64,7 @@ typedef struct ic_extent {
 	uint32_t	ic_lbno;	/* Logical block # within the space */
 	uint32_t	ic_nbno;	/* # blocks in this extent */
 	daddr_t		ic_pbno;	/* Physical block number of extent. */
-					/* (always in disk blocks) 	*/
+					/* (always in disk blocks)	*/
 } ic_extent_t;
 
 typedef struct extent_block {
@@ -119,7 +119,7 @@ typedef struct ic_extent_block {
 
 #define	LDL_MINBUFSIZE		(32 * 1024)
 #define	LDL_USABLE_BSIZE	(DEV_BSIZE - sizeof (sect_trailer_t))
-#define	NB_LEFT_IN_SECTOR(off) 	(LDL_USABLE_BSIZE - ((off) - dbtob(btodb(off))))
+#define	NB_LEFT_IN_SECTOR(off)	(LDL_USABLE_BSIZE - ((off) - dbtob(btodb(off))))
 
 typedef struct cirbuf {
 	buf_t		*cb_bp;		/* buf's with space in circular buf */
@@ -297,7 +297,7 @@ struct delta {
 	int64_t		d_mof;	/* byte offset on device to start writing */
 				/*   delta */
 	int32_t		d_nb;	/* # bytes in the delta */
-	delta_t 	d_typ;	/* Type of delta.  Defined in ufs_trans.h */
+	delta_t		d_typ;	/* Type of delta.  Defined in ufs_trans.h */
 };
 /*
  * common map entry

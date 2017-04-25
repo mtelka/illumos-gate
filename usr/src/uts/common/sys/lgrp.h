@@ -225,9 +225,9 @@ typedef	uint64_t	mnodeset_t;
  */
 typedef struct lgrp {
 
-	lgrp_id_t 	lgrp_id;	/* which lgroup	*/
+	lgrp_id_t	lgrp_id;	/* which lgroup	*/
 	int		lgrp_latency;
-	lgrp_handle_t  	lgrp_plathand;	/* handle for platform calls */
+	lgrp_handle_t	lgrp_plathand;	/* handle for platform calls */
 	struct lgrp	*lgrp_parent;	/* parent lgroup */
 	uint_t		lgrp_reserved1;	/* filler */
 	uint_t		lgrp_childcnt;	/* number of children lgroups */
@@ -589,7 +589,7 @@ lgrp_id_t	lgrp_home_id(kthread_t *);
 void	lgrp_loadavg(lpl_t *, uint_t, int);
 void	lgrp_move_thread(kthread_t *, lpl_t *, int);
 uint64_t lgrp_get_trthr_migrations(void);
-void 	lgrp_update_trthr_migrations(uint64_t);
+void	lgrp_update_trthr_migrations(uint64_t);
 
 /*
  * lgroup topology

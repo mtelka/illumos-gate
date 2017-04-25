@@ -132,7 +132,7 @@ typedef struct pm_scan {
  * as a struct assignment.
  */
 typedef struct pm_comp {
-	char 	*pmc_name;		/* name of component */
+	char	*pmc_name;		/* name of component */
 	int	pmc_numlevels;		/* number of power levels supported */
 	int	*pmc_lvals;		/* numerical values of levels */
 	int	*pmc_thresh;		/* thresholds in secs, last INT_MAX */
@@ -350,7 +350,7 @@ typedef struct power_req {
 		struct report_pmcap_req {
 			dev_info_t	*who;
 			int		cap;
-			void 		*arg;
+			void		*arg;
 		} report_pmcap_req;
 		/*
 		 * PMR_CHANGED_POWER
@@ -559,7 +559,7 @@ typedef struct pm_thresh_rec {
 	struct pm_thresh_rec	*ptr_next;
 	int			ptr_numcomps;	/* number of components */
 	size_t			ptr_size;	/* total size for kmem_free */
-	pm_pte_t 		*ptr_entries;
+	pm_pte_t		*ptr_entries;
 } pm_thresh_rec_t;
 
 /*
@@ -703,7 +703,7 @@ extern void	pm_log(const char *fmt, ...) __KPRINTFLIKE(1);
 #endif /* !__sparc */
 
 #ifdef PMDDEBUG
-#define	PMD(level, arglist) { 			\
+#define	PMD(level, arglist) {			\
 	if (pm_debug & (level)) {		\
 		pm_log arglist;			\
 	}					\
@@ -847,7 +847,7 @@ extern int	pm_cfb_is_up(void);
 #ifdef DIPLOCKDEBUG
 #define	PM_LOCK_DIP(dip)	{ PMD(PMD_LOCK, ("dip lock %s@%s(%s#%d) " \
 				    "%s %d\n", PM_DEVICE(dip),		  \
-				    __FILE__, __LINE__)) 		  \
+				    __FILE__, __LINE__))		  \
 				    mutex_enter(&DEVI(dip)->devi_pm_lock); }
 #define	PM_UNLOCK_DIP(dip)	{ PMD(PMD_LOCK, ("dip unlock %s@%s(%s#%d) " \
 				    "%s %d\n", PM_DEVICE(dip),		    \

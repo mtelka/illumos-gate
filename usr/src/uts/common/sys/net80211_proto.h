@@ -102,7 +102,7 @@ enum ieee80211_phytype {
 
 enum ieee80211_opmode {
 	IEEE80211_M_STA		= 1,	/* infrastructure station */
-	IEEE80211_M_IBSS 	= 0,	/* IBSS (adhoc) station */
+	IEEE80211_M_IBSS	= 0,	/* IBSS (adhoc) station */
 	IEEE80211_M_AHDEMO	= 3,	/* Old lucent compatible adhoc demo */
 	IEEE80211_M_HOSTAP	= 6,	/* Software Access Point */
 	IEEE80211_M_MONITOR	= 8	/* Monitor mode */
@@ -402,7 +402,7 @@ struct ieee80211_ie_htcap {
 	uint8_t		hc_len;			/* length in bytes */
 	uint16_t	hc_cap;			/* HT caps (see below) */
 	uint8_t		hc_param;		/* HT params (see below) */
-	uint8_t 	hc_mcsset[16]; 		/* supported MCS set */
+	uint8_t		hc_mcsset[16];		/* supported MCS set */
 	uint16_t	hc_extcap;		/* extended HT capabilities */
 	uint32_t	hc_txbf;		/* txbf capabilities */
 	uint8_t		hc_antenna;		/* antenna capabilities */
@@ -419,7 +419,7 @@ struct ieee80211_ie_htinfo {
 	uint8_t		hi_byte2;		/* ht ie byte 2 */
 	uint8_t		hi_byte3;		/* ht ie byte 3 */
 	uint16_t	hi_byte45;		/* ht ie bytes 4+5 */
-	uint8_t 	hi_basicmcsset[16]; 	/* basic MCS set */
+	uint8_t		hi_basicmcsset[16];	/* basic MCS set */
 };
 #pragma pack()
 

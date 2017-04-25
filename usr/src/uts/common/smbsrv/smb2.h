@@ -275,7 +275,7 @@ typedef enum {
 /*
  * SMB2 Close
  */
-#define	SMB2_CLOSE_FLAG_POSTQUERY_ATTRIB 	0x0001
+#define	SMB2_CLOSE_FLAG_POSTQUERY_ATTRIB	0x0001
 
 /*
  * SMB2 Write
@@ -324,7 +324,7 @@ typedef enum {
 /*
  * SMB2 Ioctl Request
  */
-#define	SMB2_0_IOCTL_IS_FSCTL 		0x00000001
+#define	SMB2_0_IOCTL_IS_FSCTL		0x00000001
 
 
 /*

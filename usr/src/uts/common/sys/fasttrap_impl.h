@@ -27,8 +27,6 @@
 #ifndef	_FASTTRAP_IMPL_H
 #define	_FASTTRAP_IMPL_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 #include <sys/dtrace.h>
 #include <sys/proc.h>
@@ -165,7 +163,7 @@ typedef struct fasttrap_hash {
 
 extern void fasttrap_sigtrap(proc_t *, kthread_t *, uintptr_t);
 
-extern dtrace_id_t 		fasttrap_probe_id;
+extern dtrace_id_t		fasttrap_probe_id;
 extern fasttrap_hash_t		fasttrap_tpoints;
 
 #define	FASTTRAP_TPOINTS_INDEX(pid, pc) \

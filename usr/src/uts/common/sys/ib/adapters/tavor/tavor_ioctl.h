@@ -106,7 +106,7 @@ typedef enum {
 /*
  * Expand CFI data size to support the Intel Expanded Command Set.
  */
-#define	TAVOR_CFI_INFO_SIZE 			0x100
+#define	TAVOR_CFI_INFO_SIZE			0x100
 #define	TAVOR_CFI_INFO_QSIZE			TAVOR_CFI_INFO_SIZE >> 2
 
 /*

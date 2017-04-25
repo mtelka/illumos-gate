@@ -27,8 +27,6 @@
 #ifndef _SYS_TNF_WRITER_H
 #define	_SYS_TNF_WRITER_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * Public interface for writing predefined TNF types
  */
@@ -43,14 +41,14 @@ extern "C" {
  * Defines
  */
 
-#define	TNF_OFFSETOF(s, m) 	((size_t)(&(((s *)0)->m)))
+#define	TNF_OFFSETOF(s, m)	((size_t)(&(((s *)0)->m)))
 #define	TNF_ALIGN(type)		TNF_OFFSETOF(struct { char _c; type _t; }, _t)
 
 /*
  * Typedefs
  */
 
-typedef char 		*tnf_record_p;	  /* trace buffer memory ptr */
+typedef char		*tnf_record_p;	  /* trace buffer memory ptr */
 typedef tnf_ref32_t	tnf_reference_t;  /* generic reference */
 
 typedef struct _tnf_ops		tnf_ops_t; /* opaque */
@@ -140,7 +138,7 @@ extern tnf_tag_data_t	*tnf_uint16_tag_data;
 #define	tnf_uint16(ops, item, ref)	(item)
 
 extern tnf_tag_data_t	*tnf_int32_tag_data;
-#define	tnf_int32(ops, item, ref) 	(item)
+#define	tnf_int32(ops, item, ref)	(item)
 
 extern tnf_tag_data_t	*tnf_uint32_tag_data;
 #define	tnf_uint32(ops, item, ref)	(item)
@@ -231,7 +229,7 @@ typedef tnf_float64_t			tnf_double_t;
 
 extern tnf_tag_data_t		*tnf_tag_tag_data;
 typedef tnf_ref32_t		tnf_tag_t;
-#define	tnf_tag(ops, item, ref) 	\
+#define	tnf_tag(ops, item, ref)		\
 	(tnf_ref32(ops, item, ref) | TNF_REF32_T_TAG)
 
 extern tnf_tag_data_t		*tnf_string_tag_data;
@@ -240,13 +238,13 @@ typedef tnf_reference_t		tnf_string_t;
 	tnf_string_1(ops, item, ref, tnf_string_tag_data)
 
 extern tnf_tag_data_t		*tnf_name_tag_data;
-typedef tnf_string_t 		tnf_name_t;
-#define	tnf_name(ops, item, ref) 	\
+typedef tnf_string_t		tnf_name_t;
+#define	tnf_name(ops, item, ref)	\
 	tnf_string_1(ops, item, ref, tnf_name_tag_data)
 
 extern tnf_tag_data_t		*tnf_size_tag_data;
 typedef tnf_ulong_t		tnf_size_t;
-#define	tnf_size(ops, item, ref) 	\
+#define	tnf_size(ops, item, ref)	\
 	tnf_ulong(ops, item, ref)
 
 extern tnf_tag_data_t		*tnf_opaque_tag_data;
@@ -271,12 +269,12 @@ typedef tnf_uint32_t			tnf_opaque_t;
 
 extern tnf_tag_data_t		*tnf_time_base_tag_data;
 typedef tnf_int64_t		tnf_time_base_t;
-#define	tnf_time_base(ops, item, ref) 	\
+#define	tnf_time_base(ops, item, ref)	\
 	tnf_int64(ops, item, ref)
 
 extern tnf_tag_data_t		*tnf_time_delta_tag_data;
 typedef tnf_uint32_t		tnf_time_delta_t;
-#define	tnf_time_delta(ops, item, ref) 	\
+#define	tnf_time_delta(ops, item, ref)	\
 	tnf_uint32(ops, item, ref)
 
 extern tnf_tag_data_t		*tnf_probe_event_tag_data;
@@ -398,7 +396,7 @@ extern tnf_ref32_t	tnf_ref32_1(tnf_ops_t *,
 					tnf_record_p,
 					tnf_record_p);
 
-extern tnf_reference_t 	tnf_string_1(tnf_ops_t *,
+extern tnf_reference_t	tnf_string_1(tnf_ops_t *,
 					const char *,
 					tnf_record_p,
 					tnf_tag_data_t *);

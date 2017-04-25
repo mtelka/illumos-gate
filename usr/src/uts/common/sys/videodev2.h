@@ -443,8 +443,8 @@ struct v4l2_mpeg_compression {
 	enum v4l2_mpeg_audiotype	au_type;
 	struct v4l2_bitrate		au_bitrate;
 	uint32_t			au_sample_rate;
-	uint8_t 			au_pesid;
-	uint8_t 			reserved_2[3]; /* align */
+	uint8_t				au_pesid;
+	uint8_t				reserved_2[3]; /* align */
 
 	/* video */
 	enum v4l2_mpeg_videotype	vi_type;
@@ -453,8 +453,8 @@ struct v4l2_mpeg_compression {
 	uint32_t			vi_frame_rate;
 	uint16_t			vi_frames_per_gop;
 	uint16_t			vi_bframes_count;
-	uint8_t 			vi_pesid;
-	uint8_t 			reserved_3[3]; /* align */
+	uint8_t				vi_pesid;
+	uint8_t				reserved_3[3]; /* align */
 
 	/* misc flags */
 	uint32_t			closed_gops:1;
@@ -583,7 +583,7 @@ struct v4l2_clip
 struct v4l2_window
 {
 	struct v4l2_rect	w;
-	enum v4l2_field 	field;
+	enum v4l2_field		field;
 	uint32_t			chromakey;
 	struct v4l2_clip	 *clips; /* __user */
 	uint32_t			clipcount;
@@ -644,20 +644,20 @@ typedef uint64_t v4l2_std_id;
 
 /* one bit for each */
 #define	V4L2_STD_PAL_B		((v4l2_std_id)0x00000001)
-#define	V4L2_STD_PAL_B1 	((v4l2_std_id)0x00000002)
+#define	V4L2_STD_PAL_B1		((v4l2_std_id)0x00000002)
 #define	V4L2_STD_PAL_G		((v4l2_std_id)0x00000004)
 #define	V4L2_STD_PAL_H		((v4l2_std_id)0x00000008)
 #define	V4L2_STD_PAL_I		((v4l2_std_id)0x00000010)
 #define	V4L2_STD_PAL_D		((v4l2_std_id)0x00000020)
-#define	V4L2_STD_PAL_D1 	((v4l2_std_id)0x00000040)
+#define	V4L2_STD_PAL_D1		((v4l2_std_id)0x00000040)
 #define	V4L2_STD_PAL_K		((v4l2_std_id)0x00000080)
 
 #define	V4L2_STD_PAL_M		((v4l2_std_id)0x00000100)
 #define	V4L2_STD_PAL_N		((v4l2_std_id)0x00000200)
-#define	V4L2_STD_PAL_Nc 	((v4l2_std_id)0x00000400)
-#define	V4L2_STD_PAL_60 	((v4l2_std_id)0x00000800)
+#define	V4L2_STD_PAL_Nc		((v4l2_std_id)0x00000400)
+#define	V4L2_STD_PAL_60		((v4l2_std_id)0x00000800)
 
-#define	V4L2_STD_NTSC_M 	((v4l2_std_id)0x00001000)
+#define	V4L2_STD_NTSC_M		((v4l2_std_id)0x00001000)
 #define	V4L2_STD_NTSC_M_JP	((v4l2_std_id)0x00002000)
 #define	V4L2_STD_NTSC_443	((v4l2_std_id)0x00004000)
 #define	V4L2_STD_NTSC_M_KR	((v4l2_std_id)0x00008000)
@@ -875,7 +875,7 @@ struct v4l2_querymenu
 #define	V4L2_CTRL_FLAG_GRABBED		0x0002
 #define	V4L2_CTRL_FLAG_READ_ONLY	0x0004
 #define	V4L2_CTRL_FLAG_UPDATE		0x0008
-#define	V4L2_CTRL_FLAG_INACTIVE 	0x0010
+#define	V4L2_CTRL_FLAG_INACTIVE		0x0010
 #define	V4L2_CTRL_FLAG_SLIDER		0x0020
 
 /*  Query flag, to be ORed with the control ID */
@@ -1026,7 +1026,7 @@ enum v4l2_mpeg_audio_emphasis {
 	V4L2_MPEG_AUDIO_EMPHASIS_50_DIV_15_uS = 1,
 	V4L2_MPEG_AUDIO_EMPHASIS_CCITT_J17 = 2
 };
-#define	V4L2_CID_MPEG_AUDIO_CRC 		(V4L2_CID_MPEG_BASE+108)
+#define	V4L2_CID_MPEG_AUDIO_CRC			(V4L2_CID_MPEG_BASE+108)
 enum v4l2_mpeg_audio_crc {
 	V4L2_MPEG_AUDIO_CRC_NONE = 0,
 	V4L2_MPEG_AUDIO_CRC_CRC16 = 1
@@ -1047,7 +1047,7 @@ enum v4l2_mpeg_video_aspect {
 };
 #define	V4L2_CID_MPEG_VIDEO_B_FRAMES		(V4L2_CID_MPEG_BASE+202)
 #define	V4L2_CID_MPEG_VIDEO_GOP_SIZE		(V4L2_CID_MPEG_BASE+203)
-#define	V4L2_CID_MPEG_VIDEO_GOP_CLOSURE 	(V4L2_CID_MPEG_BASE+204)
+#define	V4L2_CID_MPEG_VIDEO_GOP_CLOSURE		(V4L2_CID_MPEG_BASE+204)
 #define	V4L2_CID_MPEG_VIDEO_PULLDOWN		(V4L2_CID_MPEG_BASE+205)
 #define	V4L2_CID_MPEG_VIDEO_BITRATE_MODE	(V4L2_CID_MPEG_BASE+206)
 enum v4l2_mpeg_video_bitrate_mode {
@@ -1254,9 +1254,9 @@ struct v4l2_sliced_vbi_format
  */
 #define	V4L2_SLICED_TELETEXT_B		(0x0001)
 /* Video Program System, defined on ETS 300 231 */
-#define	V4L2_SLICED_VPS 		(0x0400)
+#define	V4L2_SLICED_VPS			(0x0400)
 /* Closed Caption, defined on EIA-608 */
-#define	V4L2_SLICED_CAPTION_525 	(0x1000)
+#define	V4L2_SLICED_CAPTION_525		(0x1000)
 /* Wide Screen System, defined on ITU-R BT1119.1 */
 #define	V4L2_SLICED_WSS_625		(0x4000)
 
@@ -1343,7 +1343,7 @@ struct v4l2_streamparm
  */
 #define	VIDIOC_QUERYCAP		_IOR('V',  0, struct v4l2_capability)
 #define	VIDIOC_RESERVED		_IO('V',  1)
-#define	VIDIOC_ENUM_FMT 	_IOWR('V',  2, struct v4l2_fmtdesc)
+#define	VIDIOC_ENUM_FMT		_IOWR('V',  2, struct v4l2_fmtdesc)
 #define	VIDIOC_G_FMT		_IOWR('V',  4, struct v4l2_format)
 #define	VIDIOC_S_FMT		_IOWR('V',  5, struct v4l2_format)
 #ifdef __KERNEL__
@@ -1389,7 +1389,7 @@ struct v4l2_streamparm
 #define	VIDIOC_S_CROP		_IOW('V', 60, struct v4l2_crop)
 #define	VIDIOC_G_JPEGCOMP	_IOR('V', 61, struct v4l2_jpegcompression)
 #define	VIDIOC_S_JPEGCOMP	_IOW('V', 62, struct v4l2_jpegcompression)
-#define	VIDIOC_QUERYSTD 	_IOR('V', 63, v4l2_std_id)
+#define	VIDIOC_QUERYSTD		_IOR('V', 63, v4l2_std_id)
 #define	VIDIOC_TRY_FMT		_IOWR('V', 64, struct v4l2_format)
 #define	VIDIOC_ENUMAUDIO	_IOWR('V', 65, struct v4l2_audio)
 #define	VIDIOC_ENUMAUDOUT	_IOWR('V', 66, struct v4l2_audioout)

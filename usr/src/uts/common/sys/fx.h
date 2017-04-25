@@ -26,8 +26,6 @@
 #ifndef _SYS_FX_H
 #define	_SYS_FX_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 #include <sys/thread.h>
 #include <sys/ddi.h>
@@ -112,19 +110,19 @@ typedef struct fxproc {
 	pri_t		fx_uprilim;	/* user priority limit */
 
 	char		fx_nice;	/* nice value for compatibility */
-	uchar_t 	fx_flags;	/* flags defined below */
-	kthread_t 	*fx_tp;		/* pointer to thread */
+	uchar_t		fx_flags;	/* flags defined below */
+	kthread_t	*fx_tp;		/* pointer to thread */
 
 	/* the following are used only when we have callbacks registered */
 	kt_did_t	fx_ktid;
-	struct fxproc 	*fx_cb_next;	/* pointer to next fxproc that */
+	struct fxproc	*fx_cb_next;	/* pointer to next fxproc that */
 					/* has a callback */
 
-	struct fxproc 	*fx_cb_prev;	/* pointer to previous fxproc that */
+	struct fxproc	*fx_cb_prev;	/* pointer to previous fxproc that */
 					/* has a callback */
 	fx_cookie_t	fx_cookie;	/* cookie with which callback */
 					/* was registered */
-	fx_callbacks_t 	*fx_callback;	/* pointer to callback structure */
+	fx_callbacks_t	*fx_callback;	/* pointer to callback structure */
 	caps_sc_t	fx_caps;	/* CPU caps specific data */
 } fxproc_t;
 

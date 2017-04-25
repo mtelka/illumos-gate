@@ -27,8 +27,6 @@
 #ifndef _SYS_SCSI_IMPL_USMP_H
 #define	_SYS_SCSI_IMPL_USMP_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -59,7 +57,7 @@ typedef struct usmp_cmd32 {
 
 #define	usmp_cmd32tousmp_cmd(u32, ucmd)				\
 	ucmd->usmp_req		= (caddr_t)(uintptr_t)u32->usmp_req;	\
-	ucmd->usmp_rsp		= (caddr_t)(uintptr_t)u32->usmp_rsp; 	\
+	ucmd->usmp_rsp		= (caddr_t)(uintptr_t)u32->usmp_rsp;	\
 	ucmd->usmp_reqsize	= (size_t)u32->usmp_reqsize;		\
 	ucmd->usmp_rspsize	= (size_t)u32->usmp_rspsize;		\
 	ucmd->usmp_timeout	= u32->usmp_timeout;

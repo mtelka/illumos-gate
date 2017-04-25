@@ -205,8 +205,7 @@ rpc_gss_service_t rpc_gss_get_service_type(AUTH *);
 /*
  *  USER rpc_gss_* public interfaces
  */
-AUTH *
-rpc_gss_seccreate(
+AUTH *rpc_gss_seccreate(
 	CLIENT			*clnt,		/* associated client handle */
 	char			*principal,	/* server service principal */
 	char			*mechanism,	/* security mechanism */
@@ -216,8 +215,7 @@ rpc_gss_seccreate(
 	rpc_gss_options_ret_t   *options_ret    /* returned options */
 );
 
-bool_t
-rpc_gss_get_principal_name(
+bool_t rpc_gss_get_principal_name(
 	rpc_gss_principal_t	*principal,
 	char			*mechanism,
 	char			*user_name,
@@ -232,26 +230,22 @@ char **rpc_gss_get_mech_info(
 	rpc_gss_service_t	*service
 );
 
-bool_t
-rpc_gss_is_installed(
+bool_t rpc_gss_is_installed(
 	char	*mechanism
 );
 
-bool_t
-rpc_gss_mech_to_oid(
+bool_t rpc_gss_mech_to_oid(
 	char		*mech,
 	rpc_gss_OID	*oid
 );
 
-bool_t
-rpc_gss_qop_to_num(
+bool_t rpc_gss_qop_to_num(
 	char	*qop,
 	char	*mech,
 	uint_t	*num
 );
 
-bool_t
-rpc_gss_set_svc_name(
+bool_t rpc_gss_set_svc_name(
 	char			*principal,
 	char			*mechanism,
 	uint_t			req_time,
@@ -259,15 +253,13 @@ rpc_gss_set_svc_name(
 	uint_t			version
 );
 
-bool_t
-rpc_gss_set_defaults(
+bool_t rpc_gss_set_defaults(
 	AUTH			*auth,
 	rpc_gss_service_t	service,
 	char			*qop
 );
 
-void
-rpc_gss_get_error(
+void rpc_gss_get_error(
 	rpc_gss_error_t		*error
 );
 
@@ -283,38 +275,33 @@ bool_t	__rpc_gss_unwrap();
 /*
  *  USER and KERNEL rpc_gss_* interfaces.
  */
-bool_t
-rpc_gss_set_callback(
+bool_t rpc_gss_set_callback(
 	rpc_gss_callback_t	*cb
 );
 
-bool_t
-rpc_gss_getcred(
+bool_t rpc_gss_getcred(
 	struct svc_req		*req,
 	rpc_gss_rawcred_t	**rcred,
 	rpc_gss_ucred_t		**ucred,
 	void			**cookie
 );
 
-int
-rpc_gss_max_data_length(
+int rpc_gss_max_data_length(
 	AUTH			*rpcgss_handle,
 	int			max_tp_unit_len
 );
 
-int
-rpc_gss_svc_max_data_length(
+int rpc_gss_svc_max_data_length(
 	struct	svc_req		*req,
 	int			max_tp_unit_len
 );
 
-bool_t
-rpc_gss_get_versions(
+bool_t rpc_gss_get_versions(
 	uint_t	*vers_hi,
 	uint_t	*vers_lo
 );
 
-#define	RPCSEC_GSS_REFRESH_ATTEMPTS 	20
+#define	RPCSEC_GSS_REFRESH_ATTEMPTS	20
 
 /*
  * Protocol data.

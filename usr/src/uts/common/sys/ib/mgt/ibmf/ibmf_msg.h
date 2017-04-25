@@ -27,8 +27,6 @@
 #ifndef	_SYS_IB_MGT_IBMF_IBMF_MSG_H
 #define	_SYS_IB_MGT_IBMF_IBMF_MSG_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -116,7 +114,7 @@ typedef struct _ibmf_msg_bufs {
 	void		*im_bufs_cl_hdr;	/* class hdr buffer ptr */
 	size_t		im_bufs_cl_hdr_len;	/* class hdr buffer len ptr */
 	void		*im_bufs_cl_data;	/* mad class data buf ptr */
-	size_t		im_bufs_cl_data_len; 	/* mad class data len ptr */
+	size_t		im_bufs_cl_data_len;	/* mad class data len ptr */
 } ibmf_msg_bufs_t;
 
 /*

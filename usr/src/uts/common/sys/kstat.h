@@ -424,14 +424,14 @@ typedef struct kstat32 {
  * but overriding routines should contain at least the following:
  *
  * if (rw == KSTAT_READ) {
- * 	kstat_named_t *knp = buf;
- * 	char *end = knp + ksp->ks_ndata;
- * 	uint_t i;
+ *	kstat_named_t *knp = buf;
+ *	char *end = knp + ksp->ks_ndata;
+ *	uint_t i;
  *
- * 	... Do the regular copy ...
- * 	bcopy(ksp->ks_data, buf, sizeof (kstat_named_t) * ksp->ks_ndata);
+ *	... Do the regular copy ...
+ *	bcopy(ksp->ks_data, buf, sizeof (kstat_named_t) * ksp->ks_ndata);
  *
- * 	for (i = 0; i < ksp->ks_ndata; i++, knp++) {
+ *	for (i = 0; i < ksp->ks_ndata; i++, knp++) {
  *		if (knp[i].data_type == KSTAT_DATA_STRING &&
  *		    KSTAT_NAMED_STR_PTR(knp) != NULL) {
  *			bcopy(KSTAT_NAMED_STR_PTR(knp), end,
@@ -457,11 +457,11 @@ typedef struct kstat_named {
 		uint32_t	ui32;
 		struct {
 			union {
-				char 		*ptr;	/* NULL-term string */
+				char		*ptr;	/* NULL-term string */
 #if defined(_KERNEL) && defined(_MULTI_DATAMODEL)
 				caddr32_t	ptr32;
 #endif
-				char 		__pad[8]; /* 64-bit padding */
+				char		__pad[8]; /* 64-bit padding */
 			} addr;
 			uint32_t	len;	/* # bytes for strlen + '\0' */
 		} str;

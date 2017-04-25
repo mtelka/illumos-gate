@@ -103,10 +103,10 @@ typedef struct hard_addr {
 
 typedef struct port_type {
 #if defined(_BIT_FIELDS_LTOH)
-	uint32_t	rsvd   		: 24,
+	uint32_t	rsvd		: 24,
 			port_type	: 8;
 #else
-	uint32_t	port_type   	: 8,
+	uint32_t	port_type	: 8,
 			rsvd		: 24;
 #endif	/* _BIT_FIELDS_LTOH */
 } fc_porttype_t;

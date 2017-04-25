@@ -290,9 +290,9 @@ typedef struct {
 #define	IKE_GRP_DESC_ECP_384		20
 #define	IKE_GRP_DESC_ECP_521		21
 /* values for p1xf_dh_group (aligned with RFC5114) */
-#define	IKE_GRP_DESC_MODP_1024_160 	22
-#define	IKE_GRP_DESC_MODP_2048_224 	23
-#define	IKE_GRP_DESC_MODP_2048_256 	24
+#define	IKE_GRP_DESC_MODP_1024_160	22
+#define	IKE_GRP_DESC_MODP_2048_224	23
+#define	IKE_GRP_DESC_MODP_2048_256	24
 #define	IKE_GRP_DESC_ECP_192		25
 #define	IKE_GRP_DESC_ECP_224		26
 

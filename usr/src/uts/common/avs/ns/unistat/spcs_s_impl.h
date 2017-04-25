@@ -100,7 +100,7 @@ typedef struct {
  *	The types of supplemental data references
  */
 
-typedef enum {SU_STRING, 		/* character string reference */
+typedef enum {SU_STRING,		/* character string reference */
 		SU_BYTESTREAM,		/* bytestream data reference */
 		SU_RES2,
 		SU_RES3} suenum;
@@ -255,7 +255,7 @@ typedef struct {
  *	FIRST.
  */
 
-enum 	{SPCS_M_Solaris,	/* Solaris module */
+enum	{SPCS_M_Solaris,	/* Solaris module */
 	SPCS_M_SPCS,		/* SPCS "module" (for codes that apply across */
 				/* all controller modules */
 	SPCS_M_DSW,		/* InstantImage Module */

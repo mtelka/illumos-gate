@@ -23,7 +23,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * University Copyright- Copyright (c) 1982, 1986, 1988
@@ -340,13 +340,13 @@ struct as;
  *
  * So, as a quick summary:
  *
- * 	pse_mutex[]'s protect the p_selock and p_cv fields.
+ *	pse_mutex[]'s protect the p_selock and p_cv fields.
  *
- * 	p_selock protects the p_free, p_age, p_vnode, p_offset and p_hash,
+ *	p_selock protects the p_free, p_age, p_vnode, p_offset and p_hash,
  *
- * 	ph_mutex[]'s protect the page_hash[] array and its chains.
+ *	ph_mutex[]'s protect the page_hash[] array and its chains.
  *
- * 	vph_mutex[]'s protect the v_pages field and the vp page chains.
+ *	vph_mutex[]'s protect the v_pages field and the vp page chains.
  *
  *	First lock the page, then the hash chain, then the vnode chain.  When
  *	this is not possible `trylocks' must be used.  Sleeping while holding
@@ -1078,7 +1078,7 @@ typedef struct kpm_hlk {
  * The state about how a kpm page is mapped and whether it is ready to go
  * is indicated by the following 1 byte kpm_spage structure. This byte is
  * split into two 4-bit parts - kp_mapped and kp_mapped_go.
- * 	- kp_mapped == 1	the page is mapped cacheable
+ *	- kp_mapped == 1	the page is mapped cacheable
  *	- kp_mapped == 2	the page is mapped non-cacheable
  *	- kp_mapped_go == 1	the mapping is ready to be dropped in
  *	- kp_mapped_go == 0	the mapping is not ready to be dropped in.

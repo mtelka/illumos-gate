@@ -39,7 +39,7 @@ extern "C" {
  * Mapping requests are for an rnumber or for a regspec.
  *
  * A regspec is a generic triple, usually representing
- * 	type, offset, length
+ *	type, offset, length
  *
  * And is interpreted privately between the child and parent.
  * The triple should be sufficient for representing byte addressable devices.

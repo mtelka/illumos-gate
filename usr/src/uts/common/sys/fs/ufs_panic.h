@@ -27,8 +27,6 @@
 #ifndef	_SYS_FS_UFS_PANIC_H
 #define	_SYS_FS_UFS_PANIC_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 #include <sys/vfs.h>
 #include <sys/fs/ufs_inode.h>
@@ -123,7 +121,7 @@ typedef struct vfs_ufsfx {
  *
  *  ufs_fault(vnode_t *, char *fmt, ...)
  *	replaces calls to cmn_err(CE_PANIC, char *fmt, ...)
- *  	The vnode is any vnode in the filesystem.
+ *	The vnode is any vnode in the filesystem.
  *	ufs_fault returns an errno to bubble up.
  *  ufsfx_init()
  *	is called at modload time to set global values etc.

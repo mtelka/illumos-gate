@@ -349,7 +349,7 @@ typedef struct sm_switchinfo_s {
 						/* pkts from def port */
 						/* have DLID not in FDB */
 	uint8_t		LifeTimeValue	:5;	/* time pkt can live in sw */
-	uint8_t		PortStateChange :1; 	/* change in port state value */
+	uint8_t		PortStateChange :1;	/* change in port state value */
 	uint8_t		Reserved	:2;
 	uint16_t	LIDsPerPort;		/* max # of LID/LMCs per port */
 	uint16_t	PartitionEnforcementCap; /* max entries in p. enf tbl */
@@ -372,7 +372,7 @@ typedef struct sm_switchinfo_s {
 						/* pkts from def port */
 						/* have DLID not in FDB */
 	uint8_t		Reserved	:2;
-	uint8_t		PortStateChange :1; 	/* change in port state value */
+	uint8_t		PortStateChange :1;	/* change in port state value */
 	uint8_t		LifeTimeValue	:5;	/* time pkt can live in sw */
 	uint16_t	LIDsPerPort;		/* max # of LID/LMCs per port */
 	uint16_t	PartitionEnforcementCap; /* max entries in p. enf tbl */

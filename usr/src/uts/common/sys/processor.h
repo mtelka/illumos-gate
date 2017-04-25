@@ -69,7 +69,7 @@ typedef int	chipid_t;
 #define	P_NOINTR	0x0006	/* processor is online, but no I/O interrupts */
 #define	P_SPARE		0x0007	/* processor is offline, can be reactivated */
 #define	P_BAD		P_FAULTED	/* unused but defined by USL */
-#define	P_FORCED 	0x10000000	/* force processor offline */
+#define	P_FORCED	0x10000000	/* force processor offline */
 
 /*
  * String names for processor states defined above.
@@ -95,7 +95,7 @@ typedef int	chipid_t;
 #define	PI_FPUTYPE	32	/* max size of FPU types string */
 
 typedef struct {
-	int	pi_state;  			/* processor state, see above */
+	int	pi_state;			/* processor state, see above */
 	char	pi_processor_type[PI_TYPELEN];	/* ASCII CPU type */
 	char	pi_fputypes[PI_FPUTYPE];	/* ASCII FPU types */
 	int	pi_clock;			/* CPU clock freq in MHz */

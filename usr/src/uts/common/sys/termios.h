@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 /*
@@ -329,8 +329,8 @@ extern pid_t tcgetsid(int);
 /* Slots reserved for 386/XENIX compatibility - keyboard control */
 
 #define	TIOCKBON	(_TIOC|8)
-#define	TIOCKBOF 	(_TIOC|9)
-#define	KBENABLED 	(_TIOC|10)
+#define	TIOCKBOF	(_TIOC|9)
+#define	KBENABLED	(_TIOC|10)
 
 #ifndef IOCTYPE
 #define	IOCTYPE	0xff00
@@ -413,7 +413,7 @@ struct ppsclockev32 {
 #define	TIOCSETD	(tIOC|1)
 #define	TIOCHPCL	(tIOC|2)
 #define	TIOCGETP	(tIOC|8)
-#define	TIOCSETP  	(tIOC|9)
+#define	TIOCSETP	(tIOC|9)
 #define	TIOCSETN	(tIOC|10)
 #define	TIOCEXCL	(tIOC|13)
 #define	TIOCNXCL	(tIOC|14)

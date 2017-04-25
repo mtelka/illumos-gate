@@ -27,8 +27,6 @@
 #ifndef	_SYS_FS_HSFS_SUSP_H
 #define	_SYS_FS_HSFS_SUSP_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -39,7 +37,7 @@ extern "C" {
 #define	DPRINTF_ALL	if (DEBUGGING_ALL) printf
 
 /*
- * 	return values from SUA parsing
+ *	return values from SUA parsing
  */
 #define	SUA_NULL_POINTER	-1
 #define	END_OF_SUA_PARSING	-2
@@ -80,12 +78,12 @@ extern "C" {
 #define	SUSP_ST		"ST"
 
 /*
- * 	Generic System Use Field (SUF) Macros and declarations
+ *	Generic System Use Field (SUF) Macros and declarations
  */
 
 #define	SUF_SIG_LEN	2			/* length of signatures */
 #define	SUF_MIN_LEN	4			/* minimum length of a */
-						/* 	signature field */
+						/*	signature field */
 
 #define	SUF_LEN(x)	*(SUF_len(x))		/* SUF length */
 #define	SUF_len(x)	(&((uchar_t *)x)[2])	/* SUF length */
@@ -102,12 +100,12 @@ extern "C" {
 
 
 #define	ER_DES_LEN(x)	*(ER_des_len(x))	/* Extension ref description */
-						/* 	length */
+						/*	length */
 #define	ER_des_len(x)	(&((uchar_t *)x)[5])	/* Extension ref description */
-						/* 	length */
+						/*	length */
 
 #define	ER_SRC_LEN(x)	*(ER_src_len(x))	/* Extension ref source */
-						/* 	description length */
+						/*	description length */
 
 #define	ER_src_len(x)	(&((uchar_t *)x)[6])	/* Extension ref source */
 						/* description length */
@@ -193,10 +191,10 @@ typedef	struct extension_signature_struct	ext_signature_t;
 
 /*
  * Extension name structure, to corrolate the extensions with their own
- * 	signature tables.
+ *	signature tables.
  */
 struct extension_name_struct {
-	char  		*extension_name;	/* ER field identifier */
+	char		*extension_name;	/* ER field identifier */
 	ushort_t	ext_version;		/* version # of extensions */
 	ext_signature_t	*signature_table;	/* pointer to signature */
 						/*   table for appropriate */

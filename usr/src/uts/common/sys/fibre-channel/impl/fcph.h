@@ -157,15 +157,15 @@ typedef struct frame_header {
 			type	: 8;
 	uint32_t	seq_cnt	: 16,
 			df_ctl	: 8,
-			seq_id 	: 8;
+			seq_id	: 8;
 	uint32_t	rx_id	: 16,
 			ox_id	: 16;
 	uint32_t	ro;
 
 #else
-	uint32_t	r_ctl 	: 8,
-			d_id 	: 24;
-	uint32_t	rsvd 	: 8,
+	uint32_t	r_ctl	: 8,
+			d_id	: 24;
+	uint32_t	rsvd	: 8,
 			s_id	: 24;
 	uint32_t	type	: 8,
 			f_ctl	: 24;

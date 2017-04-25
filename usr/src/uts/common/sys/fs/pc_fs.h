@@ -315,7 +315,7 @@ struct fat32_bootsec {
 #define	FAT16_VALIDMSK							\
 	(BPB_SECSIZE_OK | BPB_SECPERCLUS_OK | BPB_CLSIZE_OK |		\
 	BPB_RSVDSECCNT_OK | BPB_NUMFAT_OK | BPB_ROOTENTCNT_OK |		\
-	BPB_TOTSEC_OK | BPB_TOTSEC16_OK | BPB_TOTSEC32_OK | 		\
+	BPB_TOTSEC_OK | BPB_TOTSEC16_OK | BPB_TOTSEC32_OK |		\
 	BPB_FATSZ_OK | BPB_FATSZ16_OK | BPB_BPBSIG_OK)
 
 /*
@@ -337,7 +337,7 @@ struct fat32_bootsec {
 #define	FAT32_VALIDMSK							\
 	(BPB_SECSIZE_OK | BPB_SECPERCLUS_OK | BPB_CLSIZE_OK |		\
 	BPB_RSVDSECCNT_OK | BPB_NUMFAT_OK | BPB_ROOTENTCNT_OK |		\
-	BPB_TOTSEC_OK | BPB_TOTSEC16_OK | BPB_TOTSEC32_OK | 		\
+	BPB_TOTSEC_OK | BPB_TOTSEC16_OK | BPB_TOTSEC32_OK |		\
 	BPB_FATSZ_OK | BPB_FATSZ16_OK |	BPB_FATSZ32_OK |		\
 	BPB_EXTFLAGS_OK | BPB_FSVER_OK | BPB_ROOTCLUSTER_OK |		\
 	BPB_BPBSIG_OK)
@@ -456,12 +456,12 @@ struct pcfs {
 /* for compatibility */
 struct old_pcfs_args {
 	int	secondswest;	/* seconds west of Greenwich */
-	int	dsttime;    	/* type of dst correction */
+	int	dsttime;	/* type of dst correction */
 };
 
 struct pcfs_args {
 	int	secondswest;	/* seconds west of Greenwich */
-	int	dsttime;    	/* type of dst correction */
+	int	dsttime;	/* type of dst correction */
 	int	flags;
 };
 

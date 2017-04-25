@@ -1,5 +1,5 @@
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 /*
@@ -353,14 +353,14 @@ extern	todinfo_t	utc_to_tod(time_t);
 extern	time_t		tod_to_utc(todinfo_t);
 extern	int		hr_clock_lock(void);
 extern	void		hr_clock_unlock(int);
-extern	hrtime_t 	gethrtime(void);
-extern	hrtime_t 	gethrtime_unscaled(void);
+extern	hrtime_t	gethrtime(void);
+extern	hrtime_t	gethrtime_unscaled(void);
 extern	hrtime_t	gethrtime_max(void);
 extern	hrtime_t	gethrtime_waitfree(void);
 extern	void		scalehrtime(hrtime_t *);
 extern	uint64_t	unscalehrtime(hrtime_t);
-extern	void 		gethrestime(timespec_t *);
-extern	time_t 		gethrestime_sec(void);
+extern	void		gethrestime(timespec_t *);
+extern	time_t		gethrestime_sec(void);
 extern	void		gethrestime_lasttick(timespec_t *);
 extern	void		hrt2ts(hrtime_t, timestruc_t *);
 extern	hrtime_t	ts2hrt(const timestruc_t *);

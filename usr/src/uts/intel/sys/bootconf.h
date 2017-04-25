@@ -83,7 +83,7 @@ struct bsys_mem {
 	struct memlist	*physavail;	/* amt of physmem avail for use */
 	struct memlist	*virtavail;	/* amt of virtmem avail for use */
 	struct memlist	*pcimem;	/* amt of pcimem avail for use */
-	uint_t		extent; 	/* number of bytes in the space */
+	uint_t		extent;		/* number of bytes in the space */
 };
 
 /*
@@ -103,7 +103,7 @@ typedef struct bootops {
 	/*
 	 * the area containing boot's memlists
 	 */
-	struct 	bsys_mem *boot_mem;
+	struct	bsys_mem *boot_mem;
 
 	/*
 	 * have boot allocate size bytes at virthint

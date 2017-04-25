@@ -117,9 +117,9 @@ enum xdr_op {
 typedef struct XDR {
 	enum xdr_op	x_op;	/* operation; fast additional param */
 	struct xdr_ops *x_ops;
-	caddr_t 	x_public; /* users' data */
+	caddr_t		x_public; /* users' data */
 	caddr_t		x_private; /* pointer to private data */
-	caddr_t 	x_base;	/* private used for position info */
+	caddr_t		x_base;	/* private used for position info */
 	int		x_handy; /* extra private word */
 } XDR;
 

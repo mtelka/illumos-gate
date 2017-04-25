@@ -27,8 +27,6 @@
 #ifndef _IPP_DSCPMK_DSCPMK_H
 #define	_IPP_DSCPMK_DSCPMK_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -36,8 +34,8 @@ extern "C" {
 /* Header file for Mark -- dscpmks ToS/DS field */
 
 #define	DSCPMK_NEXT_ACTION_NAME	"dscpmk.next_action"		/* string */
-#define	DSCPMK_DSCP_MAP		"dscpmk.dscp_map" 		/* array */
-#define	DSCPMK_DETAILED_STATS	"dscpmk.dscp_detailed_stats" 	/* uint32 */
+#define	DSCPMK_DSCP_MAP		"dscpmk.dscp_map"		/* array */
+#define	DSCPMK_DETAILED_STATS	"dscpmk.dscp_detailed_stats"	/* uint32 */
 
 #ifdef	__cplusplus
 }

@@ -27,8 +27,6 @@
 #ifndef _SYS_RSM_RSMAPI_COMMON_H
 #define	_SYS_RSM_RSMAPI_COMMON_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -65,8 +63,8 @@ typedef struct {
 
 typedef struct {
 	void		*seg;
-	uint16_t 	gnum;
-	void 		*privdata;
+	uint16_t	gnum;
+	void		*privdata;
 }rsmapi_barrier_t;
 
 /*

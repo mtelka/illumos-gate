@@ -279,7 +279,7 @@ extern trap_trace_rec_t	trap_trace_postmort;	/* Entry used after death */
 
 #endif	/* TRAPTRACE */
 
-#endif 	/* _ASM */
+#endif	/* _ASM */
 
 #define	TT_SYSCALL	0xaa	/* system call via lcall */
 #define	TT_SYSENTER	0xab	/* system call via sysenter */

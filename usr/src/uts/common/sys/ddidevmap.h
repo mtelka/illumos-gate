@@ -246,7 +246,7 @@ typedef struct devmap_handle {
  * defines for devmap_*_setup flag, called by drivers
  */
 #define	DEVMAP_DEFAULTS			0x00
-#define	DEVMAP_MAPPING_INVALID		0x01 	/* mapping is invalid */
+#define	DEVMAP_MAPPING_INVALID		0x01	/* mapping is invalid */
 #define	DEVMAP_ALLOW_REMAP		0x02	/* allow remap */
 #define	DEVMAP_USE_PAGESIZE		0x04	/* use pagesize for mmu load */
 

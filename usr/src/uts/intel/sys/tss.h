@@ -12,7 +12,7 @@ extern "C" {
 
 /*	Copyright (c) 1990, 1991 UNIX System Laboratories, Inc.	*/
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989, 1990 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * Copyright (c) 1990 The Regents of the University of California.
@@ -77,9 +77,9 @@ extern "C" {
 #pragma	pack(4)
 struct tss64 {
 	uint32_t	tss_rsvd0;	/* reserved, ignored */
-	uint64_t	tss_rsp0; 	/* stack pointer CPL = 0 */
-	uint64_t	tss_rsp1; 	/* stack pointer CPL = 1 */
-	uint64_t	tss_rsp2; 	/* stack pointer CPL = 2 */
+	uint64_t	tss_rsp0;	/* stack pointer CPL = 0 */
+	uint64_t	tss_rsp1;	/* stack pointer CPL = 1 */
+	uint64_t	tss_rsp2;	/* stack pointer CPL = 2 */
 	uint64_t	tss_rsvd1;	/* reserved, ignored */
 	uint64_t	tss_ist1;	/* Interrupt stack table 1 */
 	uint64_t	tss_ist2;	/* Interrupt stack table 2 */

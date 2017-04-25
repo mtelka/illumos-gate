@@ -42,7 +42,7 @@ extern "C" {
 struct tmount {
 	struct vfs	*tm_vfsp;	/* filesystem's vfs struct */
 	struct tmpnode	*tm_rootnode;	/* root tmpnode */
-	char 		*tm_mntpath;	/* name of tmpfs mount point */
+	char		*tm_mntpath;	/* name of tmpfs mount point */
 	ulong_t		tm_anonmax;	/* file system max anon reservation */
 	pgcnt_t		tm_anonmem;	/* pages of reserved anon memory */
 	dev_t		tm_dev;		/* unique dev # of mounted `device' */
@@ -89,7 +89,7 @@ extern size_t	tmpfs_minfree;		/* Anonymous memory in pages */
  */
 #define	TMPMAXFRACKMEM	25	/* 1/25 of physical memory */
 
-extern size_t 	tmp_kmemspace;
+extern size_t	tmp_kmemspace;
 extern size_t	tmpfs_maxkmem;	/* Allocatable kernel memory in bytes */
 
 extern	void	tmpnode_init(struct tmount *, struct tmpnode *,

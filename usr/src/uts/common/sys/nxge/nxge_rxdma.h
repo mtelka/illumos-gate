@@ -34,7 +34,7 @@ extern "C" {
 #include <sys/nxge/nxge_rxdma_hw.h>
 #include <npi_rxdma.h>
 
-#define	RXDMA_CK_DIV_DEFAULT		7500 	/* 25 usec */
+#define	RXDMA_CK_DIV_DEFAULT		7500	/* 25 usec */
 /*
  * Hardware RDC designer: 8 cache lines during Atlas bringup.
  */
@@ -122,29 +122,29 @@ typedef struct _nxge_rx_ring_stats_t {
 	uint32_t	zcp_soft_err;
 	uint32_t	rcr_unknown_err;
 	uint32_t	dcf_err;
-	uint32_t 	rbr_tmout;
-	uint32_t 	rsp_cnt_err;
-	uint32_t 	byte_en_err;
-	uint32_t 	byte_en_bus;
-	uint32_t 	rsp_dat_err;
-	uint32_t 	rcr_ack_err;
-	uint32_t 	dc_fifo_err;
-	uint32_t 	rcr_sha_par;
-	uint32_t 	rbr_pre_par;
-	uint32_t 	port_drop_pkt;
-	uint32_t 	wred_drop;
-	uint32_t 	rbr_pre_empty;
-	uint32_t 	rcr_shadow_full;
-	uint32_t 	config_err;
-	uint32_t 	rcrincon;
-	uint32_t 	rcrfull;
-	uint32_t 	rbr_empty;
-	uint32_t 	rbrfull;
-	uint32_t 	rbrlogpage;
-	uint32_t 	cfiglogpage;
-	uint32_t 	rcrto;
-	uint32_t 	rcrthres;
-	uint32_t 	mex;
+	uint32_t	rbr_tmout;
+	uint32_t	rsp_cnt_err;
+	uint32_t	byte_en_err;
+	uint32_t	byte_en_bus;
+	uint32_t	rsp_dat_err;
+	uint32_t	rcr_ack_err;
+	uint32_t	dc_fifo_err;
+	uint32_t	rcr_sha_par;
+	uint32_t	rbr_pre_par;
+	uint32_t	port_drop_pkt;
+	uint32_t	wred_drop;
+	uint32_t	rbr_pre_empty;
+	uint32_t	rcr_shadow_full;
+	uint32_t	config_err;
+	uint32_t	rcrincon;
+	uint32_t	rcrfull;
+	uint32_t	rbr_empty;
+	uint32_t	rbrfull;
+	uint32_t	rbrlogpage;
+	uint32_t	cfiglogpage;
+	uint32_t	rcrto;
+	uint32_t	rcrthres;
+	uint32_t	mex;
 	rdc_errlog_t	errlog;
 } nxge_rx_ring_stats_t, *p_nxge_rx_ring_stats_t;
 
@@ -166,31 +166,31 @@ typedef struct _nxge_rxbuf_off_hdr_t {
 
 typedef struct _rx_msg_t {
 	nxge_os_dma_common_t	buf_dma;
-	nxge_os_mutex_t 	lock;
+	nxge_os_mutex_t		lock;
 	struct _nxge_t		*nxgep;
 	struct _rx_rbr_ring_t	*rx_rbr_p;
-	boolean_t 		spare_in_use;
-	boolean_t 		free;
-	uint32_t 		ref_cnt;
+	boolean_t		spare_in_use;
+	boolean_t		free;
+	uint32_t		ref_cnt;
 #ifdef RXBUFF_USE_SEPARATE_UP_CNTR
-	uint32_t 		pass_up_cnt;
-	boolean_t 		release;
+	uint32_t		pass_up_cnt;
+	boolean_t		release;
 #endif
-	nxge_os_frtn_t 		freeb;
-	size_t 			bytes_arrived;
-	size_t 			bytes_expected;
-	size_t 			block_size;
+	nxge_os_frtn_t		freeb;
+	size_t			bytes_arrived;
+	size_t			bytes_expected;
+	size_t			block_size;
 	uint32_t		block_index;
-	uint32_t 		pkt_buf_size;
-	uint32_t 		pkt_buf_size_code;
-	uint32_t 		max_pkt_bufs;
+	uint32_t		pkt_buf_size;
+	uint32_t		pkt_buf_size_code;
+	uint32_t		max_pkt_bufs;
 	uint32_t		cur_usage_cnt;
 	uint32_t		max_usage_cnt;
 	uchar_t			*buffer;
-	uint32_t 		pri;
-	uint32_t 		shifted_addr;
+	uint32_t		pri;
+	uint32_t		shifted_addr;
 	boolean_t		use_buf_pool;
-	p_mblk_t 		rx_mblk_p;
+	p_mblk_t		rx_mblk_p;
 	boolean_t		rx_use_bcopy;
 } rx_msg_t, *p_rx_msg_t;
 
@@ -214,16 +214,16 @@ typedef struct _rx_rcr_ring_t {
 	rcrcfig_a_t		rcr_cfga;
 	rcrcfig_b_t		rcr_cfgb;
 
-	nxge_os_mutex_t 	lock;
+	nxge_os_mutex_t		lock;
 	uint16_t		index;
 	uint16_t		rdc;
 	boolean_t		full_hdr_flag;	 /* 1: 18 bytes header */
 	uint16_t		sw_priv_hdr_len; /* 0 - 192 bytes (SW) */
-	uint32_t 		comp_size;	 /* # of RCR entries */
+	uint32_t		comp_size;	 /* # of RCR entries */
 	uint64_t		rcr_addr;
-	uint_t 			comp_wrap_mask;
-	uint_t 			comp_rd_index;
-	uint_t 			comp_wt_index;
+	uint_t			comp_wrap_mask;
+	uint_t			comp_rd_index;
+	uint_t			comp_wt_index;
 
 	p_rcr_entry_t		rcr_desc_first_p;
 	p_rcr_entry_t		rcr_desc_first_pp;
@@ -279,8 +279,8 @@ typedef enum {
 /* Receive Buffer Block Ring */
 typedef struct _rx_rbr_ring_t {
 	nxge_os_dma_common_t	rbr_desc;
-	p_rx_msg_t 		*rx_msg_ring;
-	p_nxge_dma_common_t 	*dma_bufp;
+	p_rx_msg_t		*rx_msg_ring;
+	p_nxge_dma_common_t	*dma_bufp;
 	rbr_cfig_a_t		rbr_cfga;
 	rbr_cfig_b_t		rbr_cfgb;
 	rbr_kick_t		rbr_kick;
@@ -301,11 +301,11 @@ typedef struct _rx_rbr_ring_t {
 	struct _nxge_t		*nxgep;
 	uint16_t		rdc;
 	uint16_t		rdc_grp_id;
-	uint_t 			rbr_max_size;
+	uint_t			rbr_max_size;
 	uint64_t		rbr_addr;
-	uint_t 			rbr_wrap_mask;
-	uint_t 			rbb_max;
-	uint_t 			rbb_added;
+	uint_t			rbr_wrap_mask;
+	uint_t			rbb_max;
+	uint_t			rbb_added;
 	uint_t			block_size;
 	uint_t			num_blocks;
 	uint_t			tnblocks;
@@ -323,8 +323,8 @@ typedef struct _rx_rbr_ring_t {
 
 	p_rx_rcr_ring_t		rx_rcr_p;
 
-	uint_t 			rbr_wr_index;
-	uint_t 			rbr_rd_index;
+	uint_t			rbr_wr_index;
+	uint_t			rbr_rd_index;
 
 	rxring_info_t  *ring_info;
 #if	defined(sun4v) && defined(NIU_LP_WORKAROUND)
@@ -334,9 +334,9 @@ typedef struct _rx_rbr_ring_t {
 	uint64_t		hv_rx_cntl_ioaddr_size;
 	boolean_t		hv_set;
 #endif
-	uint_t 			rbr_consumed;
-	uint_t 			rbr_threshold_hi;
-	uint_t 			rbr_threshold_lo;
+	uint_t			rbr_consumed;
+	uint_t			rbr_threshold_hi;
+	uint_t			rbr_threshold_lo;
 	nxge_rxbuf_type_t	rbr_bufsize_type;
 	boolean_t		rbr_use_bcopy;
 
@@ -362,7 +362,7 @@ typedef struct _rx_mbox_t {
 	uint64_t		mbox_addr;
 	boolean_t		cfg_set;
 
-	nxge_os_mutex_t 	lock;
+	nxge_os_mutex_t		lock;
 	uint16_t		index;
 	struct _nxge_t		*nxgep;
 	uint16_t		rdc;
@@ -370,19 +370,19 @@ typedef struct _rx_mbox_t {
 
 
 typedef struct _rx_rbr_rings_t {
-	p_rx_rbr_ring_t 	*rbr_rings;
+	p_rx_rbr_ring_t		*rbr_rings;
 	uint32_t		ndmas;
 	boolean_t		rxbuf_allocated;
 } rx_rbr_rings_t, *p_rx_rbr_rings_t;
 
 typedef struct _rx_rcr_rings_t {
-	p_rx_rcr_ring_t 	*rcr_rings;
+	p_rx_rcr_ring_t		*rcr_rings;
 	uint32_t		ndmas;
 	boolean_t		cntl_buf_allocated;
 } rx_rcr_rings_t, *p_rx_rcr_rings_t;
 
 typedef struct _rx_mbox_areas_t {
-	p_rx_mbox_t 		*rxmbox_areas;
+	p_rx_mbox_t		*rxmbox_areas;
 	uint32_t		ndmas;
 	boolean_t		mbox_allocated;
 } rx_mbox_areas_t, *p_rx_mbox_areas_t;

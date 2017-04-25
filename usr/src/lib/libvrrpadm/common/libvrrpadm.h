@@ -190,7 +190,7 @@ typedef enum {
 
 #define	addr_len(af) ((af) == AF_INET ? sizeof (in_addr_t): sizeof (in6_addr_t))
 
-#define	VRRPADDR_UNSPECIFIED(af, addr) 					\
+#define	VRRPADDR_UNSPECIFIED(af, addr)					\
 	(((af) == AF_INET6 && IN6_IS_ADDR_UNSPECIFIED(			\
 	    &(addr)->in6.sin6_addr)) || ((af) == AF_INET &&		\
 	    ((addr)->in4.sin_addr.s_addr == INADDR_ANY)))

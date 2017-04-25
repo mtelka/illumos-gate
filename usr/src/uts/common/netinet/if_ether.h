@@ -18,7 +18,6 @@
 #ifndef	_NETINET_IF_ETHER_H
 #define	_NETINET_IF_ETHER_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 /* if_ether.h 1.28 89/08/04 SMI; from UCB 7.2 12/7/87 */
 
 #include <sys/ethernet.h>
@@ -93,7 +92,7 @@ struct	arptab {
 	union {
 	    struct ether_addr atu_enaddr;	/* ethernet address */
 	    long   atu_tvsec;			/* timestamp if incomplete */
-	} 	at_union;
+	}	at_union;
 	uchar_t	at_timer;		/* minutes since last reference */
 	uchar_t	at_flags;		/* flags */
 	struct	mbuf *at_hold;		/* last packet until resolved/timeout */

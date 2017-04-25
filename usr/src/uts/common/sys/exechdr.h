@@ -27,8 +27,6 @@
 #ifndef _SYS_EXECHDR_H
 #define	_SYS_EXECHDR_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/inttypes.h>
 
 #ifdef	__cplusplus
@@ -44,7 +42,7 @@ struct exec {
 	unsigned	a_toolversion:7; /* version of toolset used to */
 					/* create this file */
 	unsigned char	a_machtype;	/* machine type */
-	uint16_t 	a_magic;	/* magic number */
+	uint16_t	a_magic;	/* magic number */
 	uint32_t	a_text;		/* size of text segment */
 	uint32_t	a_data;		/* size of initialized data */
 	uint32_t	a_bss;		/* size of uninitialized data */

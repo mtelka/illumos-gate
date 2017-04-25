@@ -149,7 +149,7 @@ typedef	void		*_RESTRICT_KYWD Psocklen_t;
 					/* when doing zero-copy */
 
 struct so_snd_bufinfo {
-	ushort_t	sbi_wroff; 	/* Write offset */
+	ushort_t	sbi_wroff;	/* Write offset */
 	ssize_t		sbi_maxblk;	/* Max size of a single mblk */
 	ssize_t		sbi_maxpsz;	/* Max total size of a mblk chain */
 	ushort_t	sbi_tail;	/* Extra space available at the end */

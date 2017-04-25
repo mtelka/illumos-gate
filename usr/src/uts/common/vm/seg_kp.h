@@ -27,8 +27,6 @@
 #ifndef	_VM_SEG_KP_H
 #define	_VM_SEG_KP_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * segkp (as in kernel pageable) is a segment driver that supports allocation
  * of page-aligned variable size of vm resources.
@@ -54,7 +52,7 @@ extern "C" {
  */
 struct segkp_segdata {
 	struct anon_hdr	*kpsd_anon;	/* anon structs */
-	vmem_t		*kpsd_arena; 	/* virtual memory descriptor */
+	vmem_t		*kpsd_arena;	/* virtual memory descriptor */
 	struct segkp_data **kpsd_hash;	/* Hash table for lookups */
 };
 

@@ -28,7 +28,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _SYS_ELF_H
@@ -624,7 +624,7 @@ typedef struct {
 #define	ELF32_R_INFO(sym, type)	(((sym)<<8)+(unsigned char)(type))
 
 #define	ELF64_R_SYM(info)	((info)>>32)
-#define	ELF64_R_TYPE(info)    	((Elf64_Word)(info))
+#define	ELF64_R_TYPE(info)	((Elf64_Word)(info))
 #define	ELF64_R_INFO(sym, type)	(((Elf64_Xword)(sym)<<32)+(Elf64_Xword)(type))
 
 
@@ -671,7 +671,7 @@ typedef struct {
 #if defined(_LP64) || defined(_LONGLONG_TYPE)
 typedef struct {
 	Elf32_Lword	m_value;	/* symbol value */
-	Elf32_Word 	m_info;		/* size + index */
+	Elf32_Word	m_info;		/* size + index */
 	Elf32_Word	m_poffset;	/* symbol offset */
 	Elf32_Half	m_repeat;	/* repeat count */
 	Elf32_Half	m_stride;	/* stride info */
@@ -690,7 +690,7 @@ typedef struct {
 
 typedef struct {
 	Elf64_Lword	m_value;	/* symbol value */
-	Elf64_Xword 	m_info;		/* size + index */
+	Elf64_Xword	m_info;		/* size + index */
 	Elf64_Xword	m_poffset;	/* symbol offset */
 	Elf64_Half	m_repeat;	/* repeat count */
 	Elf64_Half	m_stride;	/* stride info */
@@ -749,7 +749,7 @@ typedef	Elf64_Word	Elf64_Capchain;
  *	info = ELF64_C_INFO(sym, grp)
  */
 #define	ELF64_C_SYM(info)	((info)>>32)
-#define	ELF64_C_GROUP(info)    	((Elf64_Word)(info))
+#define	ELF64_C_GROUP(info)	((Elf64_Word)(info))
 #define	ELF64_C_INFO(sym, grp)	(((Elf64_Xword)(sym)<<32)+(Elf64_Xword)(grp))
 
 #endif	/* defined(_LP64) || defined(_LONGLONG_TYPE) */
@@ -818,7 +818,7 @@ typedef	Elf64_Word	Elf64_Capchain;
 #define	NT_PRPRIVINFO	19	/* priv_impl_info_t <sys/priv.h>	*/
 #define	NT_CONTENT	20	/* core_content_t <sys/corectl.h>	*/
 #define	NT_ZONENAME	21	/* string from getzonenamebyid(3C)	*/
-#define	NT_FDINFO	22	/* open fd info 			*/
+#define	NT_FDINFO	22	/* open fd info				*/
 #define	NT_SPYMASTER	23	/* psinfo_t for agent LWP spymaster	*/
 #define	NT_SECFLAGS	24	/* process security-flags */
 #define	NT_NUM		24

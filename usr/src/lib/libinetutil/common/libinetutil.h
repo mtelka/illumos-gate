@@ -63,7 +63,7 @@ extern boolean_t	sockaddrunspec(const struct sockaddr *);
  *    int ifaddrlist(struct ifaddrlist **addrlistp, int af, uint_t flags,
  *	             char *errbuf);
  *
- * 	* addrlistp: Upon success, ifaddrlist() sets *addrlistp to a
+ *	* addrlistp: Upon success, ifaddrlist() sets *addrlistp to a
  *	  dynamically-allocated array of addresses.
  *
  *	* af: Either AF_INET to obtain IPv4 addresses, or AF_INET6 to
@@ -113,7 +113,7 @@ extern int ifaddrlist(struct ifaddrlist **, int, uint_t, char *);
  *	* clear: Flags that must be clear on the address for it to be
  *	  returned.
  *
- * 	* ifaddrp: Upon success, ifaddrlistx() sets *ifaddrp to the head
+ *	* ifaddrp: Upon success, ifaddrlistx() sets *ifaddrp to the head
  *	  of a dynamically-allocated array of ifaddrlistx structures.
  *
  * Once done, the caller must free `ifaddrp' by calling ifaddrlistx_free().

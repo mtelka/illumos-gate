@@ -213,7 +213,7 @@ extern "C" {
 	pushq	%r8;							\
 	pushq	%r9;							\
 	pushq	%r10;							\
-	TRAP_INSTR;	/* clear upcall mask, force upcall */ 		\
+	TRAP_INSTR;	/* clear upcall mask, force upcall */		\
 	popq	%r10;							\
 	popq	%r9;							\
 	popq	%r8;							\

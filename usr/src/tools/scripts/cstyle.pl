@@ -301,9 +301,6 @@ line: while (<$filehandle>) {
 	$in_cpp = $next_in_cpp || /^\s*#/;	# continued or started
 	$next_in_cpp = $in_cpp && /\\$/;	# only if continued
 
-	# strip off trailing backslashes, which appear in long macros
-	s/\s*\\$//;
-
 	# an /* END CSTYLED */ comment ends a no-check block.
 	if ($nocheck) {
 		if (/\/\* *END *CSTYLED *\*\//) {
@@ -369,11 +366,8 @@ line: while (<$filehandle>) {
 	}
 
 	# universal checks; apply to everything
-	if (/\t +\t/) {
-		err("spaces between tabs");
-	}
-	if (/ \t+ /) {
-		err("tabs between spaces");
+	if (/ \t/) {
+		err("space followed by a tab");
 	}
 	if (/\s$/) {
 		err("space or tab at end of line");
@@ -381,6 +375,9 @@ line: while (<$filehandle>) {
 	if (/[^ \t(]\/\*/ && !/\w\(\/\*.*\*\/\);/) {
 		err("comment preceded by non-blank");
 	}
+
+	# strip off trailing backslashes, which appear in long macros
+	s/\s*\\$//;
 
 	# is this the beginning or ending of a function?
 	# (not if "struct foo\n{\n")

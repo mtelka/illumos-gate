@@ -27,8 +27,6 @@
 #ifndef	_SYS_PROMIF_H
 #define	_SYS_PROMIF_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 #include <sys/obpdefs.h>
 
@@ -64,8 +62,8 @@ extern "C" {
  * allow the promif routines to allocate and free memory allocated from
  * the bottom 32-bits of the 64-bit address space:
  *
- * 	void *promplat_alloc(size_t);
- * 	void promplat_free(void *, size_t);
+ *	void *promplat_alloc(size_t);
+ *	void promplat_free(void *, size_t);
  *
  * The alloc function should guarantee that it will never return an
  * invalid pointer.

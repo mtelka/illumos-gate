@@ -20,7 +20,7 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 /*
@@ -131,7 +131,7 @@ typedef struct {
 #define	NC_ICMP		"icmp"
 
 /*
- * 	Values for nc_proto for "rdma" protofmly
+ *	Values for nc_proto for "rdma" protofmly
  */
 #define	NC_KVIPL	"kvipl"
 #define	NC_IBTF		"ibtf"

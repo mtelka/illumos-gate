@@ -44,7 +44,7 @@ extern "C" {
 struct v_address {
 	caddr_t		v_addr;		/* base virtual address */
 	struct	as	*v_as;		/* pointer to address space */
-	void 		*v_priv;	/* priv data for shadow I/O */
+	void		*v_priv;	/* priv data for shadow I/O */
 };
 
 /*
@@ -275,7 +275,7 @@ typedef struct ddi_dma_lim {
 	 *
 	 * This value also implies the required address alignment.
 	 * The number of bytes transferred is assumed to be
-	 * 	dlim_minxfer * (DMA engine count)
+	 *	dlim_minxfer * (DMA engine count)
 	 *
 	 * It should be set to DMA_UNIT_8, DMA_UNIT_16, or DMA_UNIT_32.
 	 */
@@ -427,8 +427,8 @@ typedef struct ddi_dma_attr {
 	uint64_t	dma_attr_align;		/* DMA address alignment */
 	uint_t		dma_attr_burstsizes;	/* DMA burstsizes */
 	uint32_t	dma_attr_minxfer;	/* min effective DMA size */
-	uint64_t 	dma_attr_maxxfer;	/* max DMA xfer size */
-	uint64_t 	dma_attr_seg;		/* segment boundary */
+	uint64_t	dma_attr_maxxfer;	/* max DMA xfer size */
+	uint64_t	dma_attr_seg;		/* segment boundary */
 	int		dma_attr_sgllen;	/* s/g length */
 	uint32_t	dma_attr_granular;	/* granularity of device */
 	uint_t		dma_attr_flags;		/* Bus specific DMA flags */
@@ -520,7 +520,7 @@ typedef struct ddi_dma_req {
 /*
  * Flag definitions for the allocation functions.
  */
-#define	DDI_DMA_WRITE		0x0001	/* Direction memory --> IO 	*/
+#define	DDI_DMA_WRITE		0x0001	/* Direction memory --> IO	*/
 #define	DDI_DMA_READ		0x0002	/* Direction IO --> memory	*/
 #define	DDI_DMA_RDWR		(DDI_DMA_READ | DDI_DMA_WRITE)
 

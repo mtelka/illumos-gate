@@ -63,7 +63,7 @@ struct par_list {
 };
 
 struct bind {
-	struct bind 	*b_next;
+	struct bind	*b_next;
 	char		*b_name;
 	char		*b_bind_name;
 	int		b_num;

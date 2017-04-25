@@ -45,9 +45,9 @@ extern "C" {
 #define	IPSEC_CONF_IPSEC_EALGS	9	/* Encr Algorithms - DES etc. */
 #define	IPSEC_CONF_IPSEC_EAALGS	10	/* Encr Algorithms - MD5 etc. */
 #define	IPSEC_CONF_IPSEC_SA		11	/* Shared or unique SA */
-#define	IPSEC_CONF_IPSEC_DIR 		12	/* Direction of traffic */
-#define	IPSEC_CONF_ICMP_TYPE 		13	/* ICMP type */
-#define	IPSEC_CONF_ICMP_CODE 		14	/* ICMP code */
+#define	IPSEC_CONF_IPSEC_DIR		12	/* Direction of traffic */
+#define	IPSEC_CONF_ICMP_TYPE		13	/* ICMP type */
+#define	IPSEC_CONF_ICMP_CODE		14	/* ICMP code */
 #define	IPSEC_CONF_NEGOTIATE		15	/* Negotiation */
 #define	IPSEC_CONF_TUNNEL		16	/* Tunnel */
 
@@ -139,10 +139,10 @@ extern uint32_t keysock_next_seq(netstack_t *);
 #define	HASH_LOCKED(table, hash) \
 	MUTEX_HELD(&(table)[hash].hash_lock)
 
-#define	HASH_ITERATE(var, field, table, hash) 		\
+#define	HASH_ITERATE(var, field, table, hash)		\
 	var = table[hash].hash_head; var != NULL; var = var->field.hash_next
 
-#define	HASH_NEXT(var, field) 		\
+#define	HASH_NEXT(var, field)		\
 	(var)->field.hash_next
 
 #define	HASH_INSERT(var, field, table, hash)			\
@@ -152,8 +152,8 @@ extern uint32_t keysock_next_seq(netstack_t *);
 	(var)->field.hash_pp = &(table)[hash].hash_head;	\
 	(table)[hash].hash_head = var;				\
 	if ((var)->field.hash_next != NULL)			\
-		(var)->field.hash_next->field.hash_pp = 	\
-			&((var)->field.hash_next); 		\
+		(var)->field.hash_next->field.hash_pp =		\
+			&((var)->field.hash_next);		\
 }
 
 
@@ -169,21 +169,21 @@ extern uint32_t keysock_next_seq(netstack_t *);
 	(var)->field.hash_pp = &(head);				\
 	head = var;						\
 	if ((var)->field.hash_next != NULL)			\
-		(var)->field.hash_next->field.hash_pp = 	\
-			&((var)->field.hash_next); 		\
+		(var)->field.hash_next->field.hash_pp =		\
+			&((var)->field.hash_next);		\
 }
 
-#define	HASHLIST_UNCHAIN(var, field) 				\
+#define	HASHLIST_UNCHAIN(var, field)				\
 {								\
 	*var->field.hash_pp = var->field.hash_next;		\
 	if (var->field.hash_next)				\
-		var->field.hash_next->field.hash_pp = 		\
+		var->field.hash_next->field.hash_pp =		\
 			var->field.hash_pp;			\
 	HASH_NULL(var, field);					\
 }
 
 
-#define	HASH_NULL(var, field) 					\
+#define	HASH_NULL(var, field)					\
 {								\
 	var->field.hash_next = NULL;				\
 	var->field.hash_pp = NULL;				\
@@ -224,8 +224,8 @@ typedef struct ipsec_prot
 	uint8_t		ipp_auth_alg;		 /* DOI number */
 	uint8_t		ipp_encr_alg;		 /* DOI number */
 	uint8_t		ipp_esp_auth_alg;	 /* DOI number */
-	uint16_t 	ipp_ah_minbits;		 /* AH: min keylen */
-	uint16_t 	ipp_ah_maxbits;		 /* AH: max keylen */
+	uint16_t	ipp_ah_minbits;		 /* AH: min keylen */
+	uint16_t	ipp_ah_maxbits;		 /* AH: max keylen */
 	uint16_t	ipp_espe_minbits;	 /* ESP encr: min keylen */
 	uint16_t	ipp_espe_maxbits;	 /* ESP encr: max keylen */
 	uint16_t	ipp_espa_minbits;	 /* ESP auth: min keylen */
@@ -406,10 +406,10 @@ struct ipsec_policy_s
 	HASH_LINK(ipsp_hash, struct ipsec_policy_s);
 	avl_node_t		ipsp_byid;
 	uint64_t		ipsp_index;	/* unique id */
-	uint32_t		ipsp_prio; 	/* rule priority */
+	uint32_t		ipsp_prio;	/* rule priority */
 	uint32_t		ipsp_refs;
 	ipsec_sel_t		*ipsp_sel;	/* selector set (shared) */
-	ipsec_action_t		*ipsp_act; 	/* action (may be shared) */
+	ipsec_action_t		*ipsp_act;	/* action (may be shared) */
 	netstack_t		*ipsp_netstack;	/* No netstack_hold */
 };
 
@@ -442,7 +442,7 @@ typedef struct ipsec_policy_root_s
 {
 	ipsec_policy_t		*ipr_nonhash[IPSEC_NAF];
 	int			ipr_nchains;
-	ipsec_policy_hash_t 	*ipr_hash;
+	ipsec_policy_hash_t	*ipr_hash;
 } ipsec_policy_root_t;
 
 /*
@@ -569,7 +569,7 @@ typedef struct ipsid_s
 	struct ipsid_s **ipsid_ptpn;
 	uint32_t	ipsid_refcnt;
 	int		ipsid_type;	/* id type */
-	char 		*ipsid_cid;	/* certificate id string */
+	char		*ipsid_cid;	/* certificate id string */
 } ipsid_t;
 
 /*
@@ -785,7 +785,7 @@ struct ipsec_stack {
 	 * Because policy needs to know what algorithms are supported, keep the
 	 * lists of algorithms here.
 	 */
-	kmutex_t 		ipsec_alg_lock;
+	kmutex_t		ipsec_alg_lock;
 
 	uint8_t			ipsec_nalgs[IPSEC_NALGTYPES];
 	ipsec_alginfo_t	*ipsec_alglists[IPSEC_NALGTYPES][IPSEC_MAX_ALGS];
@@ -794,11 +794,11 @@ struct ipsec_stack {
 
 	int		ipsec_algs_exec_mode[IPSEC_NALGTYPES];
 
-	uint32_t 	ipsec_tun_spd_hashsize;
+	uint32_t	ipsec_tun_spd_hashsize;
 	/*
 	 * Tunnel policies - AVL tree indexed by tunnel name.
 	 */
-	krwlock_t 	ipsec_tunnel_policy_lock;
+	krwlock_t	ipsec_tunnel_policy_lock;
 	uint64_t	ipsec_tunnel_policy_gen;
 	avl_tree_t	ipsec_tunnel_policies;
 

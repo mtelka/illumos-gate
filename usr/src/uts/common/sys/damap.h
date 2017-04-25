@@ -82,7 +82,7 @@ extern "C" {
 
 /*
  * damap_t:		Handle to a delta address map
- * damap_id_t:  	Handle to an entry of damap_t
+ * damap_id_t:		Handle to an entry of damap_t
  */
 typedef struct __damap_dm *damap_t;
 typedef id_t damap_id_t;

@@ -117,7 +117,7 @@ typedef struct mac_tx_intr_cpus_s {
 
 typedef struct mac_cpus_props_s {
 	uint32_t		mc_ncpus;		/* num of cpus */
-	uint32_t		mc_cpus[MRP_NCPUS]; 	/* cpu list */
+	uint32_t		mc_cpus[MRP_NCPUS];	/* cpu list */
 	uint32_t		mc_rx_fanout_cnt;	/* soft ring cpu cnt */
 	uint32_t		mc_rx_fanout_cpus[MRP_NCPUS]; /* SR cpu list */
 	uint32_t		mc_rx_pollid;		/* poll thr binding */
@@ -187,10 +187,10 @@ typedef struct mac_protect_s {
 /* The default priority for flows */
 #define	MPL_SUBFLOW_DEFAULT		MPL_MEDIUM
 
-#define	MRP_MAXBW		0x00000001 	/* Limit set */
-#define	MRP_CPUS		0x00000002 	/* CPU/fanout set */
-#define	MRP_CPUS_USERSPEC	0x00000004 	/* CPU/fanout from user */
-#define	MRP_PRIORITY		0x00000008 	/* Priority set */
+#define	MRP_MAXBW		0x00000001	/* Limit set */
+#define	MRP_CPUS		0x00000002	/* CPU/fanout set */
+#define	MRP_CPUS_USERSPEC	0x00000004	/* CPU/fanout from user */
+#define	MRP_PRIORITY		0x00000008	/* Priority set */
 #define	MRP_PROTECT		0x00000010	/* Protection set */
 #define	MRP_RX_RINGS		0x00000020	/* Rx rings */
 #define	MRP_TX_RINGS		0x00000040	/* Tx rings */

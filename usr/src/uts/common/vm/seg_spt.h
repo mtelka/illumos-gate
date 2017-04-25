@@ -26,8 +26,6 @@
 #ifndef	_VM_SEG_SPT_H
 #define	_VM_SEG_SPT_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -52,11 +50,11 @@ struct  segspt_crargs {
 typedef struct spt_data {
 	struct vnode	*spt_vp;
 	struct anon_map	*spt_amp;
-	size_t 		spt_realsize;
+	size_t		spt_realsize;
 	struct page	**spt_ppa;
 	ushort_t	*spt_ppa_lckcnt;
 	uint_t		spt_prot;
-	kmutex_t 	spt_lock;
+	kmutex_t	spt_lock;
 	size_t		spt_pcachecnt;	/* # of times in pcache */
 	uint_t		spt_flags;	/* Dynamic ISM or regular ISM */
 	kcondvar_t	spt_cv;
@@ -75,7 +73,7 @@ typedef struct shm_data {
 	struct as	*shm_sptas;
 	struct anon_map *shm_amp;
 	spgcnt_t	shm_softlockcnt; /* # outstanding lock operations */
-	struct seg 	*shm_sptseg;	/* pointer to spt segment */
+	struct seg	*shm_sptseg;	/* pointer to spt segment */
 	char		*shm_vpage;	/* indicating locked pages */
 	spgcnt_t	shm_lckpgs;	/* # of locked pages per attached seg */
 	/*

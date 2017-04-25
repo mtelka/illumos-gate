@@ -31,8 +31,6 @@
 #ifndef _SYS_LLC1_H
 #define	_SYS_LLC1_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -220,7 +218,7 @@ struct snaphdr {
 };
 
 #define	LLC_UI		0x3
-#define	LLC_XID 	0xAF
+#define	LLC_XID		0xAF
 #define	LLC_TEST	0xE3
 #define	LLC_P		0x10	/* P bit for use with XID/TEST */
 #define	LLC_XID_FMTID	0x81	/* XID format identifier */

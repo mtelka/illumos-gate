@@ -27,8 +27,6 @@
 #ifndef _IPP_DLCOSMK_DLCOSMK_H
 #define	_IPP_DLCOSMK_DLCOSMK_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -39,9 +37,9 @@ extern "C" {
  */
 
 #define	DLCOSMK_NEXT_ACTION_NAME	"dlcosmk.next_action"	/* string */
-#define	DLCOSMK_COS			"dlcosmk.cos" 		/* uint8 */
-#define	DLCOSMK_BAND			"dlcosmk.bband" 	/* uint8 */
-#define	DLCOSMK_PRI			"dlcosmk.dlpri" 	/* uint8 */
+#define	DLCOSMK_COS			"dlcosmk.cos"		/* uint8 */
+#define	DLCOSMK_BAND			"dlcosmk.bband"		/* uint8 */
+#define	DLCOSMK_PRI			"dlcosmk.dlpri"		/* uint8 */
 
 #ifdef	__cplusplus
 }

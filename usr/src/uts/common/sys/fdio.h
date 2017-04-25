@@ -27,8 +27,6 @@
 #ifndef _SYS_FDIO_H
 #define	_SYS_FDIO_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -51,7 +49,7 @@ struct fd_char {
  */
 struct fd_state {
 	int	fds_bsec;		/* bytes per sector */
-	int 	fds_strack;		/* sectors per track */
+	int	fds_strack;		/* sectors per track */
 	int	fds_step;		/* step rate */
 	int	fds_rate;		/* data rate */
 	int	fds_error;		/* error returned by controller */
@@ -131,7 +129,7 @@ struct fd_cmd32 {
 #define	FDCMD_READ		2
 #define	FDCMD_SEEK		3
 #define	FDCMD_REZERO		4
-#define	FDCMD_FORMAT_UNIT 	5
+#define	FDCMD_FORMAT_UNIT	5
 #define	FDCMD_FORMAT_TRACK	6
 
 /*

@@ -42,7 +42,7 @@ extern "C" {
  * fp/fctl use these a lot with the fp_topology field in the fc_port_t struct,
  * but use is not limited to fp_topology. These are also understood by ULPs.
  */
-#define	FC_TOP_UNKNOWN 		0
+#define	FC_TOP_UNKNOWN		0
 #define	FC_TOP_PRIVATE_LOOP	1
 #define	FC_TOP_PUBLIC_LOOP	2
 #define	FC_TOP_FABRIC		3
@@ -302,7 +302,7 @@ typedef struct fc_rnid_hdr {
 
 typedef struct la_els_rnid_acc {
 	ls_code_t	ls_code;
-	fc_rnid_hdr_t  	hdr;
+	fc_rnid_hdr_t	hdr;
 	uchar_t		data[FCIO_RNID_MAX_DATA_LEN];
 } la_els_rnid_acc_t;
 

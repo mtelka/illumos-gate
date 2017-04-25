@@ -316,7 +316,7 @@ typedef struct nd_neighbor_advert {	/* neighbor advertisement */
  * defined in this order:
  *	Router flag
  *	Solicited flag
- * 	Override flag
+ *	Override flag
  */
 
 /* Save valuable htonl() cycles on little-endian boxen. */

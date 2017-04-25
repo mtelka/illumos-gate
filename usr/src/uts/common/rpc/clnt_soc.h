@@ -38,8 +38,6 @@
 #ifndef _RPC_CLNT_SOC_H
 #define	_RPC_CLNT_SOC_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * All the following declarations are only for backward compatibility
  * with SUNOS 4.0.
@@ -142,7 +140,7 @@ extern CLIENT *clntraw_create();
  * name service library functions
  * void
  * get_myaddress(addr)
- * 	struct sockaddr_in  *addr;
+ *	struct sockaddr_in  *addr;
  */
 #ifdef __STDC__
 extern void get_myaddress(struct sockaddr_in *);
@@ -154,7 +152,7 @@ extern void get_myaddress();
  * get the port number on the host for the rpc program, version and proto
  * void
  * getrpcport(host, prognum, versnum, proto)
- * 	char *host;
+ *	char *host;
  *	rpcprog_t prognum;
  *	rpcvers_t versnum;
  *	rpcprot_t proto;

@@ -254,7 +254,7 @@ typedef struct door_return_desc32 {
  */
 typedef struct door_node {
 	vnode_t		*door_vnode;
-	struct proc 	*door_target;	/* Proc handling this doors invoc's. */
+	struct proc	*door_target;	/* Proc handling this doors invoc's. */
 	struct door_node *door_list;	/* List of active doors in proc */
 	struct door_node *door_ulist;	/* Unref list */
 	void		(*door_pc)();	/* Door server entry point */

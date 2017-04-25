@@ -71,7 +71,7 @@ typedef struct _agp_allocate {
 typedef struct _agp_bind_pages {
 	uint32_t	agpb_pgstart;
 	pfn_t		*agpb_pages;
-	unsigned long 	agpb_pgcount;
+	unsigned long	agpb_pgcount;
 } agp_bind_pages_t;
 
 typedef struct _agp_unbind_pages {

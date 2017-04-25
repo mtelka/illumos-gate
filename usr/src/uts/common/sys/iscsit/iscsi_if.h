@@ -481,8 +481,8 @@ typedef struct iscsi_conn_props {
 	} cp_peer;						/* Out */
 
 
-	iscsi_login_params_t 	cp_params;
-	boolean_t 		cp_params_valid;
+	iscsi_login_params_t	cp_params;
+	boolean_t		cp_params_valid;
 
 } iscsi_conn_props_t;
 

@@ -34,8 +34,6 @@
 #ifndef _SYS_VUID_STORE_H
 #define	_SYS_VUID_STORE_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -83,7 +81,7 @@ typedef	struct vuid_seg {
 					/* Up/down value of boolean codes */
 	char			ints[VUID_BIT_ARRAY_SIZE];
 					/* In/not in list */
-	struct vuid_value 	*list;	/* Linked list of values of */
+	struct vuid_value	*list;	/* Linked list of values of */
 					/* non-boolean codes.  If a code is */
 					/* in this list, the boolean value is */
 					/* ignored and the corresponding bit */

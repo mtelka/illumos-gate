@@ -28,8 +28,6 @@
 #ifndef	_GSSAPI_H_
 #define	_GSSAPI_H_
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -514,8 +512,8 @@ OM_uint32 gss_import_name(
 
 OM_uint32 gss_export_name(
 	OM_uint32 *,		/* minor_status */
-	const gss_name_t,  	/* input_name */
-	gss_buffer_t 		/* exported_name */
+	const gss_name_t,	/* input_name */
+	gss_buffer_t		/* exported_name */
 );
 
 OM_uint32 gss_release_name(
@@ -611,46 +609,46 @@ OM_uint32 gss_import_sec_context(
 );
 
 OM_uint32 gss_create_empty_oid_set(
-	OM_uint32 *, 		/* minor_status */
+	OM_uint32 *,		/* minor_status */
 	gss_OID_set *		/* oid_set */
 );
 
 OM_uint32 gss_add_oid_set_member(
-	OM_uint32 *, 		/* minor_status */
-	const gss_OID,  	/* member_oid */
+	OM_uint32 *,		/* minor_status */
+	const gss_OID,		/* member_oid */
 	gss_OID_set *		/* oid_set */
 );
 
 OM_uint32 gss_test_oid_set_member(
-	OM_uint32 *, 		/* minor_status */
-	const gss_OID,  	/* member */
-	const gss_OID_set, 	/* set */
-	int *  			/* present */
+	OM_uint32 *,		/* minor_status */
+	const gss_OID,		/* member */
+	const gss_OID_set,	/* set */
+	int *			/* present */
 );
 
 OM_uint32 gss_inquire_names_for_mech(
-	OM_uint32 *, 		/* minor_status */
-	const gss_OID,  	/* mechanism */
+	OM_uint32 *,		/* minor_status */
+	const gss_OID,		/* mechanism */
 	gss_OID_set *		/* name_types */
 );
 
 OM_uint32 gss_inquire_mechs_for_name(
-	OM_uint32 *, 		/* minor_status */
-	const gss_name_t,  	/* input_name */
+	OM_uint32 *,		/* minor_status */
+	const gss_name_t,	/* input_name */
 	gss_OID_set *		/* mech_types */
 );
 
 OM_uint32 gss_canonicalize_name(
-	OM_uint32 *, 		/* minor_status */
-	const gss_name_t,  	/* input_name */
-	const gss_OID,  	/* mech_type */
-	gss_name_t * 		/* output_name */
+	OM_uint32 *,		/* minor_status */
+	const gss_name_t,	/* input_name */
+	const gss_OID,		/* mech_type */
+	gss_name_t *		/* output_name */
 );
 
 OM_uint32 gss_duplicate_name(
-	OM_uint32 *, 		/* minor_status */
-	const gss_name_t,  	/* src_name */
-	gss_name_t * 		/* dest_name */
+	OM_uint32 *,		/* minor_status */
+	const gss_name_t,	/* src_name */
+	gss_name_t *		/* dest_name */
 );
 
 

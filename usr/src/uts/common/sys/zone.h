@@ -433,13 +433,13 @@ typedef struct zone {
 					/* if not emulated */
 	/*
 	 * zone_lock protects the following fields of a zone_t:
-	 * 	zone_ref
-	 * 	zone_cred_ref
-	 * 	zone_subsys_ref
-	 * 	zone_ref_list
-	 * 	zone_ntasks
-	 * 	zone_flags
-	 * 	zone_zsd
+	 *	zone_ref
+	 *	zone_cred_ref
+	 *	zone_subsys_ref
+	 *	zone_ref_list
+	 *	zone_ntasks
+	 *	zone_flags
+	 *	zone_zsd
 	 *	zone_pfexecd
 	 */
 	kmutex_t	zone_lock;
@@ -543,7 +543,7 @@ typedef struct zone {
 
 	boolean_t	zone_restart_init;	/* Restart init if it dies? */
 	struct brand	*zone_brand;		/* zone's brand */
-	void 		*zone_brand_data;	/* store brand specific data */
+	void		*zone_brand_data;	/* store brand specific data */
 	id_t		zone_defaultcid;	/* dflt scheduling class id */
 	kstat_t		*zone_swapresv_kstat;
 	kstat_t		*zone_lockedmem_kstat;
@@ -681,7 +681,7 @@ typedef uint_t zone_key_t;
 
 extern void	zone_key_create(zone_key_t *, void *(*)(zoneid_t),
     void (*)(zoneid_t, void *), void (*)(zoneid_t, void *));
-extern int 	zone_key_delete(zone_key_t);
+extern int	zone_key_delete(zone_key_t);
 extern void	*zone_getspecific(zone_key_t, zone_t *);
 extern int	zone_setspecific(zone_key_t, zone_t *, const void *);
 
@@ -707,7 +707,7 @@ struct zsd_entry {
 	void			(*zsd_shutdown)(zoneid_t, void *);
 	void			(*zsd_destroy)(zoneid_t, void *);
 	list_node_t		zsd_linkage;
-	uint16_t 		zsd_flags;	/* See below */
+	uint16_t		zsd_flags;	/* See below */
 	kcondvar_t		zsd_cv;
 };
 

@@ -24,7 +24,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * University Copyright- Copyright (c) 1982, 1986, 1988
@@ -328,8 +328,8 @@ void	hat_setstat(struct as *, caddr_t, size_t, uint_t);
  *
  * Certain flags only apply to some interfaces:
  *
- * 	HAT_LOAD	Default flags to load a translation to the page.
- * 	HAT_LOAD_LOCK	Lock down mapping resources; hat_map(), hat_memload(),
+ *	HAT_LOAD	Default flags to load a translation to the page.
+ *	HAT_LOAD_LOCK	Lock down mapping resources; hat_map(), hat_memload(),
  *			and hat_devload().
  *	HAT_LOAD_ADV	Advisory load - Load translation if and only if
  *			sufficient MMU resources exist (i.e., do not steal).
@@ -591,7 +591,7 @@ extern struct hrmstat **hrm_hashtab;
 /*
  * Hat locking functions
  * XXX - these two functions are currently being used by hatstats
- * 	they can be removed by using a per-as mutex for hatstats.
+ *	they can be removed by using a per-as mutex for hatstats.
  */
 void	hat_enter(struct hat *);
 void	hat_exit(struct hat *);

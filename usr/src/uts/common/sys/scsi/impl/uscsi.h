@@ -189,7 +189,7 @@ struct uscsi_rqs32	{
  * User SCSI io control command
  */
 #define	USCSIIOC	(0x04 << 8)
-#define	USCSICMD	(USCSIIOC|201) 	/* user scsi command */
+#define	USCSICMD	(USCSIIOC|201)	/* user scsi command */
 
 #ifdef	_KERNEL
 

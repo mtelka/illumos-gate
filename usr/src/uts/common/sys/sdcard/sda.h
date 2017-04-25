@@ -246,7 +246,7 @@ struct sda_cmd {
 typedef struct sda_host sda_host_t;
 
 typedef enum {
-	SDA_PROP_INSERTED = 	1,	/* R: is card inserted? */
+	SDA_PROP_INSERTED =	1,	/* R: is card inserted? */
 	SDA_PROP_WPROTECT =	2,	/* R: is card write protected */
 	SDA_PROP_LED =		3,	/* W: LED */
 	SDA_PROP_CLOCK =	4,	/* R: frequency, Hz */

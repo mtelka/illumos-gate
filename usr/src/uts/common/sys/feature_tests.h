@@ -130,7 +130,7 @@ extern "C" {
  * cc -Xs (K&R C)		    undefined	      undefined
  *
  * gcc (default)			1	      undefined
- * gcc -ansi, -std={c89, c99,...)  	1              defined
+ * gcc -ansi, -std={c89, c99,...)	1              defined
  * gcc -traditional (K&R)	    undefined	      undefined
  *
  * The default compilation modes for Sun C compilers versus GNU C compilers
@@ -191,7 +191,7 @@ extern "C" {
  *	of _POSIX_SOURCE nor _XOPEN_SOURCE is defined and the value of
  *	__STDC__ does not imply standards conformance).
  *    -	Extended system interfaces are explicitly requested (__EXTENSIONS__
- * 	is defined).
+ *	is defined).
  *    -	Access to in-kernel interfaces is requested (_KERNEL or _KMEMUSER is
  *	defined).  (Note that this dependency is an artifact of the current
  *	kernel implementation and may change in future releases.)

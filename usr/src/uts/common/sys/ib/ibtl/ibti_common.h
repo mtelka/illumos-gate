@@ -424,7 +424,7 @@ typedef enum ibt_chan_open_flags_e {
  *    original (ibt_chan_open_args_t)->oc_prim_pkt_lt.
  * Update (ibt_chan_args_t)->oc_path based on path information returned
  * from ibt_get_paths using the gid in the return data below:
- * 	(ibt_rc_returns_t)->rc_arej_info.ari_redirect_info.ari_gid.
+ *	(ibt_rc_returns_t)->rc_arej_info.ari_redirect_info.ari_gid.
  * Set flags to IBT_OCHAN_PORT_REDIRECTED.
  *
  * Note : oc_cm_path is not used for any other scenario, and must be set for
@@ -450,8 +450,8 @@ typedef enum ibt_chan_open_flags_e {
  * Not specified attributes should be set to "NULL" or "0".
  */
 typedef struct ibt_chan_open_args_s {
-	ibt_path_info_t 	*oc_path;	/* Primary & Alternate */
-	ibt_cm_handler_t 	oc_cm_handler;	/* cm_handler - required */
+	ibt_path_info_t		*oc_path;	/* Primary & Alternate */
+	ibt_cm_handler_t	oc_cm_handler;	/* cm_handler - required */
 	void			*oc_cm_clnt_private;	/* First argument to */
 							/* cm_handler */
 	ibt_rnr_retry_cnt_t	oc_path_rnr_retry_cnt;
@@ -461,7 +461,7 @@ typedef struct ibt_chan_open_args_s {
 	ibt_priv_data_len_t	oc_priv_data_len;	/* Number of bytes of */
 							/* REQ Private data */
 	void			*oc_priv_data;		/* REQ private data */
-	ibt_channel_hdl_t	oc_dup_channel; 	/* IBT_OCHAN_DUP */
+	ibt_channel_hdl_t	oc_dup_channel;		/* IBT_OCHAN_DUP */
 	ibt_redirect_info_t	*oc_cm_redirect_info;	/* Redirect params */
 							/* for port and CM */
 							/* redirection */
@@ -742,7 +742,7 @@ ibt_status_t ibt_close_hca(ibt_hca_hdl_t hca_hdl);
 /*
  * ibt_query_hca()
  * ibt_query_hca_byguid()
- * 	Returns the static attributes of the specified HCA
+ *	Returns the static attributes of the specified HCA
  */
 ibt_status_t ibt_query_hca(ibt_hca_hdl_t hca_hdl, ibt_hca_attr_t *hca_attrs);
 
@@ -833,7 +833,7 @@ ibt_status_t ibt_get_alt_path(ibt_channel_hdl_t chan, ibt_path_flags_t flags,
 
 /*
  * ibt_open_rc_channel
- * 	ibt_open_rc_channel() opens a previously allocated RC communication
+ *	ibt_open_rc_channel() opens a previously allocated RC communication
  *	channel. The IBTL initiates the channel establishment protocol.
  */
 ibt_status_t ibt_open_rc_channel(ibt_channel_hdl_t rc_chan,
@@ -1166,12 +1166,12 @@ void *ibt_get_cq_private(ibt_cq_hdl_t ibt_cq);
  *	Applicable for both RC and UD channels.
  *
  * ibt_register_mr()
- * 	Prepares a virtually addressed memory region for use by a HCA. A
+ *	Prepares a virtually addressed memory region for use by a HCA. A
  *	description of the registered memory suitable for use in Work Requests
  *	(WRs) is returned in the ibt_mr_desc_t parameter.
  *
  * ibt_register_buf()
- * 	Prepares a memory region described by a buf(9S) struct for use by a
+ *	Prepares a memory region described by a buf(9S) struct for use by a
  *	HCA. A description of the registered memory suitable for use in
  *	Work Requests (WRs) is returned in the ibt_mr_desc_t parameter.
  *
@@ -1239,7 +1239,7 @@ ibt_status_t ibt_free_mw(ibt_hca_hdl_t hca_hdl, ibt_mw_hdl_t mw_hdl);
 
 /*
  * ibt_alloc_lkey()
- * 	Allocates physical buffer list resources for use in memory
+ *	Allocates physical buffer list resources for use in memory
  *	registrations.
  *
  *	Applicable for both RC and UD channels.
@@ -1440,7 +1440,7 @@ void ibt_register_subnet_notices(ibt_clnt_hdl_t ibt_hdl,
  *
  * ibt_alloc_pd()
  * ibt_free_pd()
- * 	Allocate/Release a protection domain
+ *	Allocate/Release a protection domain
  */
 ibt_status_t ibt_alloc_pd(ibt_hca_hdl_t hca_hdl, ibt_pd_flags_t flags,
     ibt_pd_hdl_t *pd);
@@ -1574,7 +1574,7 @@ void *ibt_get_srq_private(ibt_srq_hdl_t ibt_srq);
 
 /*
  * ibt_check_failure()
- * 	Function to test for special case failures
+ *	Function to test for special case failures
  */
 ibt_failure_type_t ibt_check_failure(ibt_status_t status, uint64_t *reserved_p);
 

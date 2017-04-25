@@ -20,7 +20,7 @@
  */
 /*	Copyright (c) 1990, 1991 UNIX System Laboratories, Inc.	*/
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989, 1990 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * Copyright 2010 Sun Microsystems, Inc.  All rights reserved.
@@ -40,14 +40,14 @@ extern "C" {
 
 #define	T_ZERODIV	0x0	/* #de	divide by 0 error		*/
 #define	T_SGLSTP	0x1	/* #db	single step			*/
-#define	T_NMIFLT	0x2	/* 	NMI				*/
+#define	T_NMIFLT	0x2	/*	NMI				*/
 #define	T_BPTFLT	0x3	/* #bp	breakpoint fault, INT3 insn	*/
 #define	T_OVFLW		0x4	/* #of	INTO overflow fault		*/
 #define	T_BOUNDFLT	0x5	/* #br	BOUND insn fault		*/
 #define	T_ILLINST	0x6	/* #ud	invalid opcode fault		*/
 #define	T_NOEXTFLT	0x7	/* #nm	device not available: x87	*/
 #define	T_DBLFLT	0x8	/* #df	double fault			*/
-#define	T_EXTOVRFLT	0x9	/* 	[not generated: 386 only]	*/
+#define	T_EXTOVRFLT	0x9	/*	[not generated: 386 only]	*/
 #define	T_TSSFLT	0xa	/* #ts	invalid TSS fault		*/
 #define	T_SEGFLT	0xb	/* #np	segment not present fault	*/
 #define	T_STKFLT	0xc	/* #ss	stack fault			*/
@@ -57,7 +57,7 @@ extern "C" {
 #define	T_ALIGNMENT	0x11	/* #ac	alignment check error		*/
 #define	T_MCE		0x12	/* #mc	machine check exception		*/
 #define	T_SIMDFPE	0x13	/* #xm	SSE/SSE exception		*/
-#define	T_DBGENTR	0x14	/*	debugger entry 			*/
+#define	T_DBGENTR	0x14	/*	debugger entry			*/
 #define	T_ENDPERR	0x21	/*	emulated extension error flt	*/
 #define	T_ENOEXTFLT	0x20	/*	emulated ext not present	*/
 #define	T_FASTTRAP	0xd2	/*	fast system call		*/

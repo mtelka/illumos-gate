@@ -67,7 +67,7 @@ typedef struct ncec_cb_s {
 struct ncec_s {
 	struct	ncec_s	*ncec_next;	/* Hash chain next pointer */
 	struct	ncec_s	**ncec_ptpn;	/* Pointer to previous next */
-	struct 	ill_s	*ncec_ill;	/* Associated ill */
+	struct	ill_s	*ncec_ill;	/* Associated ill */
 	uint16_t	ncec_flags;	/* See below */
 	uint16_t	ncec_state;	/* See reachability states in if.h */
 	int16_t		ncec_pcnt;	/* Probe counter */

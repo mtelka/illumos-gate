@@ -340,8 +340,8 @@ typedef enum dat_ep_creator_for_psp {
 /* General Interface Adapter attributes. These apply to both udat and kdat. */
 
 /* To support backwards compatibility for DAPL-1.0 */
-#define	max_rdma_read_per_ep 		max_rdma_read_per_ep_in
-#define	DAT_IA_FIELD_IA_MAX_DTO_PER_OP 	DAT_IA_FIELD_IA_ MAX_DTO_PER_EP_IN
+#define	max_rdma_read_per_ep		max_rdma_read_per_ep_in
+#define	DAT_IA_FIELD_IA_MAX_DTO_PER_OP	DAT_IA_FIELD_IA_ MAX_DTO_PER_EP_IN
 
 /* to support backwards compatibility for DAPL-1.0 & DAPL-1.1 */
 #define	max_mtu_size max_message_size
@@ -429,7 +429,7 @@ typedef DAT_UINT64 DAT_IA_ATTR_MASK;
 #define	DAT_IA_FIELD_IA_VENDOR_ATTR			UINT64_C(0x400000000)
 
 /* To support backwards compatibility for DAPL-1.0 & DAPL-1.1 */
-#define	DAT_IA_ALL 					DAT_IA_FIELD_ALL
+#define	DAT_IA_ALL					DAT_IA_FIELD_ALL
 #define	DAT_IA_FIELD_ALL				UINT64_C(0x7FFFFFFFF)
 #define	DAT_IA_FIELD_NONE				UINT64_C(0x0)
 
@@ -568,7 +568,7 @@ typedef struct dat_srq_param {
 	DAT_COUNT		max_recv_dtos;
 	DAT_COUNT		max_recv_iov;
 	DAT_COUNT		low_watermark;
-	DAT_COUNT 		available_dto_count;
+	DAT_COUNT		available_dto_count;
 	DAT_COUNT		outstanding_dto_count;
 } DAT_SRQ_PARAM;
 
@@ -1079,12 +1079,12 @@ extern DAT_RETURN dat_lmr_free(
 
 extern DAT_RETURN dat_lmr_sync_rdma_read(
 	IN	DAT_IA_HANDLE,		/* ia_handle		*/
-	IN 	const DAT_LMR_TRIPLET *, /* local_segments	*/
+	IN	const DAT_LMR_TRIPLET *, /* local_segments	*/
 	IN	DAT_VLEN);		/* num_segments		*/
 
 extern DAT_RETURN dat_lmr_sync_rdma_write(
 	IN	DAT_IA_HANDLE,		/* ia_handle		*/
-	IN 	const DAT_LMR_TRIPLET *, /* local_segments	*/
+	IN	const DAT_LMR_TRIPLET *, /* local_segments	*/
 	IN	DAT_VLEN);		/* num_segments		*/
 
 /* RMR Functions */
@@ -1174,7 +1174,7 @@ extern DAT_RETURN dat_ep_create_with_srq(
 	IN	DAT_EVD_HANDLE,		/* recv_evd_handle	*/
 	IN	DAT_EVD_HANDLE,		/* request_evd_handle	*/
 	IN	DAT_EVD_HANDLE,		/* connect_evd_handle	*/
-	IN	DAT_SRQ_HANDLE,		/* srq_handle 		*/
+	IN	DAT_SRQ_HANDLE,		/* srq_handle		*/
 	IN	const DAT_EP_ATTR *,	/* ep_attributes	*/
 	OUT	DAT_EP_HANDLE *);	/* ep_handle		*/
 

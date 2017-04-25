@@ -553,7 +553,7 @@ extern taskq_t		*sdev_taskq;
 #ifdef DEBUG
 extern int sdev_debug;
 #define	SDEV_DEBUG		0x01	/* error messages to console/log */
-#define	SDEV_DEBUG_VOPS 	0x02	/* vnode ops errors */
+#define	SDEV_DEBUG_VOPS		0x02	/* vnode ops errors */
 #define	SDEV_DEBUG_DLF		0x04	/* trace devname_lookup_func */
 #define	SDEV_DEBUG_DRF		0x08	/* trace devname_readdir_func */
 #define	SDEV_DEBUG_NCACHE	0x10	/* negative cache tracing */

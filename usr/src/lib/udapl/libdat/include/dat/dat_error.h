@@ -176,7 +176,7 @@ typedef enum dat_return_type
 	/* [Unix only] dat_evd_wait or dat_cno_wait has been interrupted. */
 	DAT_INTERRUPTED_CALL				= 0x00130000,
 
-	/* No Connection Qualifiers are available 			*/
+	/* No Connection Qualifiers are available			*/
 	DAT_CONN_QUAL_UNAVAILABLE			= 0x00140000,
 
 	/* Provider does not support the operation yet.			*/

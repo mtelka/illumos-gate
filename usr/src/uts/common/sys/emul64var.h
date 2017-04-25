@@ -27,8 +27,6 @@
 #ifndef _SYS_SCSI_ADAPTERS_EMUL64VAR_H
 #define	_SYS_SCSI_ADAPTERS_EMUL64VAR_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/avl.h>
 #include <sys/note.h>
 #include <sys/emul64.h>
@@ -249,7 +247,7 @@ typedef struct emul64_tgt {
 	emul64_nowrite_t	*emul64_tgt_nowrite;	/* List of regions to */
 							/* skip writes */
 	diskaddr_t		emul64_tgt_sectors;	/* # sectors in dev */
-	char 			emul64_tgt_inq[8+16];
+	char			emul64_tgt_inq[8+16];
 	uint_t			emul64_tgt_dtype;
 	uint_t			emul64_tgt_ncyls;	/* # cylinders in dev */
 	uint_t			emul64_tgt_nheads;	/* # disk heads */

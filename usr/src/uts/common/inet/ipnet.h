@@ -221,11 +221,11 @@ typedef struct ipnet_stack {
 	DL_INFO_ACK,			/* dl_primitive */		\
 	INT_MAX,			/* dl_max_sdu */		\
 	0,				/* dl_min_sdu */		\
-	sizeof (uint16_t),		/* dl_addr_length */ 		\
+	sizeof (uint16_t),		/* dl_addr_length */		\
 	DL_IPNET,			/* dl_mac_type */		\
 	0,				/* dl_reserved */		\
 	0,				/* dl_current_state */		\
-	sizeof (uint16_t),		/* dl_sap_length */ 		\
+	sizeof (uint16_t),		/* dl_sap_length */		\
 	DL_CLDLS,			/* dl_service_mode */		\
 	0,				/* dl_qos_length */		\
 	0,				/* dl_qos_offset */		\

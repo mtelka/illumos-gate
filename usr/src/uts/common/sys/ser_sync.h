@@ -27,8 +27,6 @@
 #ifndef	_SYS_SER_SYNC_H
 #define	_SYS_SER_SYNC_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * Initial port setup parameters for sync lines
  */
@@ -143,13 +141,13 @@ struct sl_status32 {
  * defines for status field in sl_status
  * DO NOT change the values for CS_(DCD|CTS)_(UP|DOWN)!!!
  */
-#define	CS_DCD_DOWN   	0x08
-#define	CS_DCD_UP   	0x0c
-#define	CS_DCD_DROP   	0x10
+#define	CS_DCD_DOWN	0x08
+#define	CS_DCD_UP	0x0c
+#define	CS_DCD_DROP	0x10
 #define	CS_CTS_DOWN	0x20
 #define	CS_CTS_UP	0x30
-#define	CS_CTS_DROP   	0x40
-#define	CS_CTS_TO   	0x80
+#define	CS_CTS_DROP	0x40
+#define	CS_CTS_TO	0x80
 #define	CS_DCD		CS_DCD_DOWN
 #define	CS_CTS		CS_CTS_DOWN
 

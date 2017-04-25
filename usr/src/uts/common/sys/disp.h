@@ -26,7 +26,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _SYS_DISP_H
@@ -63,11 +63,11 @@ typedef struct _disp {
 	/*
 	 * Priorities:
 	 *	disp_maxrunpri is the maximum run priority of runnable threads
-	 * 	on this queue.  It is -1 if nothing is runnable.
+	 *	on this queue.  It is -1 if nothing is runnable.
 	 *
 	 *	disp_max_unbound_pri is the maximum run priority of threads on
 	 *	this dispatch queue but runnable by any CPU.  This may be left
-	 * 	artificially high, then corrected when some CPU tries to take
+	 *	artificially high, then corrected when some CPU tries to take
 	 *	an unbound thread.  It is -1 if nothing is runnable.
 	 */
 	pri_t		disp_maxrunpri;	/* maximum run priority */

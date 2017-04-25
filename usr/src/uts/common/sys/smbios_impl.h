@@ -183,8 +183,8 @@ typedef struct smb_cache {
 #define	SMB_CACHE_SIZE(s)	(((s) & 0x8000) ? \
 	((uint32_t)((s) & 0x7FFF) * 64 * 1024) : ((uint32_t)(s) * 1024))
 
-#define	SMB_CACHE_EXT_SIZE(s)	(((s) & 0x80000000U) ? 	\
-	((uint64_t)((s) & 0x7FFFFFFFULL) * 64ULL * 1024ULL) : 	\
+#define	SMB_CACHE_EXT_SIZE(s)	(((s) & 0x80000000U) ?	\
+	((uint64_t)((s) & 0x7FFFFFFFULL) * 64ULL * 1024ULL) :	\
 	((uint64_t)(s) * 1024ULL))
 
 #define	SMB_CACHE_CFG_MODE(c)		(((c) >> 8) & 3)
@@ -452,7 +452,7 @@ typedef struct smb_struct {
 	const smb_header_t *smbst_hdr;	/* address of raw structure data */
 	const uchar_t *smbst_str;	/* address of string data (if any) */
 	const uchar_t *smbst_end;	/* address of 0x0000 ending tag */
-	struct smb_struct *smbst_next; 	/* next structure in hash chain */
+	struct smb_struct *smbst_next;	/* next structure in hash chain */
 	uint16_t *smbst_strtab;		/* string index -> offset table */
 	uint_t smbst_strtablen;		/* length of smbst_strtab */
 } smb_struct_t;

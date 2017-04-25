@@ -63,7 +63,7 @@ typedef struct tqstat {
 	uint_t		tqs_hits;
 	uint_t		tqs_misses;
 	uint_t		tqs_overflow;	/* no threads to allocate   */
-	uint_t		tqs_tcreates;	/* threads created 	*/
+	uint_t		tqs_tcreates;	/* threads created	*/
 	uint_t		tqs_tdeaths;	/* threads died		*/
 	uint_t		tqs_maxthreads;	/* max # of alive threads */
 	uint_t		tqs_nomem;	/* # of times there were no memory */

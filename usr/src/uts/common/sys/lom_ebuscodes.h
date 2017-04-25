@@ -27,8 +27,6 @@
 #ifndef _SYS_LOM_EBUSCODES_H
 #define	_SYS_LOM_EBUSCODES_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * This file enumerates the virtual registers exported by the microcontroller.
  * It cannot be changed without also revising the firwmare.
@@ -590,7 +588,7 @@ extern "C" {
 #define	CPU_IDENT_H8_3437SF		0x84
 #define	CPU_IDENT_H8S_2148		0x85
 #define	CPU_IDENT_H8S_2148A		0x86
-#define	CPU_IDENT_H8S_BSC 		0x87
+#define	CPU_IDENT_H8S_BSC		0x87
 
 /*
  * Capability codes
@@ -598,7 +596,7 @@ extern "C" {
 #define	EBUS_CAP0_ASYNC_DOG		0x01 /* EBUS_CMD_DOGPAT implemented */
 #define	EBUS_CAP0_SYNC_EVENTS		0x02 /* event report at command end */
 #define	EBUS_CAP0_NEW_EVENTLOG_SPACE	0x04 /* new implementation of space8 */
-#define	EBUS_CAP0_NEW_SELFTESTS 	0x08 /* new implementation of tests */
+#define	EBUS_CAP0_NEW_SELFTESTS		0x08 /* new implementation of tests */
 #define	EBUS_CAP0_NEW_PROGRAMMING	0x10 /* new flash programming scheme */
 #define	EBUS_CAP0_LED_INFORMATION	0x20 /* new LED modelling scheme */
 #define	EBUS_CAP0_CPU_SIG		0x40 /* understands CPU signatures */

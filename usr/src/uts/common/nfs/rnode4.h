@@ -24,7 +24,7 @@
  */
 
 /*	Copyright (c) 1983, 1984, 1985, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 #ifndef	_NFS_RNODE4_H
 #define	_NFS_RNODE4_H
@@ -216,7 +216,7 @@ typedef struct r4hashq {
  * be held whenever any kind of access of r_size is made.
  *
  * Lock ordering:
- * 	r_rwlock > r_lkserlock > r_os_lock > r_statelock > r_statev4_lock
+ *	r_rwlock > r_lkserlock > r_os_lock > r_statelock > r_statev4_lock
  *	vnode_t::v_lock > r_os_lock
  */
 struct exportinfo;	/* defined in nfs/export.h */
@@ -308,11 +308,11 @@ typedef struct rnode4 {
 					/* delegation has been recalled by */
 					/* the server during open with */
 					/* CLAIM_PREVIOUS */
-	unsigned 	r_deleg_return_pending:1;
+	unsigned	r_deleg_return_pending:1;
 					/* delegreturn is pending, don't use */
 					/* the delegation stateid, set in */
 					/* nfs4_dlistadd */
-	unsigned 	r_deleg_return_inprog:1;
+	unsigned	r_deleg_return_inprog:1;
 					/* delegreturn is in progress, may */
 					/* only be set by nfs4delegreturn. */
 	nfs_rwlock_t    r_deleg_recall_lock;

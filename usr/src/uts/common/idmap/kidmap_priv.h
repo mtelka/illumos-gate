@@ -42,7 +42,7 @@ typedef struct sid2pid {
 	avl_node_t	avl_link;
 	struct sid2pid	*flink;
 	struct sid2pid	*blink;
-	const char 	*sid_prefix;
+	const char	*sid_prefix;
 	uint32_t	rid;
 	uid_t		uid;
 	time_t		uid_ttl;
@@ -56,7 +56,7 @@ typedef struct pid2sid {
 	avl_node_t	avl_link;
 	struct pid2sid	*flink;
 	struct pid2sid	*blink;
-	const char 	*sid_prefix;
+	const char	*sid_prefix;
 	uint32_t	rid;
 	uid_t		pid;
 	time_t		ttl;
@@ -108,39 +108,39 @@ kidmap_cache_purge(idmap_cache_t *cache);
 
 int
 kidmap_cache_lookup_uidbysid(idmap_cache_t *cache, const char *sid_prefix,
-			uint32_t rid, uid_t *uid);
+    uint32_t rid, uid_t *uid);
 
 int
 kidmap_cache_lookup_gidbysid(idmap_cache_t *cache, const char *sid_prefix,
-			uint32_t rid, gid_t *gid);
+    uint32_t rid, gid_t *gid);
 
 int
 kidmap_cache_lookup_pidbysid(idmap_cache_t *cache, const char *sid_prefix,
-			uint32_t rid, uid_t *pid, int *is_user);
+    uint32_t rid, uid_t *pid, int *is_user);
 
 int
 kidmap_cache_lookup_sidbyuid(idmap_cache_t *cache, const char **sid_prefix,
-			uint32_t *rid, uid_t uid);
+    uint32_t *rid, uid_t uid);
 
 int
 kidmap_cache_lookup_sidbygid(idmap_cache_t *cache, const char **sid_prefix,
-			uint32_t *rid, gid_t gid);
+    uint32_t *rid, gid_t gid);
 
 
 void
 kidmap_cache_add_sid2uid(idmap_cache_t *cache, const char *sid_prefix,
-			uint32_t rid, uid_t uid, int direction);
+    uint32_t rid, uid_t uid, int direction);
 
 void
 kidmap_cache_add_sid2gid(idmap_cache_t *cache, const char *sid_prefix,
-			uint32_t rid, gid_t gid, int direction);
+    uint32_t rid, gid_t gid, int direction);
 
 void
 kidmap_cache_add_sid2pid(idmap_cache_t *cache, const char *sid_prefix,
-			uint32_t rid, uid_t pid, int is_user, int direction);
+    uint32_t rid, uid_t pid, int is_user, int direction);
 void
 kidmap_cache_get_data(idmap_cache_t *cache, size_t *uidbysid, size_t *gidbysid,
-			size_t *pidbysid, size_t *sidbyuid, size_t *sidbygid);
+    size_t *pidbysid, size_t *sidbyuid, size_t *sidbygid);
 int
 kidmap_start(void);
 

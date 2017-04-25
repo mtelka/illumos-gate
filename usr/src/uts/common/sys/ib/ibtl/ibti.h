@@ -135,7 +135,7 @@ typedef struct ibt_ud_dest_query_attr_s {
 	ibt_hca_hdl_t		ud_hca_hdl;	/* Local HCA Handle */
 	ib_qpn_t		ud_dst_qpn;	/* Destination QPN */
 	ib_qkey_t		ud_qkey;	/* Q_Key */
-	ibt_adds_vect_t 	ud_addr_vect;	/* Address Information */
+	ibt_adds_vect_t		ud_addr_vect;	/* Address Information */
 	ibt_pd_hdl_t		ud_pd;
 } ibt_ud_dest_query_attr_t;
 
@@ -208,7 +208,7 @@ typedef struct ibt_ud_chan_modify_attr_s {
 
 /*
  * ibt_alloc_rc_channel
- * 	Allocates a RC communication channels that satisfy the specified
+ *	Allocates a RC communication channels that satisfy the specified
  *	channel attributes.
  */
 ibt_status_t ibt_alloc_rc_channel(ibt_hca_hdl_t hca_hdl,
@@ -243,7 +243,7 @@ ibt_status_t ibt_query_rc_channel(ibt_channel_hdl_t rc_chan,
 
 /*
  * ibt_modify_rc_channel()
- * 	Modifies a previous opened operational or paused RC channel's
+ *	Modifies a previous opened operational or paused RC channel's
  *	attributes.
  *
  * NOTE:
@@ -283,7 +283,7 @@ ibt_status_t ibt_query_ud_channel(ibt_channel_hdl_t ud_chan,
 
 /*
  * ibt_modify_ud_channel()
- * 	Modifies an UD channel's attributes, as specified by a
+ *	Modifies an UD channel's attributes, as specified by a
  *	ibt_cep_modify_flags_t parameter to those specified in the
  *	ibt_ud_chan_modify_attr_t structure.
  *
@@ -393,7 +393,7 @@ ibt_status_t ibt_update_channel_qkey(ibt_channel_hdl_t ud_chan,
 /*
  * ibt_set_chan_private()
  * ibt_get_chan_private()
- * 	Set/get a pointer to client private data.
+ *	Set/get a pointer to client private data.
  *	Applicable for both RC and UD channels.
  */
 void ibt_set_chan_private(ibt_channel_hdl_t chan, void *clnt_private);

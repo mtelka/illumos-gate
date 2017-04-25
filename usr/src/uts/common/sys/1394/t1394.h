@@ -27,8 +27,6 @@
 #ifndef	_SYS_1394_T1394_H
 #define	_SYS_1394_T1394_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * t1394.h
  *    Contains all of the prototypes, defines, and structures necessary
@@ -98,7 +96,7 @@ typedef struct t1394_localinfo_s {
  *    iblock cookie and the attributes necessary for DMA allocations, etc.
  */
 typedef struct t1394_attachinfo_s {
-	ddi_iblock_cookie_t 	iblock_cookie;
+	ddi_iblock_cookie_t	iblock_cookie;
 	ddi_device_acc_attr_t	acc_attr;
 	ddi_dma_attr_t		dma_attr;
 	t1394_localinfo_t	localinfo;

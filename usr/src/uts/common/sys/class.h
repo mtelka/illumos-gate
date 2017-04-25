@@ -27,7 +27,7 @@
  */
 
 /*	Copyright (c) 1988 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 #ifndef _SYS_CLASS_H
 #define	_SYS_CLASS_H
@@ -84,8 +84,8 @@ typedef struct thread_ops {
 	void	(*cl_active)(kthread_t *);
 	void	(*cl_inactive)(kthread_t *);
 	pri_t	(*cl_swapin)(kthread_t *, int);
-	pri_t 	(*cl_swapout)(kthread_t *, int);
-	void 	(*cl_trapret)(kthread_t *);
+	pri_t	(*cl_swapout)(kthread_t *, int);
+	void	(*cl_trapret)(kthread_t *);
 	void	(*cl_preempt)(kthread_t *);
 	void	(*cl_setrun)(kthread_t *);
 	void	(*cl_sleep)(kthread_t *);

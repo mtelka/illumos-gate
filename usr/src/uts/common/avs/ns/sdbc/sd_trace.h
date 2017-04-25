@@ -212,7 +212,7 @@ typedef struct _sdbc_trace_s {
 #ifdef _SD_FNAME
 /*
  * function category names
- * 	change these when changing functions above
+ *	change these when changing functions above
  *	compress name to fit in 8 printable characters
  */
 char *_bcache_fname[16] =

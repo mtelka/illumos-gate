@@ -40,7 +40,7 @@ extern "C" {
 #define	_SD_FAULT_RES		/* Enable Fault tolerance		*/
 
 #define	_SD_USE_THREADS		/* Use own threadset			*/
-#define	_SD_LRU_OPTIMIZE	/* Enable LRU queue optimizations  	*/
+#define	_SD_LRU_OPTIMIZE	/* Enable LRU queue optimizations	*/
 #define	_SD_HASH_OPTIMIZE	/* Enable Hash optimizations		*/
 
 #if !defined(_SD_NO_GENERIC)
@@ -72,7 +72,7 @@ extern "C" {
 
 /*
  * Other compiler defines currently not enabled.
- * 	#define	_SD_FBA_DATA_LOG  Enable data logging per 512 bytes.
+ *	#define	_SD_FBA_DATA_LOG  Enable data logging per 512 bytes.
  * Other compiler defines enabled in the Makefile.
  *	#define	_SD_8K_BLKSIZE	  Allow 8K cache block size
  */
@@ -112,7 +112,7 @@ extern	int	_sd_cblock_shift;
 			| NSC_METADATA)
 
 
-#define	_SD_FLAG_MASK   	(NSC_FLAGS)
+#define	_SD_FLAG_MASK		(NSC_FLAGS)
 #define	_SD_HINT_MASK		(NSC_HINTS)
 #define	_SD_WRTHRU_MASK		(NSC_WRTHRU | NSC_FORCED_WRTHRU)
 #define	_SD_NOCACHE_MASK	(NSC_NOCACHE)

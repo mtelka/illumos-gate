@@ -790,7 +790,7 @@ typedef struct rdc_net_dataset rdc_net_dataset_t;
  * They have been calculated to be 8MB of data with an average of
  * 2K IO size
  */
-#define	RDC_MAXTHRES_QUEUE 	16384	/* max # of fbas on async q */
+#define	RDC_MAXTHRES_QUEUE	16384	/* max # of fbas on async q */
 #define	RDC_MAX_QITEMS		4096	/* max # of items on async q */
 #define	RDC_ASYNCTHR		2	/* number of async threads */
 
@@ -861,7 +861,7 @@ typedef struct {
 } rdc_info_stats_t;
 #endif /* _KERNEL */
 
-#ifndef _SunOS_5_6 	/* i.e. 2.7+ */
+#ifndef _SunOS_5_6	/* i.e. 2.7+ */
 typedef int xdr_t;
 #else	/* i.e. 2.6- */
 typedef unsigned long rpcprog_t;

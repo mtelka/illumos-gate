@@ -174,7 +174,7 @@ ndi_devi_bind_driver_async(dev_info_t *dip, uint_t flags);
  */
 int
 ndi_devctl_device_getstate(dev_info_t *parent, struct devctl_iocdata *dcp,
-	uint_t *state);
+    uint_t *state);
 
 /*
  * Transition the child addressed by "name@addr" to the online state.
@@ -182,7 +182,7 @@ ndi_devctl_device_getstate(dev_info_t *parent, struct devctl_iocdata *dcp,
  */
 int
 ndi_devctl_device_online(dev_info_t *dip, struct devctl_iocdata *dcp,
-	uint_t flags);
+    uint_t flags);
 
 /*
  * Transition the child addressed by "name@addr" to the offline state.
@@ -190,7 +190,7 @@ ndi_devctl_device_online(dev_info_t *dip, struct devctl_iocdata *dcp,
  */
 int
 ndi_devctl_device_offline(dev_info_t *dip, struct devctl_iocdata *dcp,
-	uint_t flags);
+    uint_t flags);
 
 /*
  * Remove the child addressed by name@addr.
@@ -198,7 +198,7 @@ ndi_devctl_device_offline(dev_info_t *dip, struct devctl_iocdata *dcp,
  */
 int
 ndi_devctl_device_remove(dev_info_t *dip, struct devctl_iocdata *dcp,
-	uint_t flags);
+    uint_t flags);
 
 /*
  * Bus get state
@@ -206,7 +206,7 @@ ndi_devctl_device_remove(dev_info_t *dip, struct devctl_iocdata *dcp,
  */
 int
 ndi_devctl_bus_getstate(dev_info_t *dip, struct devctl_iocdata *dcp,
-	uint_t *state);
+    uint_t *state);
 
 /*
  * Place the devinfo in the ONLINE state
@@ -219,7 +219,7 @@ ndi_devi_online(dev_info_t *dip, uint_t flags);
  */
 int
 ndi_devctl_ioctl(dev_info_t *dip, int cmd, intptr_t arg, int mode,
-	uint_t flags);
+    uint_t flags);
 
 /*
  * Asynchronous version of ndi_devi_online, callable from interrupt
@@ -524,7 +524,7 @@ typedef struct ndi_event_set {
  */
 int
 ndi_event_alloc_hdl(dev_info_t *dip, ddi_iblock_cookie_t cookie,
-	ndi_event_hdl_t *ndi_event_hdl, uint_t flag);
+    ndi_event_hdl_t *ndi_event_hdl, uint_t flag);
 
 /*
  * free the ndi event handle
@@ -536,40 +536,36 @@ ndi_event_free_hdl(ndi_event_hdl_t handle);
  * bind or unbind a set of events to/from the event handle
  */
 int
-ndi_event_bind_set(ndi_event_hdl_t	handle,
-	ndi_event_set_t		*ndi_event_set,
-	uint_t			flag);
+ndi_event_bind_set(ndi_event_hdl_t handle,
+    ndi_event_set_t *ndi_event_set,
+    uint_t flag);
 
 int
-ndi_event_unbind_set(ndi_event_hdl_t	handle,
-	ndi_event_set_t		*ndi_event_set,
-	uint_t			flag);
+ndi_event_unbind_set(ndi_event_hdl_t handle,
+    ndi_event_set_t *ndi_event_set,
+    uint_t flag);
 
 /*
  * get an event cookie
  */
 int
-ndi_event_retrieve_cookie(ndi_event_hdl_t	handle,
-	dev_info_t		*child_dip,
-	char			*eventname,
-	ddi_eventcookie_t	*cookiep,
-	uint_t			flag);
+ndi_event_retrieve_cookie(ndi_event_hdl_t handle,
+    dev_info_t *child_dip,
+    char *eventname,
+    ddi_eventcookie_t *cookiep,
+    uint_t flag);
 
 /*
  * add an event callback info to the ndi event handle
  */
 int
 ndi_event_add_callback(ndi_event_hdl_t	handle,
-	dev_info_t		*child_dip,
-	ddi_eventcookie_t	cookie,
-	void			(*event_callback)
-					(dev_info_t *,
-					ddi_eventcookie_t,
-					void *arg,
-					void *impldata),
-	void			*arg,
-	uint_t			flag,
-	ddi_callback_id_t *cb_id);
+    dev_info_t *child_dip,
+    ddi_eventcookie_t cookie,
+    void (*event_callback)(dev_info_t *, ddi_eventcookie_t, void *, void *),
+    void *arg,
+    uint_t flag,
+    ddi_callback_id_t *cb_id);
 
 /*
  * remove an event callback registration from the ndi event handle
@@ -603,7 +599,7 @@ ndi_event_tag_to_cookie(ndi_event_hdl_t handle, int event_tag);
  */
 int
 ndi_event_cookie_to_tag(ndi_event_hdl_t handle,
-	ddi_eventcookie_t cookie);
+    ddi_eventcookie_t cookie);
 
 /*
  * ndi_event_cookie_to_name: utility function to find an event
@@ -611,7 +607,7 @@ ndi_event_cookie_to_tag(ndi_event_hdl_t handle,
  */
 char *
 ndi_event_cookie_to_name(ndi_event_hdl_t handle,
-	ddi_eventcookie_t cookie);
+    ddi_eventcookie_t cookie);
 
 /*
  * ndi_event_tag_to_name: utility function to find an event
@@ -681,7 +677,7 @@ typedef struct ndi_ra_request {
 	uint64_t	ra_boundlen;	/* Length of the area, starting	*/
 					/* from ra_boundbase, for the	*/
 					/* allocated resource to be	*/
-					/* restricted to.   		*/
+					/* restricted to.		*/
 
 	uint64_t	ra_align_mask;	/* Alignment mask used for	*/
 					/* allocated base address	*/
@@ -743,11 +739,11 @@ ndi_ra_map_destroy(dev_info_t *dip, char *type);
 
 int
 ndi_ra_alloc(dev_info_t *dip, ndi_ra_request_t *req, uint64_t *basep,
-	uint64_t *lenp, char *type, uint_t flag);
+    uint64_t *lenp, char *type, uint_t flag);
 
 int
 ndi_ra_free(dev_info_t *dip, uint64_t base, uint64_t len, char *type,
-	uint_t flag);
+    uint_t flag);
 
 /*
  * ndi_dev_is_prom_node: Return non-zero if the node is a prom node

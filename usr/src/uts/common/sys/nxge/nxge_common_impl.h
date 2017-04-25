@@ -149,7 +149,7 @@ typedef kmutex_t			nxge_os_mutex_t;
 typedef	krwlock_t			nxge_os_rwlock_t;
 
 typedef	dev_info_t			nxge_dev_info_t;
-typedef	ddi_iblock_cookie_t 		nxge_intr_cookie_t;
+typedef	ddi_iblock_cookie_t		nxge_intr_cookie_t;
 
 typedef ddi_acc_handle_t		nxge_os_acc_handle_t;
 typedef	nxge_os_acc_handle_t		npi_reg_handle_t;

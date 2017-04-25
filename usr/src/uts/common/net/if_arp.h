@@ -32,11 +32,11 @@ extern "C" {
  */
 struct	arphdr {
 	ushort_t ar_hrd;	/* format of hardware address */
-#define	ARPHRD_ETHER 	1	/* ethernet hardware address */
+#define	ARPHRD_ETHER	1	/* ethernet hardware address */
 #define	ARPHRD_EETHER	2	/* experimental ethernet */
 #define	ARPHRD_AX25	3	/* amateur readio ax.25 */
 #define	ARPHRD_CHAOS	5	/* Chaos net */
-#define	ARPHRD_IEEE802 	6	/* IEEE 802 hardware address */
+#define	ARPHRD_IEEE802	6	/* IEEE 802 hardware address */
 #define	ARPHRD_ARCNET	7	/* ARCNET */
 #define	ARPHRD_FRAME	15	/* Frame relay */
 #define	ARPHRD_ATM	16	/* ATM */

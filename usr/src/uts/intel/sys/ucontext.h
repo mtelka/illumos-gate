@@ -27,7 +27,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 #ifndef _SYS_UCONTEXT_H
 #define	_SYS_UCONTEXT_H
@@ -81,9 +81,9 @@ struct	__ucontext {
 #endif
 	unsigned long	uc_flags;
 	ucontext_t	*uc_link;
-	sigset_t   	uc_sigmask;
-	stack_t 	uc_stack;
-	mcontext_t 	uc_mcontext;
+	sigset_t	uc_sigmask;
+	stack_t		uc_stack;
+	mcontext_t	uc_mcontext;
 	long		uc_filler[5];	/* see ABI spec for Intel386 */
 };
 

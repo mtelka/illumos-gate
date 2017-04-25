@@ -27,8 +27,6 @@
 #ifndef	_SLP_AMI_H
 #define	_SLP_AMI_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -767,18 +765,18 @@ AMI_STATUS ami_sign PROTO_LIST((
 	const uchar_t *,		/* IN:  signature key */
 	const size_t,			/* IN:  signature key length */
 	const ami_algid *,		/* IN:  signature algorithm */
-	uchar_t **, 			/* OUT: signature */
+	uchar_t **,			/* OUT: signature */
 	size_t *));			/* OUT: signature length */
 AMI_STATUS ami_verify PROTO_LIST((
 	ami_handle_t *,			/* IN: ami handle */
-	const uchar_t *, 		/* IN: data to be verified */
+	const uchar_t *,		/* IN: data to be verified */
 	const size_t,			/* IN: data length */
 	const int,			/* IN: more input data flag */
 	const ami_algid *,		/* IN: verification key algorithm */
 	const uchar_t *,		/* IN: verification key */
 	const size_t,			/* IN: verification key length */
 	const ami_algid *,		/* IN: verification algorithm */
-	const uchar_t *, 		/* IN: signature */
+	const uchar_t *,		/* IN: signature */
 	const size_t));			/* IN: signature length */
 AMI_STATUS ami_encrypt PROTO_LIST((
 	ami_handle_t *,			/* IN:	ami handle */
@@ -826,19 +824,19 @@ AMI_STATUS ami_unwrap_key PROTO_LIST((
 /* certificate verification */
 AMI_STATUS ami_verify_cert PROTO_LIST((
 	const ami_handle_t *,		/* IN: ami handle */
-	const ami_cert *, 		/* IN: certificate to be verified */
+	const ami_cert *,		/* IN: certificate to be verified */
 	const ami_pubkey_info *,	/* IN: public verification key */
 	const int));			/* IN: flags (unused) */
 AMI_STATUS ami_verify_cert_chain PROTO_LIST((
 	const ami_handle_t *,		/* IN: ami handle */
-	const ami_cert *, 	/* IN: certificate chain to be verified */
+	const ami_cert *,	/* IN: certificate chain to be verified */
 	const int,			/* IN: length of cert chain */
 	const struct ami_tkey_list *,	/* IN: trusted key list */
 	const int,			/* IN: flags (unused) */
 	ami_cert **));		/* OUT: first expired certificate */
 AMI_STATUS ami_verify_cert_est_chain PROTO_LIST((
 	const ami_handle_t *,		/* IN: ami handle */
-	const ami_cert *, 		/* IN: certificate to be verified */
+	const ami_cert *,		/* IN: certificate to be verified */
 	const struct ami_tkey_list *,	/* IN: trusted key list */
 	const char **,			/* IN: CA Name list */
 	const int,			/* IN: flags (unused) */

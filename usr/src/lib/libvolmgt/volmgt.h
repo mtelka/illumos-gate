@@ -26,8 +26,6 @@
 #ifndef	_VOLMGT_H
 #define	_VOLMGT_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -95,7 +93,7 @@ int volmgt_running(void);
  *
  *	The string must be free(3)'d.
  */
-char 	*volmgt_symname(char *path);
+char	*volmgt_symname(char *path);
 
 /*
  * volmgt_symdev:
@@ -115,7 +113,7 @@ char 	*volmgt_symname(char *path);
  *
  *	The string must be free(3)'d.
  */
-char 	*volmgt_symdev(char *symname);
+char	*volmgt_symdev(char *symname);
 
 /*
  * volmgt_ownspath:
@@ -145,7 +143,7 @@ int	volmgt_ownspath(char *path);
  *	volume management root (e.g. "/vol").
  *	Will return NULL if volume management isn't running.
  */
-const char 	*volmgt_root(void);
+const char	*volmgt_root(void);
 
 /*
  * media_findname:
@@ -174,12 +172,12 @@ const char 	*volmgt_root(void);
  *
  *	The string must be free(3)'d.
  */
-char 	*media_findname(char *start);
+char	*media_findname(char *start);
 
 /*
  * media_getattr:
  *	returns the value for an attribute for a piece of
- * 	removable media.
+ *	removable media.
  *
  * arguments:
  *	path - Path to the media in /vol.  Can be the block or character
@@ -189,7 +187,7 @@ char 	*media_findname(char *start);
  *
  * return value(s):
  *	returns NULL or a pointer to a string that contains the value for
- * 	the requested attribute.
+ *	the requested attribute.
  *
  *	NULL can mean:
  *	 - the media doesn't exist

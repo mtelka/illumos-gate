@@ -108,7 +108,7 @@ extern sock_downcalls_t sock_tcp_downcalls;
 /* TCP timers related data structures.  Refer to tcp_timers.c. */
 typedef struct tcp_timer_s {
 	conn_t	*connp;
-	void 	(*tcpt_proc)(void *);
+	void	(*tcpt_proc)(void *);
 	callout_id_t   tcpt_tid;
 } tcp_timer_t;
 

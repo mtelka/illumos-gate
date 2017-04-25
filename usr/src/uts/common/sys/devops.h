@@ -71,8 +71,8 @@ extern "C" {
  *	b/c		XXopen		DDI/DKI
  *	b/c		XXclose		DDI/DKI
  *	b		XXstrategy	DDI/DKI
- *	b  		XXprint		DDI/DKI
- *	b  		XXdump		DDI(Sun)
+ *	b		XXprint		DDI/DKI
+ *	b		XXdump		DDI(Sun)
  *	  c		XXread		DDI/DKI
  *	  c		XXwrite		DDI/DKI
  *	  c		XXioctl		DDI/DKI

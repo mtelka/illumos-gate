@@ -149,7 +149,7 @@ struct t_unitdata {
  */
 struct t_uderr {
 	struct netbuf	addr;		/* address		*/
-	struct netbuf	opt;		/* options 		*/
+	struct netbuf	opt;		/* options		*/
 	t_scalar_t	error;		/* error code		*/
 };
 
@@ -181,7 +181,7 @@ struct t_uderr {
 #define	T_UNINIT	0		/* uninitialized		*/
 #define	T_UNBND		1		/* unbound			*/
 #define	T_IDLE		2		/* idle				*/
-#define	T_OUTCON	3		/* outgoing connection pending 	*/
+#define	T_OUTCON	3		/* outgoing connection pending	*/
 #define	T_INCON		4		/* incoming connection pending	*/
 #define	T_DATAXFER	5		/* data transfer		*/
 #define	T_OUTREL	6		/* outgoing release pending	*/

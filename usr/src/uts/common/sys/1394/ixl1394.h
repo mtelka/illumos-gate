@@ -27,8 +27,6 @@
 #ifndef	_SYS_1394_IXL1394_H
 #define	_SYS_1394_IXL1394_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * ixl1394.h
  *    Contains all defines and structures necessary for Isochronous Transfer
@@ -351,7 +349,7 @@ typedef struct ixl1394_set_skipmode {
 	ixl1394_priv_t		compiler_privatep;
 	uint16_t		compiler_resv;
 	uint16_t		ixl_opcode;
-	ixl1394_command_t 	*label;
+	ixl1394_command_t	*label;
 	ixl1394_skip_t		skipmode;
 } ixl1394_set_skipmode_t;
 

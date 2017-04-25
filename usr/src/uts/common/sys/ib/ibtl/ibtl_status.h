@@ -194,9 +194,9 @@ typedef enum ibt_status_e {
 	IBT_CHAN_ATOMICS_NOT_SUPPORTED	= 405,	/* Atomics not supported */
 	IBT_ERR_OPAQUE2			= 406,
 	IBT_ERR_OPAQUE3			= 407,
-	IBT_CHAN_OP_TYPE_INVALID 	= 408,	/* Invalid Operation Type */
+	IBT_CHAN_OP_TYPE_INVALID	= 408,	/* Invalid Operation Type */
 	IBT_CHAN_SGL_FORMAT_INVALID	= 409,	/* Invalid SG List format */
-	IBT_CHAN_SGL_LEN_INVALID 	= 410,	/* Invalid SG List length */
+	IBT_CHAN_SGL_LEN_INVALID	= 410,	/* Invalid SG List length */
 	IBT_CHAN_APM_STATE_INVALID	= 411,	/* Invalid Path Migration */
 						/* State */
 	IBT_CHAN_SPECIAL_TYPE_INVALID	= 412,	/* Invalid Special channel */
@@ -236,7 +236,7 @@ typedef enum ibt_status_e {
 	IBT_ERR_OPAQUE6			= 602,
 	IBT_ERR_OPAQUE7			= 700,
 	IBT_ERR_OPAQUE8			= 701,
-	IBT_ERR_OPAQUE9 		= 702,
+	IBT_ERR_OPAQUE9			= 702,
 	IBT_ERR_OPAQUE10		= 703,
 
 	/*
@@ -244,17 +244,17 @@ typedef enum ibt_status_e {
 	 */
 	IBT_MR_VA_INVALID		= 800,	/* Invalid Virtual Address */
 	IBT_MR_LEN_INVALID		= 801,	/* Invalid Memory Length */
-	IBT_MR_PHYSBUF_INVALID 		= 802,	/* Invalid Physical Buffer */
+	IBT_MR_PHYSBUF_INVALID		= 802,	/* Invalid Physical Buffer */
 						/* List */
 	IBT_MR_OFFSET_INVALID		= 803,	/* Invalid Memory Offset */
 	IBT_MR_LKEY_INVALID		= 804,	/* Invalid Memory L_KEY */
 	IBT_MR_RKEY_INVALID		= 805,	/* Invalid Memory R_KEY */
-	IBT_MR_HDL_INVALID 		= 806,	/* Invalid Memory Region */
+	IBT_MR_HDL_INVALID		= 806,	/* Invalid Memory Region */
 						/* Handle */
-	IBT_MR_ACCESS_REQ_INVALID 	= 807,	/* Invalid Access Control */
+	IBT_MR_ACCESS_REQ_INVALID	= 807,	/* Invalid Access Control */
 						/* Specifier */
 	IBT_MR_IN_USE			= 808,	/* Mem region in Use */
-	IBT_MW_HDL_INVALID 		= 809,	/* Invalid Memory Window */
+	IBT_MW_HDL_INVALID		= 809,	/* Invalid Memory Window */
 						/* Handle */
 	IBT_MW_TYPE_INVALID		= 810,
 	IBT_MA_HDL_INVALID		= 811,  /* Invalid Memory Area Hdl */

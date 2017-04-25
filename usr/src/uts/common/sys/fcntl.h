@@ -24,7 +24,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * University Copyright- Copyright (c) 1982, 1986, 1988
@@ -181,7 +181,7 @@ extern "C" {
 #endif	/* _STRICT_SYMBOLS */
 #endif /* _LP64 || _FILE_OFFSET_BITS == 32 */
 
-#if 	defined(_LARGEFILE64_SOURCE)
+#if	defined(_LARGEFILE64_SOURCE)
 
 #if !defined(_LP64) || defined(_KERNEL)
 /*
@@ -260,7 +260,7 @@ typedef struct flock32 {
 
 /* transitional large file interface version */
 
-#if 	defined(_LARGEFILE64_SOURCE)
+#if	defined(_LARGEFILE64_SOURCE)
 
 typedef struct flock64 {
 	short	l_type;

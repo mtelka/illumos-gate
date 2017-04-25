@@ -79,7 +79,7 @@ typedef struct mac_misc_stats_s {
 	uint64_t	mms_brdcstrcvbytes;
 	uint64_t	mms_multixmtbytes;
 	uint64_t	mms_brdcstxmtbytes;
-	uint64_t	mms_txerrors; 	/* vid_check, tag needed errors */
+	uint64_t	mms_txerrors;	/* vid_check, tag needed errors */
 
 	/*
 	 * When a ring is taken away from a mac client, before destroying
@@ -98,13 +98,13 @@ typedef struct mac_misc_stats_s {
 } mac_misc_stats_t;
 
 extern void	mac_misc_stat_create(flow_entry_t *);
-extern void 	mac_misc_stat_delete(flow_entry_t *);
+extern void	mac_misc_stat_delete(flow_entry_t *);
 
 extern void	mac_ring_stat_create(mac_ring_t *);
 extern void	mac_ring_stat_delete(mac_ring_t *);
 
 extern void	mac_srs_stat_create(struct mac_soft_ring_set_s *);
-extern void 	mac_srs_stat_delete(struct mac_soft_ring_set_s *);
+extern void	mac_srs_stat_delete(struct mac_soft_ring_set_s *);
 extern void	mac_tx_srs_stat_recreate(struct mac_soft_ring_set_s *,
 		    boolean_t);
 

@@ -124,7 +124,7 @@ struct openprom_opr64 {
  */
 #define	OP64R_READY			0	/* ready or not applicable */
 #define	OP64R_UPGRADE_REQUIRED		1	/* Upgrade required */
-#define	OP64R_UPGRADE_RECOMMENDED 	2	/* Upgrade recommended */
+#define	OP64R_UPGRADE_RECOMMENDED	2	/* Upgrade recommended */
 
 #endif
 

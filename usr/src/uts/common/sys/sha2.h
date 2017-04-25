@@ -66,7 +66,7 @@ extern "C" {
  * Callers must never attempt to read or write any of the fields
  * in this structure directly.
  */
-typedef struct 	{
+typedef struct	{
 	uint32_t algotype;		/* Algorithm Type */
 
 	/* state (ABCDEFGH) */

@@ -171,7 +171,7 @@ typedef struct hook_family_int {
 	cvwaitlock_t			hfi_lock;
 	SLIST_ENTRY(hook_family_int)	hfi_entry;
 	hook_event_int_head_t		hfi_head;
-	hook_family_t 			hfi_family;
+	hook_family_t			hfi_family;
 	kstat_t				*hfi_kstat;
 	struct hook_stack		*hfi_stack;
 	hook_notify_head_t		hfi_nhead;

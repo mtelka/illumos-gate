@@ -26,8 +26,6 @@
 #ifndef _CIS_H
 #define	_CIS_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * This is the Card Services Card Information Structure (CIS) interpreter
  *	header file.  CIS information in this file is based on the
@@ -90,7 +88,7 @@ extern "C" {
 #define	CISTPL_DEVICE_OA	0x01d	/* other op conditions AM device info */
 #define	CISTPL_DEVICEGEO	0x01e	/* Common Memory device geometry */
 #define	CISTPL_DEVICEGEO_A	0x01f	/* Attribute Memory device geometry */
-#define	CISTPL_MANFID		0x020 	/* manufacturer identification */
+#define	CISTPL_MANFID		0x020	/* manufacturer identification */
 #define	CISTPL_FUNCID		0x021	/* function identification */
 #define	CISTPL_FUNCE		0x022	/* function extension */
 

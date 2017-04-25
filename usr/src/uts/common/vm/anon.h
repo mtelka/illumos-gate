@@ -61,22 +61,22 @@ typedef	unsigned long anoff_t;		/* anon offsets */
  *
  *	(an_vp, an_off) names the vnode of the anonymous page for this slot.
  *
- * 	(an_pvp, an_poff) names the location of the physical backing store
- * 	for the page this slot represents. If the name is null there is no
- * 	associated physical store. The physical backing store location can
+ *	(an_pvp, an_poff) names the location of the physical backing store
+ *	for the page this slot represents. If the name is null there is no
+ *	associated physical store. The physical backing store location can
  *	change while the slot is in use.
  *
  *	an_hash is a hash list of anon slots. The list is hashed by
- * 	(an_vp, an_off) of the associated anonymous page and provides a
+ *	(an_vp, an_off) of the associated anonymous page and provides a
  *	method of going from the name of an anonymous page to its
- * 	associated anon slot.
+ *	associated anon slot.
  *
  *	an_refcnt holds a reference count which is the number of separate
- * 	copies that will need to be created in case of copy-on-write.
+ *	copies that will need to be created in case of copy-on-write.
  *	A refcnt > 0 protects the existence of the slot. The refcnt is
- * 	initialized to 1 when the anon slot is created in anon_alloc().
+ *	initialized to 1 when the anon slot is created in anon_alloc().
  *	If a client obtains an anon slot and allows multiple threads to
- * 	share it, then it is the client's responsibility to insure that
+ *	share it, then it is the client's responsibility to insure that
  *	it does not allow one thread to try to reference the slot at the
  *	same time as another is trying to decrement the last count and
  *	destroy the anon slot. E.g., the seg_vn segment type protects
@@ -302,7 +302,7 @@ struct kshmid;
 typedef struct anon_map {
 	krwlock_t a_rwlock;	/* protect anon_map and anon array */
 	size_t	size;		/* size in bytes mapped by the anon array */
-	struct	anon_hdr *ahp; 	/* anon array header pointer, containing */
+	struct	anon_hdr *ahp;	/* anon array header pointer, containing */
 				/* anon pointer array(s) */
 	size_t	swresv;		/* swap space reserved for this anon_map */
 	ulong_t	refcnt;		/* reference count on this structure */
@@ -436,7 +436,7 @@ extern struct	anon *anon_get_ptr(struct anon_hdr *, ulong_t);
 extern ulong_t	*anon_get_slot(struct anon_hdr *, ulong_t);
 extern struct	anon *anon_get_next_ptr(struct anon_hdr *, ulong_t *);
 extern int	anon_set_ptr(struct anon_hdr *, ulong_t, struct anon *, int);
-extern int 	anon_copy_ptr(struct anon_hdr *, ulong_t,
+extern int	anon_copy_ptr(struct anon_hdr *, ulong_t,
 		    struct anon_hdr *, ulong_t, pgcnt_t, int);
 extern pgcnt_t	anon_grow(struct anon_hdr *, ulong_t *, pgcnt_t, pgcnt_t, int);
 extern void	anon_array_enter(struct anon_map *, ulong_t,

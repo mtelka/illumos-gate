@@ -30,8 +30,6 @@
 #ifndef	_SYS_FS_SNODE_H
 #define	_SYS_FS_SNODE_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 #include <sys/t_lock.h>
 #include <sys/cred.h>
@@ -159,7 +157,7 @@ struct vnode *specfind(dev_t, vtype_t);
 struct vnode *commonvp(dev_t, vtype_t);
 struct vnode *makectty(vnode_t *);
 void	sdelete(struct snode *);
-void 	smark(struct snode *, int);
+void	smark(struct snode *, int);
 int	specinit(int, char *);
 int	device_close(struct vnode *, int, struct cred *);
 int	spec_putpage(struct vnode *, offset_t, size_t, int, struct cred *,

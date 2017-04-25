@@ -137,7 +137,7 @@
 #define	DFSTYPES	"/etc/dfs/fstypes"
 #define	MAXTNZLEN	2048
 
-#define	ALT_MOUNT(mount_cmd) 	((mount_cmd) != Z_MNT_BOOT)
+#define	ALT_MOUNT(mount_cmd)	((mount_cmd) != Z_MNT_BOOT)
 
 /* a reasonable estimate for the number of lwps per process */
 #define	LWPS_PER_PROCESS	10
@@ -1098,7 +1098,7 @@ mount_one_dev(zlog_t *zlogp, char *devpath, zone_mnt_t mount_cmd)
 	int			err;
 	int			retval = -1;
 	zone_iptype_t		iptype;
-	const char 		*curr_iptype;
+	const char		*curr_iptype;
 
 	if (di_prof_init(devpath, &prof)) {
 		zerror(zlogp, B_TRUE, "failed to initialize profile");
@@ -1341,13 +1341,13 @@ free_fs_data(struct zone_fstab *fsarray, uint_t nelem)
  * scratch zone. The Environment creation process is split up into two
  * functions(build_mounted_pre_var() and build_mounted_post_var()). It
  * is done this way because:
- * 	We need to have both /etc and /var in the root of the scratchzone.
- * 	We loopback mount zone's own /etc and /var into the root of the
- * 	scratch zone. Unlike /etc, /var can be a seperate filesystem. So we
- * 	need to delay the mount of /var till the zone's root gets populated.
+ *	We need to have both /etc and /var in the root of the scratchzone.
+ *	We loopback mount zone's own /etc and /var into the root of the
+ *	scratch zone. Unlike /etc, /var can be a seperate filesystem. So we
+ *	need to delay the mount of /var till the zone's root gets populated.
  *	So mounting of localdirs[](/etc and /var) have been moved to the
- * 	build_mounted_post_var() which gets called only after the zone
- * 	specific filesystems are mounted.
+ *	build_mounted_post_var() which gets called only after the zone
+ *	specific filesystems are mounted.
  *
  * Note that the scratch zone we set up for updating the zone (Z_MNT_UPDATE)
  * does not loopback mount the zone's own /etc and /var into the root of the

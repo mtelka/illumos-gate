@@ -103,7 +103,7 @@ extern void nsc_decode_param(nsc_def_t *, nsc_def_t *, long *);
 
 #define	NSC_MKID(x)	(NSC_ID | ((x) << 20))
 
-#define	NSC_RAW_ID  	NSC_MKID(39)	/* Raw device */
+#define	NSC_RAW_ID	NSC_MKID(39)	/* Raw device */
 #define	NSC_FILE_ID	NSC_MKID(40)	/* File vnode device */
 #define	NSC_FREEZE_ID	NSC_MKID(41)	/* Frozen raw device */
 #define	NSC_VCHR_ID	NSC_MKID(42)	/* VCHR vnode device */
@@ -122,7 +122,7 @@ typedef enum nsc_power_ops_e {
 
 	Power_OK,	/* Power OK or restored before death */
 
-	Power_Down 	/* that's all folks machine will */
+	Power_Down	/* that's all folks machine will */
 			/* be shutdown, save any state */
 } nsc_power_ops_t;
 
@@ -176,7 +176,7 @@ extern void *nsc_get_devops(major_t);
 /* Return values */
 
 #define	NSC_DONE	(0)
-#define	NSC_PENDING  	(-1)
+#define	NSC_PENDING	(-1)
 #define	NSC_HIT		(-2)
 
 
@@ -325,7 +325,7 @@ extern int nsc_uwrite(nsc_fd_t *, void *, void *);
  */
 
 #define	NSC_WRTHRU		0x00010000
-#define	NSC_FORCED_WRTHRU  	0x00020000
+#define	NSC_FORCED_WRTHRU	0x00020000
 #define	NSC_NOCACHE		0x00040000
 #define	NSC_QUEUE		0x00080000
 #define	NSC_RDAHEAD		0x00100000

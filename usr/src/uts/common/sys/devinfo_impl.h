@@ -183,7 +183,7 @@ struct di_link {
 	di_off_t	tgt_link_next;	/* next tgt di_link /w same di_lnode */
 	di_off_t	src_node_next;	/* next src di_link /w same di_node */
 	di_off_t	tgt_node_next;	/* next tgt di_link /w same di_node */
-	uint64_t 	user_private_data;
+	uint64_t	user_private_data;
 };
 
 struct di_lnode {
@@ -214,7 +214,7 @@ struct di_lnode {
 	 */
 	di_off_t	node_next;
 
-	uint64_t 	user_private_data;
+	uint64_t	user_private_data;
 };
 
 struct di_node {	/* useful info to export for each tree node */
@@ -300,7 +300,7 @@ struct di_minor {
 	int		spec_type;	/* block or char */
 	unsigned int	mdclass;	/* no longer used, may be removed */
 	di_off_t	node;		/* address of di_node */
-	uint64_t 	user_private_data;
+	uint64_t	user_private_data;
 };
 
 typedef enum {
@@ -325,7 +325,7 @@ struct di_path {
 	di_path_state_t path_state;	/* path state */
 	uint_t		path_snap_state; /* describes valid fields */
 	int		path_instance;	/* path instance */
-	uint64_t 	user_private_data;
+	uint64_t	user_private_data;
 	uint_t		path_flags;	/* path flags */
 };
 

@@ -56,7 +56,7 @@ extern "C" {
 #define	FMT_AV_SPARC	\
 	"\20" \
 	"\21cspare"	\
-	"\20ima\17fjfmau\16trans\15random\14hpc\13vis3\12-\11fmaf" 	\
+	"\20ima\17fjfmau\16trans\15random\14hpc\13vis3\12-\11fmaf"	\
 	"\10ASIBlkInit\7vis2\6vis\5popc\4v8plus\3fsmuld\2div32\1mul32"
 
 /*

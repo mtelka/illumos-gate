@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 /*
@@ -29,8 +29,6 @@
 
 #ifndef _SYS_STROPTS_H
 #define	_SYS_STROPTS_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"	/* SVr4.0 11.20	*/
 
 #include <sys/feature_tests.h>
 #include <sys/types.h>
@@ -282,13 +280,13 @@ extern "C" {
 #define	_I_REMOVE	(STR|060)	/* Private: remove a module */
 #define	_I_GETPEERCRED	(STR|061)	/* Private: get peer cred */
 #define	_I_PLINK_LH	(STR|062)	/* Private: Layered Driver ioctl */
-#define	_I_CMD		(STR|063) 	/* Private: send ioctl via M_CMD */
+#define	_I_CMD		(STR|063)	/* Private: send ioctl via M_CMD */
 
 /*
  * User level ioctl format for ioctls that go downstream (I_STR)
  */
 struct strioctl {
-	int 	ic_cmd;			/* command */
+	int	ic_cmd;			/* command */
 	int	ic_timout;		/* timeout value */
 	int	ic_len;			/* length of data */
 	char	*ic_dp;			/* pointer to data */
@@ -297,7 +295,7 @@ struct strioctl {
 #if defined(_SYSCALL32)
 
 struct strioctl32 {
-	int32_t 	ic_cmd;			/* command */
+	int32_t		ic_cmd;			/* command */
 	int32_t		ic_timout;		/* timeout value */
 	int32_t		ic_len;			/* length of data */
 	caddr32_t	ic_dp;			/* pointer to data */
@@ -321,7 +319,7 @@ struct strioctl32 {
  */
 #define	STRCMDBUFSIZE			2048
 typedef struct strcmd {
-	int 	sc_cmd;			/* ioctl command */
+	int	sc_cmd;			/* ioctl command */
 	int	sc_timeout;		/* timeout value (in seconds) */
 	int	sc_len;			/* length of data */
 	int	sc_pad;
@@ -450,8 +448,8 @@ struct str_list {
 #if defined(_SYSCALL32)
 
 struct str_list32 {
-	int32_t 	sl_nmods;
-	caddr32_t 	sl_modlist;
+	int32_t		sl_nmods;
+	caddr32_t	sl_modlist;
 };
 
 #endif /* _SYSCALL32 */

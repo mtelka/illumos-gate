@@ -512,7 +512,7 @@ typedef DAT_RETURN (*DAT_EP_CREATE_WITH_SRQ_FUNC)(
 	IN	DAT_EVD_HANDLE,		/* recv_evd_handle	*/
 	IN	DAT_EVD_HANDLE,		/* request_evd_handle	*/
 	IN	DAT_EVD_HANDLE,		/* connect_evd_handle	*/
-	IN	DAT_SRQ_HANDLE,		/* srq_handle 		*/
+	IN	DAT_SRQ_HANDLE,		/* srq_handle		*/
 	IN	const DAT_EP_ATTR *,	/* ep_attributes	*/
 	OUT	DAT_EP_HANDLE *);	/* ep_handle		*/
 
@@ -612,12 +612,12 @@ typedef DAT_RETURN (*DAT_LMR_QUERY_FUNC)(
 
 typedef DAT_RETURN (*DAT_LMR_SYNC_RDMA_READ_FUNC)(
 	IN	DAT_IA_HANDLE,		/* ia_handle		*/
-	IN 	const DAT_LMR_TRIPLET *, /* local_segments	*/
+	IN	const DAT_LMR_TRIPLET *, /* local_segments	*/
 	IN	DAT_VLEN);		/* num_segments		*/
 
 typedef DAT_RETURN (*DAT_LMR_SYNC_RDMA_WRITE_FUNC)(
 	IN	DAT_IA_HANDLE,		/* ia_handle		*/
-	IN 	const DAT_LMR_TRIPLET *, /* local_segments	*/
+	IN	const DAT_LMR_TRIPLET *, /* local_segments	*/
 	IN	DAT_VLEN);		/* num_segments		*/
 
 /* RMR Functions */

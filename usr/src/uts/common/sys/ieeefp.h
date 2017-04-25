@@ -27,8 +27,6 @@
 #ifndef _SYS_IEEEFP_H
 #define	_SYS_IEEEFP_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"	/* SunOS4.0 1.6	*/
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -109,7 +107,7 @@ enum fp_class_type {		/* floating-point classes */
 	fp_zero		= 0,
 	fp_subnormal	= 1,
 	fp_normal	= 2,
-	fp_infinity   	= 3,
+	fp_infinity	= 3,
 	fp_quiet	= 4,
 	fp_signaling	= 5
 };

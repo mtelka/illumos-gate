@@ -27,8 +27,6 @@
 #ifndef	_SYS_ECPPREG_H
 #define	_SYS_ECPPREG_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -214,20 +212,20 @@ struct cheerio_dma_reg {
  * DMA Control and Status Register(DCSR) definitions.  See Cheerio spec
  * for more details
  */
-#define	DCSR_INT_PEND 	0x00000001	/* 1= pport or dma interrupts */
-#define	DCSR_ERR_PEND 	0x00000002	/* 1= host bus error detected */
-#define	DCSR_INT_EN 	0x00000010	/* 1= enable sidewinder/ebus intr */
-#define	DCSR_RESET  	0x00000080	/* 1= resets the DCSR */
-#define	DCSR_WRITE  	0x00000100  	/* DMA direction; 1 = memory */
-#define	DCSR_EN_DMA  	0x00000200  	/* 1= enable DMA */
+#define	DCSR_INT_PEND	0x00000001	/* 1= pport or dma interrupts */
+#define	DCSR_ERR_PEND	0x00000002	/* 1= host bus error detected */
+#define	DCSR_INT_EN	0x00000010	/* 1= enable sidewinder/ebus intr */
+#define	DCSR_RESET	0x00000080	/* 1= resets the DCSR */
+#define	DCSR_WRITE	0x00000100	/* DMA direction; 1 = memory */
+#define	DCSR_EN_DMA	0x00000200	/* 1= enable DMA */
 #define	DCSR_CYC_PEND	0x00000400	/* 1 = DMA pending */
-#define	DCSR_EN_CNT 	0x00002000	/* 1= enables byte counter */
-#define	DCSR_TC		0x00004000  	/* 1= Terminal Count occurred */
-#define	DCSR_CSR_DRAIN 	0x00000000 	/* 1= disable draining */
-#define	DCSR_BURST_0    0x00040000 	/* Burst Size bit 0 */
-#define	DCSR_BURST_1    0x00080000 	/* Burst Size bit 1 */
-#define	DCSR_DIAG	0x00000000 	/* 1= diag enable */
-#define	DCSR_TCI_DIS 	0x00800000	/* 1= TC won't cause interrupt */
+#define	DCSR_EN_CNT	0x00002000	/* 1= enables byte counter */
+#define	DCSR_TC		0x00004000	/* 1= Terminal Count occurred */
+#define	DCSR_CSR_DRAIN	0x00000000	/* 1= disable draining */
+#define	DCSR_BURST_0    0x00040000	/* Burst Size bit 0 */
+#define	DCSR_BURST_1    0x00080000	/* Burst Size bit 1 */
+#define	DCSR_DIAG	0x00000000	/* 1= diag enable */
+#define	DCSR_TCI_DIS	0x00800000	/* 1= TC won't cause interrupt */
 
 
 /* Southbridge support */

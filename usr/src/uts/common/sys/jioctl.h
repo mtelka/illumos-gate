@@ -20,13 +20,11 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _SYS_JIOCTL_H
 #define	_SYS_JIOCTL_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"	/* SVr4.0 11.5	*/
 
 #ifdef	__cplusplus
 extern "C" {
@@ -121,8 +119,8 @@ struct jerqmesg
 
 struct bagent {
 	int size;	/* size of src string going in and dest string out */
-	char * src;	/* address of the source byte string */
-	char * dest;	/* address of the destination byte string */
+	char *src;	/* address of the source byte string */
+	char *dest;	/* address of the destination byte string */
 };
 
 #ifdef	__cplusplus

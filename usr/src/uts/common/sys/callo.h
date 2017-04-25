@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 /*
@@ -355,8 +355,8 @@ typedef struct callout_table {
 	callout_list_t	*ct_lfree;	/* free callout list structures */
 	callout_id_t	ct_short_id;	/* most recently issued short-term ID */
 	callout_id_t	ct_long_id;	/* most recently issued long-term ID */
-	callout_hash_t 	*ct_idhash;	/* ID hash chains */
-	callout_hash_t 	*ct_clhash;	/* callout list hash */
+	callout_hash_t	*ct_idhash;	/* ID hash chains */
+	callout_hash_t	*ct_clhash;	/* callout list hash */
 	kstat_named_t	*ct_kstat_data;	/* callout kstat data */
 
 	uint_t		ct_type;	/* callout table type */

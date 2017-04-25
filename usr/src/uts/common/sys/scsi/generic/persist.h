@@ -159,7 +159,7 @@ typedef struct scsi_prin_readrsrv {
  * Information obtained from:
  *	SPC-3, Revision 23
  *	Section 6.11.4 PERSISTENCE RESERVE IN
- * 	Table 108 - parameter data for REPORT CAPABILTIES
+ *	Table 108 - parameter data for REPORT CAPABILTIES
  */
 typedef struct scsi_per_res_type {
 	uint8_t			resbits1 : 1,
@@ -234,7 +234,7 @@ typedef struct scsi_srp_transport_id {
  * Information obtained from:
  *	SPC-3, Revision 23
  *	Section 6.11.5 PERSISTENCE RESERVE IN
- * 	Table 110/111 - parameter data for READ FULL STATUS
+ *	Table 110/111 - parameter data for READ FULL STATUS
  *	Table 281 - TransportId format
  */
 
@@ -356,7 +356,7 @@ typedef struct scsi_prin_readrsrv {
  * Information obtained from:
  *	SPC-3, Revision 23
  *	Section 6.11.4 PERSISTENCE RESERVE IN
- * 	Table 108 - parameter data for REPORT CAPABILTIES
+ *	Table 108 - parameter data for REPORT CAPABILTIES
  */
 typedef struct scsi_per_res_type {
 	uint8_t			wr_ex_ar : 1,
@@ -431,7 +431,7 @@ typedef struct scsi_srp_transport_id {
  * Information obtained from:
  *	SPC-3, Revision 23
  *	Section 6.11.5 PERSISTENCE RESERVE IN
- * 	Table 110/111 - parameter data for READ FULL STATUS
+ *	Table 110/111 - parameter data for READ FULL STATUS
  *	Table 281 - TransportId format
  */
 

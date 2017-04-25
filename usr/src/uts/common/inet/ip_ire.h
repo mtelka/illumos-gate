@@ -55,7 +55,7 @@ extern "C" {
  * To make a byte-order neutral hash for IPv6, just take all the
  * bytes in the bottom 32 bits into account.
  */
-#define	IRE_ADDR_HASH_V6(addr, table_size) 				\
+#define	IRE_ADDR_HASH_V6(addr, table_size)				\
 	IRE_ADDR_HASH((addr).s6_addr32[3], table_size)
 
 /*
@@ -63,16 +63,16 @@ extern "C" {
  * We include some high-order bytes to avoid all IRE_LOCALs in the same
  * bucket for performance reasons.
  */
-#define	IRE_ADDR_MASK_HASH_V6(addr, mask, table_size) 			\
-	((((addr).s6_addr8[0] & (mask).s6_addr8[0]) ^ 			\
-	((addr).s6_addr8[1] & (mask).s6_addr8[1]) ^ 			\
-	((addr).s6_addr8[6] & (mask).s6_addr8[6]) ^ 			\
-	((addr).s6_addr8[7] & (mask).s6_addr8[7]) ^ 			\
-	((addr).s6_addr8[8] & (mask).s6_addr8[8]) ^ 			\
+#define	IRE_ADDR_MASK_HASH_V6(addr, mask, table_size)			\
+	((((addr).s6_addr8[0] & (mask).s6_addr8[0]) ^			\
+	((addr).s6_addr8[1] & (mask).s6_addr8[1]) ^			\
+	((addr).s6_addr8[6] & (mask).s6_addr8[6]) ^			\
+	((addr).s6_addr8[7] & (mask).s6_addr8[7]) ^			\
+	((addr).s6_addr8[8] & (mask).s6_addr8[8]) ^			\
 	((addr).s6_addr8[9] & (mask).s6_addr8[9]) ^			\
-	((addr).s6_addr8[10] & (mask).s6_addr8[10]) ^ 			\
-	((addr).s6_addr8[13] & (mask).s6_addr8[13]) ^ 			\
-	((addr).s6_addr8[14] & (mask).s6_addr8[14]) ^ 			\
+	((addr).s6_addr8[10] & (mask).s6_addr8[10]) ^			\
+	((addr).s6_addr8[13] & (mask).s6_addr8[13]) ^			\
+	((addr).s6_addr8[14] & (mask).s6_addr8[14]) ^			\
 	((addr).s6_addr8[15] & (mask).s6_addr8[15])) & ((table_size) - 1))
 
 #define	IRE_HIDDEN_TYPE(ire_type) ((ire_type) &			\
@@ -91,7 +91,7 @@ extern "C" {
 					/* don't match IRE_LOCALs from other */
 					/* zones or shared IREs */
 #define	MATCH_IRE_SECATTR	0x0040	/* Match gateway security attributes */
-#define	MATCH_IRE_TESTHIDDEN 	0x0080	/* Match ire_testhidden IREs */
+#define	MATCH_IRE_TESTHIDDEN	0x0080	/* Match ire_testhidden IREs */
 #define	MATCH_IRE_SRC_ILL	0x0100	/* ire_ill uses a src address on ill */
 #define	MATCH_IRE_DIRECT	0x0200	/* Don't match indirect routes */
 
@@ -254,7 +254,7 @@ extern	boolean_t ire_no_good(ire_t *);
 extern	nce_t	*ire_handle_condemned_nce(nce_t *, ire_t *, ipha_t *, ip6_t *,
     boolean_t);
 
-extern ire_t   	*ire_round_robin(irb_t *, ire_ftable_args_t *, uint_t,
+extern ire_t	*ire_round_robin(irb_t *, ire_ftable_args_t *, uint_t,
     ire_t *, ip_stack_t *);
 
 extern ire_t	*ire_route_recursive_v4(ipaddr_t, uint_t, const ill_t *,

@@ -106,8 +106,8 @@ extern "C" {
 #define	IBD_DRV_RC_PRIVATE_STATE	0x800000
 #endif
 #define	IBD_DRV_IN_DELETION		0x1000000
-#define	IBD_DRV_IN_LATE_HCA_INIT 	0x2000000
-#define	IBD_DRV_REQ_LIST_INITED 	0x4000000
+#define	IBD_DRV_IN_LATE_HCA_INIT	0x2000000
+#define	IBD_DRV_REQ_LIST_INITED		0x4000000
 #define	IBD_DRV_RC_TIMEOUT		0x8000000
 
 /*
@@ -407,10 +407,10 @@ void debug_print(int l, char *fmt, ...);
  * is since the IP layer does not understand padding at the front.
  */
 #define	IBD_PAD_NSNA(ip6h, len, type) {					\
-	uchar_t 	*nd_lla_ptr;					\
-	icmp6_t 	*icmp6;						\
+	uchar_t		*nd_lla_ptr;					\
+	icmp6_t		*icmp6;						\
 	nd_opt_hdr_t	*opt;						\
-	int 		i;						\
+	int		i;						\
 									\
 	icmp6 = (icmp6_t *)&ip6h[1];					\
 	len -= sizeof (nd_neighbor_advert_t);				\
@@ -548,7 +548,7 @@ typedef enum {
  * Structure to encapsulate various types of async requests.
  */
 typedef struct ibd_acache_rq {
-	struct list_node 	rq_list; 	/* list of pending work */
+	struct list_node	rq_list;	/* list of pending work */
 	int			rq_op;		/* what operation */
 	ipoib_mac_t		rq_mac;
 	ib_gid_t		rq_gid;
@@ -978,7 +978,7 @@ typedef struct ibd_state_s {
 	uint_t			rc_max_sqseg_hiwm;
 
 	/* For SRQ */
-	uint32_t 		rc_srq_size;
+	uint32_t		rc_srq_size;
 	ibt_srq_hdl_t		rc_srq_hdl;
 	ibd_list_t		rc_srq_rwqe_list;
 	ibd_list_t		rc_srq_free_list;
@@ -1085,7 +1085,7 @@ typedef struct ibd_state_s {
 	uint64_t		rc_stop_connect;
 
 #ifdef DEBUG
-	kstat_t 		*rc_ksp;
+	kstat_t			*rc_ksp;
 #endif
 	ib_guid_t		id_hca_guid;
 	ib_guid_t		id_port_guid;
@@ -1269,8 +1269,8 @@ typedef struct ibd_rc_chan_s {
 	mblk_t			*rx_mp_tail;
 	uint32_t		rx_mp_len;
 
-	uint32_t 		rcq_size;
-	uint32_t 		scq_size;
+	uint32_t		rcq_size;
+	uint32_t		scq_size;
 	/*
 	 * We need two channels for each connection.
 	 * One channel for Tx; another channel for Rx.

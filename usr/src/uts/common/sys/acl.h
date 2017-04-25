@@ -251,8 +251,8 @@ typedef struct ace_object {
  * Flags to control acl_totext()
  */
 
-#define	ACL_APPEND_ID	0x1 	/* append uid/gid to user/group entries */
-#define	ACL_COMPACT_FMT	0x2 	/* build ACL in ls -V format */
+#define	ACL_APPEND_ID	0x1	/* append uid/gid to user/group entries */
+#define	ACL_COMPACT_FMT	0x2	/* build ACL in ls -V format */
 #define	ACL_NORESOLVE	0x4	/* don't do name service lookups */
 #define	ACL_SID_FMT	0x8	/* use usersid/groupsid when appropriate */
 

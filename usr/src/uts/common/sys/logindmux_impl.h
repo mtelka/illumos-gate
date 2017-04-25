@@ -27,8 +27,6 @@
 #ifndef _SYS_LOGINDMUX_IMPL_H
 #define	_SYS_LOGINDMUX_IMPL_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 #include <sys/stream.h>
 
@@ -54,7 +52,7 @@ typedef struct unlinkinfo {
 struct tmx {
 	queue_t		*rdq;		/* our mux upper read queue */
 	queue_t		*muxq;		/* our mux lower write queue */
-	queue_t		*peerq; 	/* peer mux lower write queue */
+	queue_t		*peerq;		/* peer mux lower write queue */
 	minor_t		dev0;		/* our minor device number */
 	boolean_t	isptm;		/* true if ptm is downstream */
 	mblk_t		*unlink_mp;	/* mblk used in logdmux_unlink_timer */

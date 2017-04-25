@@ -27,8 +27,6 @@
 #ifndef _SYS_FBIO_H
 #define	_SYS_FBIO_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"	/* SunOS4.1.2 5.49 */
-
 #include <sys/types.h>
 
 #ifdef	__cplusplus
@@ -91,9 +89,9 @@ struct	fbcmap {
 struct	fbcmap32 {
 	int32_t		index;		/* first element (0 origin) */
 	int32_t		count;		/* number of elements */
-	caddr32_t 	red;		/* red color map elements */
-	caddr32_t 	green;		/* green color map elements */
-	caddr32_t 	blue;		/* blue color map elements */
+	caddr32_t	red;		/* red color map elements */
+	caddr32_t	green;		/* green color map elements */
+	caddr32_t	blue;		/* blue color map elements */
 };
 
 #endif	/* _SYSCALL32 */

@@ -35,8 +35,6 @@
 #ifndef	_POOL_H
 #define	_POOL_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/procset.h>
 #include <sys/types.h>
 #include <sys/pool.h>
@@ -82,9 +80,9 @@ extern uint_t pool_version(uint_t ver);
 #define	POE_BAD_PROP_TYPE	1
 #define	POE_INVALID_CONF	2
 #define	POE_NOTSUP		3
-#define	POE_INVALID_SEARCH    	4
-#define	POE_BADPARAM    	5
-#define	POE_PUTPROP    		6
+#define	POE_INVALID_SEARCH	4
+#define	POE_BADPARAM		5
+#define	POE_PUTPROP		6
 #define	POE_DATASTORE		7
 #define	POE_SYSTEM		8
 #define	POE_ACCESS		9

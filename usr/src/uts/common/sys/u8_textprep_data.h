@@ -68,8 +68,6 @@
 #ifndef _SYS_U8_TEXTPREP_DATA_H
 #define	_SYS_U8_TEXTPREP_DATA_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 
 #ifdef	__cplusplus
@@ -103,11 +101,11 @@ extern "C" {
  *	b4_base = u8_decomp_b3_tbl[0][b3_tbl_id][0x85].base;
  *	if (b4_tbl_id >= 0x8000) {
  *		b4_tbl_id -= 0x8000;
- *      	start_index = u8_decomp_b4_16bit_tbl[0][b4_tbl_id][0x9E];
- *      	end_index = u8_decomp_b4_16bit_tbl[0][b4_tbl_id][0x9E + 1];
+ *		start_index = u8_decomp_b4_16bit_tbl[0][b4_tbl_id][0x9E];
+ *		end_index = u8_decomp_b4_16bit_tbl[0][b4_tbl_id][0x9E + 1];
  *	} else {
- *      	start_index = u8_decomp_b4_tbl[0][b4_tbl_id][0x9E];
- *      	end_index = u8_decomp_b4_tbl[0][b4_tbl_id][0x9E + 1];
+ *		start_index = u8_decomp_b4_tbl[0][b4_tbl_id][0x9E];
+ *		end_index = u8_decomp_b4_tbl[0][b4_tbl_id][0x9E + 1];
  *	}
  *
  * The start_index and the end_index can be used to retrieve the bytes

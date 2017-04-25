@@ -26,8 +26,6 @@
 #ifndef _TNF_TNF_H
 #define	_TNF_TNF_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 #include <tnf/com.h>
 
@@ -81,20 +79,20 @@ typedef enum {
 	TNF_ERR_NONE = 0,
 
 	/* 1 through 1023 reserved for errno values */
-#define	TNF_ERRNO_MAX 		1023
+#define	TNF_ERRNO_MAX		1023
 
-	TNF_ERR_NOTTNF 		= 1024,	/* not TNF file */
-	TNF_ERR_BADDATUM 	= 1025,	/* bad or NULL data handle */
-	TNF_ERR_TYPEMISMATCH 	= 1026,	/* type mismatch */
-	TNF_ERR_BADINDEX 	= 1027,	/* array index out of bounds */
-	TNF_ERR_BADSLOT 	= 1028,	/* slot missing */
-	TNF_ERR_BADREFTYPE 	= 1029,	/* invalid reference type  */
-	TNF_ERR_ALLOCFAIL 	= 1030,	/* memory allocation failure */
-	TNF_ERR_BADTNF 		= 1031,	/* bad TNF file */
-	TNF_ERR_INTERNAL 	= 1032	/* internal error */
+	TNF_ERR_NOTTNF		= 1024,	/* not TNF file */
+	TNF_ERR_BADDATUM	= 1025,	/* bad or NULL data handle */
+	TNF_ERR_TYPEMISMATCH	= 1026,	/* type mismatch */
+	TNF_ERR_BADINDEX	= 1027,	/* array index out of bounds */
+	TNF_ERR_BADSLOT		= 1028,	/* slot missing */
+	TNF_ERR_BADREFTYPE	= 1029,	/* invalid reference type  */
+	TNF_ERR_ALLOCFAIL	= 1030,	/* memory allocation failure */
+	TNF_ERR_BADTNF		= 1031,	/* bad TNF file */
+	TNF_ERR_INTERNAL	= 1032	/* internal error */
 } tnf_errcode_t;
 
-typedef void 	tnf_error_handler_t(void *, TNF *, tnf_errcode_t);
+typedef void	tnf_error_handler_t(void *, TNF *, tnf_errcode_t);
 
 /*
  * TNF file interface
@@ -108,7 +106,7 @@ tnf_errcode_t	tnf_reader_end(TNF *);
  */
 
 void		tnf_set_error_handler(tnf_error_handler_t *, void *);
-char *		tnf_error_message(tnf_errcode_t);
+char		*tnf_error_message(tnf_errcode_t);
 
 tnf_error_handler_t	tnf_default_error_handler;
 
@@ -148,7 +146,7 @@ int		tnf_is_type(tnf_datum_t);
 tnf_kind_t	tnf_get_kind(tnf_datum_t);
 size_t		tnf_get_size(tnf_datum_t);
 tnf_datum_t	tnf_get_type(tnf_datum_t);
-char *		tnf_get_type_name(tnf_datum_t);
+char		*tnf_get_type_name(tnf_datum_t);
 caddr_t		tnf_get_raw(tnf_datum_t);
 
 /*
@@ -165,14 +163,14 @@ unsigned	tnf_get_element_count(tnf_datum_t);
 tnf_datum_t	tnf_get_element(tnf_datum_t, unsigned);
 tnf_datum_t	tnf_get_element_type(tnf_datum_t);
 caddr_t		tnf_get_elements(tnf_datum_t);
-char *		tnf_get_chars(tnf_datum_t);
+char		*tnf_get_chars(tnf_datum_t);
 
 /*
  * Struct operations
  */
 
 unsigned	tnf_get_slot_count(tnf_datum_t);
-char *		tnf_get_slot_name(tnf_datum_t, unsigned);
+char		*tnf_get_slot_name(tnf_datum_t, unsigned);
 unsigned	tnf_get_slot_index(tnf_datum_t, char *);
 tnf_datum_t	tnf_get_slot_named(tnf_datum_t, char *);
 tnf_datum_t	tnf_get_slot_indexed(tnf_datum_t, unsigned);
@@ -194,7 +192,7 @@ tnf_float64_t	tnf_get_float64(tnf_datum_t);
  */
 
 tnf_kind_t	tnf_type_get_kind(tnf_datum_t);
-char *		tnf_type_get_name(tnf_datum_t);
+char		*tnf_type_get_name(tnf_datum_t);
 size_t		tnf_type_get_size(tnf_datum_t);
 tnf_datum_t	tnf_type_get_property(tnf_datum_t, char *);
 tnf_datum_t	tnf_type_get_base(tnf_datum_t);

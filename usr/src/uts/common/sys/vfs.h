@@ -27,7 +27,7 @@
  */
 
 /*	Copyright (c) 1983, 1984, 1985, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * Portions of this source code were derived from Berkeley 4.3 BSD
@@ -442,7 +442,7 @@ typedef struct vfs_impl {
 	vopstats_t	*vi_fstypevsp;		/* ptr to per-fstype vopstats */
 	vopstats_t	vi_vopstats;		/* per-mount vnode op stats */
 
-	timespec_t	vi_hrctime; 		/* High-res creation time */
+	timespec_t	vi_hrctime;		/* High-res creation time */
 
 	zone_ref_t	vi_zone_ref;		/* reference to zone */
 } vfs_impl_t;

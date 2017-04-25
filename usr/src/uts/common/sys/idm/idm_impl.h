@@ -155,7 +155,7 @@ typedef struct idm_conn_s {
 	void			*ic_handle;
 	idm_refcnt_t		ic_refcnt;
 	idm_svc_t		*ic_svc_binding; /* Target conn. only */
-	idm_sockaddr_t 		ic_ini_dst_addr;
+	idm_sockaddr_t		ic_ini_dst_addr;
 	struct sockaddr_storage	ic_laddr;	/* conn local address */
 	struct sockaddr_storage	ic_raddr;	/* conn remote address */
 
@@ -321,7 +321,7 @@ typedef enum {
 	BP_CHECK_ASSERT
 } idm_bufpat_check_type_t;
 
-#define	BUFPAT_MATCH(bc_bufpat, bc_idb) 		\
+#define	BUFPAT_MATCH(bc_bufpat, bc_idb)			\
 	((bufpat->bufpat_idb == bc_idb) &&		\
 	    (bufpat->bufpat_bufmagic == IDM_BUF_MAGIC))
 

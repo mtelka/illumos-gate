@@ -96,7 +96,7 @@ typedef struct uf_entry {
 	short		uf_busy;	/* file is allocated [grow, fork] */
 	kcondvar_t	uf_wanted_cv;	/* waiting for setf() [never copied] */
 	kcondvar_t	uf_closing_cv;	/* waiting for close() [never copied] */
-	struct portfd 	*uf_portfd;	/* associated with port [grow] */
+	struct portfd	*uf_portfd;	/* associated with port [grow] */
 	/* Avoid false sharing - pad to coherency granularity (64 bytes) */
 	char		uf_pad[64 - sizeof (kmutex_t) - 2 * sizeof (void*) -
 		2 * sizeof (int) - 2 * sizeof (short) -

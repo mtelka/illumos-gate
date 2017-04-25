@@ -30,8 +30,6 @@
 #ifndef	_SYS_GLD_H
 #define	_SYS_GLD_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/ethernet.h>
 
 #ifdef	__cplusplus
@@ -191,7 +189,7 @@ typedef struct gld_mac_info {
 	unsigned char	reserved9[ETHERADDRL];		/* GLD PRIVATE */
 	t_uscalar_t	gldm_ppa;			/* SET BY DRIVER */
 	int32_t		reserved10;			/* GLD PRIVATE */
-	uint32_t	gldm_capabilities; 		/* SET BY DRIVER */
+	uint32_t	gldm_capabilities;		/* SET BY DRIVER */
 	int32_t		gldm_linkstate;			/* GLD PRIVATE */
 	uint32_t	reserved11;			/* GLD PRIVATE */
 	caddr_t		reserved12;			/* GLD PRIVATE */
@@ -211,7 +209,7 @@ typedef struct gld_mac_info {
 	int		(*gldm_set_promiscuous)();	/* SET BY DRIVER */
 	int		(*gldm_get_stats)();		/* SET BY DRIVER */
 	int		(*gldm_ioctl)();		/* SET BY DRIVER */
-	int		(*gldm_set_multicast)(); 	/* SET BY DRIVER */
+	int		(*gldm_set_multicast)();	/* SET BY DRIVER */
 	uint_t		(*gldm_intr)();			/* SET BY DRIVER */
 	int		(*gldm_mctl)();			/* SET BY DRIVER */
 	int		(*gldm_send_tagged)();		/* SET BY DRIVER */

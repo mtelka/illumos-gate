@@ -27,8 +27,6 @@
 #ifndef	_PICLTREE_H
 #define	_PICLTREE_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -91,7 +89,7 @@ extern	int	ptree_delete_node(picl_nodehdl_t nodeh);
 extern	int	ptree_create_prop(const ptree_propinfo_t *pi, const void *vbuf,
 			picl_prophdl_t *proph);
 extern	int	ptree_destroy_prop(picl_prophdl_t proph);
-extern	int 	ptree_delete_prop(picl_prophdl_t proph);
+extern	int	ptree_delete_prop(picl_prophdl_t proph);
 extern	int	ptree_add_prop(picl_nodehdl_t nodeh, picl_prophdl_t proph);
 extern	int	ptree_create_table(picl_prophdl_t *tbl_hdl);
 extern	int	ptree_add_row_to_table(picl_prophdl_t tbl, int nprops,
@@ -100,9 +98,9 @@ extern	int	ptree_update_propval_by_name(picl_nodehdl_t nodeh,
 		const char *name, const void *vbuf, size_t sz);
 extern	int	ptree_update_propval(picl_prophdl_t proph, const void *buf,
 			size_t sz);
-extern	int 	ptree_get_propval(picl_prophdl_t proph, void *buf,
+extern	int	ptree_get_propval(picl_prophdl_t proph, void *buf,
 			size_t sz);
-extern	int 	ptree_get_propval_by_name(picl_nodehdl_t nodeh,
+extern	int	ptree_get_propval_by_name(picl_nodehdl_t nodeh,
 			const char *name, void *buf, size_t sz);
 extern	int	ptree_get_propinfo(picl_prophdl_t proph, ptree_propinfo_t *pi);
 extern	int	ptree_get_first_prop(picl_nodehdl_t nodeh,
@@ -111,7 +109,7 @@ extern	int	ptree_get_next_prop(picl_prophdl_t thish,
 			picl_prophdl_t *proph);
 extern	int	ptree_get_prop_by_name(picl_nodehdl_t nodeh, const char *name,
 			picl_prophdl_t *proph);
-extern	int 	ptree_get_next_by_row(picl_prophdl_t proph,
+extern	int	ptree_get_next_by_row(picl_prophdl_t proph,
 			picl_prophdl_t *rowh);
 extern	int	ptree_get_next_by_col(picl_prophdl_t proph,
 			picl_prophdl_t *colh);

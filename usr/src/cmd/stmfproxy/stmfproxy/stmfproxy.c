@@ -400,7 +400,7 @@ main(int argc, char *argv[])
 {
 	struct	sockaddr_in sin;
 	int	rc;
-	struct sigaction 	act;
+	struct sigaction	act;
 	sigset_t		sigmask;
 	int	c;
 	int	node = 0;

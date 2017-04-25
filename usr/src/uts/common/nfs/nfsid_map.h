@@ -165,7 +165,7 @@ typedef struct refd_door_args32 {
 	char		xdr_arg[1];
 } refd_door_args32_t;
 
-typedef struct 	refd_door_res32 {
+typedef struct	refd_door_res32 {
 	int32_t		res_status;
 	int32_t		xdr_len;
 	char		xdr_res[1];

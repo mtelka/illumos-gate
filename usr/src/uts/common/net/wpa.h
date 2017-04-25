@@ -30,8 +30,6 @@
 #ifndef	__WPA_H
 #define	__WPA_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <inet/wifi_ioctl.h>
 #include <sys/net80211_crypto.h>
 
@@ -40,7 +38,7 @@ extern "C" {
 #endif
 
 #define	SERVICE_NAME		"network/wpa"
-#define	WPA_DOOR 		"/var/run/wpa_door"
+#define	WPA_DOOR		"/var/run/wpa_door"
 #define	SVC_METHOD		"/usr/lib/inet/wpad"
 
 /*

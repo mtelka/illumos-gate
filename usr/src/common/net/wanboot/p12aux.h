@@ -472,11 +472,11 @@ char *sunw_subject_attrs(X509 *cert, char *buf, int len);
  *      at time of call.
  *
  * Arguments:
- *   dst 	- the stack to receive the keys from 'src'
+ *   dst	- the stack to receive the keys from 'src'
  *   src	- the stack whose keys are to be moved.
  *
  * Returns:
- *   -1  	- An error occurred.  The error status is set.
+ *   -1		- An error occurred.  The error status is set.
  *   >= 0       - The number of keys that were copied.
  */
 int sunw_append_keys(STACK_OF(EVP_PKEY) *, STACK_OF(EVP_PKEY) *);

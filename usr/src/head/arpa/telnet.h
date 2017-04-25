@@ -26,7 +26,7 @@
  */
 
 /*	Copyright (c) 1983, 1984, 1985, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * Portions of this source code were derived from Berkeley 4.3 BSD
@@ -35,8 +35,6 @@
 
 #ifndef	_ARPA_TELNET_H
 #define	_ARPA_TELNET_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -91,8 +89,8 @@ char *telcmds[] = {
 #define	TELOPT_STATUS	5	/* give status */
 #define	TELOPT_TM	6	/* timing mark */
 #define	TELOPT_RCTE	7	/* remote controlled transmission and echo */
-#define	TELOPT_NAOL 	8	/* negotiate about output line width */
-#define	TELOPT_NAOP 	9	/* negotiate about output page size */
+#define	TELOPT_NAOL	8	/* negotiate about output line width */
+#define	TELOPT_NAOP	9	/* negotiate about output page size */
 #define	TELOPT_NAOCRD	10	/* negotiate about CR disposition */
 #define	TELOPT_NAOHTS	11	/* negotiate about horizontal tabstops */
 #define	TELOPT_NAOHTD	12	/* negotiate about horizontal tab disposition */

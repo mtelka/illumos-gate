@@ -69,7 +69,7 @@ typedef	struct smb_ioc_spooldoc {
 
 typedef	struct {
 	smb_ioc_header_t hdr;
-	int32_t 	offset;
+	int32_t		offset;
 } smb_ioc_gmt_t;
 
 typedef struct smb_ioc_share {

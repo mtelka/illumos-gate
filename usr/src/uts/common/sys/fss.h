@@ -140,7 +140,7 @@ typedef struct fssproc {
  * than one cpu partition then it will have a few of these structures.
  */
 typedef struct fsszone {
-	struct zone 	*fssz_zone;	/* ptr to our zone structure	*/
+	struct zone	*fssz_zone;	/* ptr to our zone structure	*/
 	struct fsszone	*fssz_next;	/* next fsszone_t in fsspset_t	*/
 	struct fsszone	*fssz_prev;	/* prev fsszone_t in fsspset_t	*/
 	uint32_t	fssz_shares;	/* sum of all project shares	*/

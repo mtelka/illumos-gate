@@ -272,7 +272,7 @@ struct __svcpool {
 	kmutex_t	p_thread_lock;		/* Thread lock		  */
 	int		p_asleep;		/* Asleep threads	  */
 	int		p_drowsy;		/* Drowsy flag		  */
-	kcondvar_t 	p_req_cv;		/* svc_poll() sleep var.  */
+	kcondvar_t	p_req_cv;		/* svc_poll() sleep var.  */
 	clock_t		p_timeout;		/* svc_poll() timeout	  */
 	kmutex_t	p_req_lock;		/* Request lock		  */
 	int		p_reqs;			/* Pending requests	  */
@@ -414,8 +414,8 @@ typedef struct __svcxprt_common {
 #define	xp_netid	xp_xpc.xpc_netid
 
 struct __svcmasterxprt {
-	SVCMASTERXPRT 	*xp_next;	/* Next transport in the list	*/
-	SVCMASTERXPRT 	*xp_prev;	/* Prev transport in the list	*/
+	SVCMASTERXPRT	*xp_next;	/* Next transport in the list	*/
+	SVCMASTERXPRT	*xp_prev;	/* Prev transport in the list	*/
 	__SVCXPRT_COMMON xp_xpc;	/* Fields common with the clone	*/
 	SVCPOOL		*xp_pool;	/* Pointer to the pool		*/
 	mblk_t		*xp_req_head;	/* Request queue head		*/
@@ -903,7 +903,7 @@ extern int	svc_create(void (*)(struct svc_req *, SVCXPRT *),
 				const rpcprog_t, const rpcvers_t,
 				const char *);
 	/*
-	 * 	void (*dispatch)();		-- dispatch routine
+	 *	void (*dispatch)();		-- dispatch routine
 	 *	const rpcprog_t prognum;	-- program number
 	 *	const rpcvers_t versnum;	-- version number
 	 *	const char *nettype;		-- network type
@@ -960,9 +960,9 @@ extern SVCXPRT	*svc_dg_create(const int, const uint_t, const uint_t);
  */
 extern  SVCXPRT	*svc_fd_create(const int, const uint_t, const uint_t);
 	/*
-	 * 	const int fd;			-- open connection end point
-	 * 	const uint_t sendsize;		-- max send size
-	 * 	const uint_t recvsize;		-- max recv size
+	 *	const int fd;			-- open connection end point
+	 *	const uint_t sendsize;		-- max send size
+	 *	const uint_t recvsize;		-- max recv size
 	 */
 
 /*
@@ -977,7 +977,7 @@ extern SVCXPRT	*svc_door_create(void (*)(struct svc_req *, SVCXPRT *),
 				const rpcprog_t, const rpcvers_t,
 				const uint_t);
 	/*
-	 * 	void (*dispatch)();		-- dispatch routine
+	 *	void (*dispatch)();		-- dispatch routine
 	 *	const rpcprog_t prognum;	-- program number
 	 *	const rpcvers_t versnum;	-- version number
 	 *	const uint_t sendsize;		-- send buffer size

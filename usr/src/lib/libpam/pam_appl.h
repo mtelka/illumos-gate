@@ -58,7 +58,7 @@ extern "C" {
 
 /* Errors returned by pam_acct_mgmt() */
 #define	PAM_ACCT_EXPIRED	17	/* user account has expired */
-#define	PAM_AUTHTOK_EXPIRED 	18	/* Password expired and no longer */
+#define	PAM_AUTHTOK_EXPIRED	18	/* Password expired and no longer */
 					/* usable */
 
 /* Errors returned by pam_open/close_session() */
@@ -93,7 +93,7 @@ extern "C" {
 
 struct pam_message {
 	int msg_style;		/* Msg_style - see below */
-	char *msg; 		/* Message string */
+	char *msg;		/* Message string */
 };
 
 /*
@@ -101,7 +101,7 @@ struct pam_message {
  * scheme and the application.
  */
 #define	PAM_PROMPT_ECHO_OFF	1	/* Echo off when getting response */
-#define	PAM_PROMPT_ECHO_ON	2 	/* Echo on when getting response */
+#define	PAM_PROMPT_ECHO_ON	2	/* Echo on when getting response */
 #define	PAM_ERROR_MSG		3	/* Error message */
 #define	PAM_TEXT_INFO		4	/* Textual information */
 
@@ -150,8 +150,7 @@ typedef struct pam_handle pam_handle_t;
  * pam_start() is called to initiate an authentication exchange
  * with PAM.
  */
-extern int
-pam_start(
+extern int pam_start(
 	const char *service_name,		/* Service Name */
 	const char *user,			/* User Name */
 	const struct pam_conv *pam_conv,	/* Conversation structure */
@@ -161,8 +160,7 @@ pam_start(
 /*
  * pam_end() is called to end an authentication exchange with PAM.
  */
-extern int
-pam_end(
+extern int pam_end(
 	pam_handle_t *pamh,		/* handle from pam_start() */
 	int status			/* the final status value that */
 					/* gets passed to cleanup functions */
@@ -171,10 +169,9 @@ pam_end(
 /*
  * pam_set_item is called to store an object in PAM handle.
  */
-extern int
-pam_set_item(
+extern int pam_set_item(
 	pam_handle_t *pamh,		/* PAM handle */
-	int item_type, 			/* Type of object - see below */
+	int item_type,			/* Type of object - see below */
 	const void *item		/* Address of place to put pointer */
 					/*   to object */
 );
@@ -182,10 +179,9 @@ pam_set_item(
 /*
  * pam_get_item is called to retrieve an object from the static data area
  */
-extern int
-pam_get_item(
-	const pam_handle_t *pamh, 	/* PAM handle */
-	int item_type, 			/* Type of object - see below */
+extern int pam_get_item(
+	const pam_handle_t *pamh,	/* PAM handle */
+	int item_type,			/* Type of object - see below */
 	void **	item			/* Address of place to put pointer */
 					/*   to object */
 );
@@ -221,18 +217,16 @@ typedef struct pam_repository pam_repository_t;
  * applications.
  */
 
-extern int
-pam_get_user(
+extern int pam_get_user(
 	pam_handle_t *pamh,		/* PAM handle */
-	char **user, 			/* User Name */
+	char **user,			/* User Name */
 	const char *prompt		/* Prompt */
 );
 
 /*
  * PAM equivalent to strerror();
  */
-extern const char *
-pam_strerror(
+extern const char *pam_strerror(
 	pam_handle_t *pamh,	/* pam handle */
 	int errnum		/* error number */
 );
@@ -243,8 +237,7 @@ pam_strerror(
 /*
  * pam_authenticate is called to authenticate the current user.
  */
-extern int
-pam_authenticate(
+extern int pam_authenticate(
 	pam_handle_t *pamh,
 	int flags
 );
@@ -258,8 +251,7 @@ pam_authenticate(
 /*
  * pam_acct_mgmt is called to perform account management processing
  */
-extern int
-pam_acct_mgmt(
+extern int pam_acct_mgmt(
 	pam_handle_t *pamh,
 	int flags
 );
@@ -268,8 +260,7 @@ pam_acct_mgmt(
  * pam_open_session is called to note the initiation of new session in the
  * appropriate administrative data bases.
  */
-extern int
-pam_open_session(
+extern int pam_open_session(
 	pam_handle_t *pamh,
 	int flags
 );
@@ -277,15 +268,13 @@ pam_open_session(
 /*
  * pam_close_session records the termination of a session.
  */
-extern int
-pam_close_session(
+extern int pam_close_session(
 	pam_handle_t	*pamh,
 	int		flags
 );
 
 /* pam_setcred is called to set the credentials of the current user */
-extern int
-pam_setcred(
+extern int pam_setcred(
 	pam_handle_t *pamh,
 	int flags
 );
@@ -299,8 +288,7 @@ pam_setcred(
 
 /* pam_chauthtok is called to change authentication token */
 
-extern int
-pam_chauthtok(
+extern int pam_chauthtok(
 	pam_handle_t	*pamh,
 	int		flags
 );
@@ -316,24 +304,21 @@ pam_chauthtok(
 
 /* pam_putenv is called to add environment variables to the PAM handle */
 
-extern int
-pam_putenv(
+extern int pam_putenv(
 	pam_handle_t	*pamh,
 	const char	*name_value
 );
 
 /* pam_getenv is called to retrieve an env variable from the PAM handle */
 
-extern char *
-pam_getenv(
+extern char *pam_getenv(
 	pam_handle_t	*pamh,
 	const char	*name
 );
 
 /* pam_getenvlist is called to retrieve all env variables from the PAM handle */
 
-extern char **
-pam_getenvlist(
+extern char **pam_getenvlist(
 	pam_handle_t	*pamh
 );
 

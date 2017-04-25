@@ -205,7 +205,7 @@ struct ilbd_hc_srv_s;
  */
 typedef struct {
 	list_node_t		hcr_link;
-	ilbd_rule_t const 	*hcr_rule;
+	ilbd_rule_t const	*hcr_rule;
 	list_t			hcr_servers;
 } ilbd_hc_rule_t;
 

@@ -27,8 +27,6 @@
 #ifndef	_SYS_PORT_KERNEL_H
 #define	_SYS_PORT_KERNEL_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/vnode.h>
 #include <sys/list.h>
 
@@ -52,7 +50,7 @@ extern "C" {
 typedef	struct	port_kevent {
 	kmutex_t	portkev_lock;	/* used by PORT_SOURCE_FD source */
 	int	portkev_source;		/* event: source */
-	int	portkev_events; 	/* event: data */
+	int	portkev_events;		/* event: data */
 	int	portkev_flags;		/* internal flags */
 	pid_t	portkev_pid;		/* pid of process using this struct */
 	long	portkev_object;		/* event: object */

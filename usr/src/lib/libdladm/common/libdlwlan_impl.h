@@ -45,7 +45,7 @@ extern "C" {
  */
 #define	DLADM_WLAN_SIGNAL2STRENGTH(signal)			\
 	    (((signal) > 12 ? DLADM_WLAN_STRENGTH_EXCELLENT :	\
-	    ((signal) > 9 ? DLADM_WLAN_STRENGTH_VERY_GOOD : 	\
+	    ((signal) > 9 ? DLADM_WLAN_STRENGTH_VERY_GOOD :	\
 	    ((signal) > 5 ? DLADM_WLAN_STRENGTH_GOOD :		\
 	    ((signal) > 2 ? DLADM_WLAN_STRENGTH_WEAK :		\
 	    DLADM_WLAN_STRENGTH_VERY_WEAK)))))

@@ -26,8 +26,6 @@
 #ifndef _SYS_NXGE_NXGE_IPP_H
 #define	_SYS_NXGE_NXGE_IPP_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -46,17 +44,17 @@ typedef	struct _ipp_errlog {
 } ipp_errlog_t, *p_ipp_errlog_t;
 
 typedef struct _nxge_ipp_stats {
-	uint32_t 		errors;
-	uint32_t 		inits;
-	uint32_t 		sop_miss;
-	uint32_t 		eop_miss;
-	uint32_t 		dfifo_ue;
-	uint32_t 		ecc_err_cnt;
-	uint32_t 		pfifo_perr;
-	uint32_t 		pfifo_over;
-	uint32_t 		pfifo_und;
-	uint32_t 		bad_cs_cnt;
-	uint32_t 		pkt_dis_cnt;
+	uint32_t		errors;
+	uint32_t		inits;
+	uint32_t		sop_miss;
+	uint32_t		eop_miss;
+	uint32_t		dfifo_ue;
+	uint32_t		ecc_err_cnt;
+	uint32_t		pfifo_perr;
+	uint32_t		pfifo_over;
+	uint32_t		pfifo_und;
+	uint32_t		bad_cs_cnt;
+	uint32_t		pkt_dis_cnt;
 	ipp_errlog_t		errlog;
 } nxge_ipp_stats_t, *p_nxge_ipp_stats_t;
 

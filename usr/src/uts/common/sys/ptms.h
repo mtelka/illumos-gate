@@ -22,7 +22,7 @@
  * Copyright (c) 1988, 2010, Oracle and/or its affiliates. All rights reserved.
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _SYS_PTMS_H
@@ -40,8 +40,8 @@ extern "C" {
  * applications.
  */
 struct pt_ttys {
-	queue_t *ptm_rdq; 	/* master's read queue pointer */
-	queue_t *pts_rdq; 	/* slave's read queue pointer */
+	queue_t *ptm_rdq;	/* master's read queue pointer */
+	queue_t *pts_rdq;	/* slave's read queue pointer */
 	mblk_t	*pt_nullmsg;	/* 0-bytes message block for pts close */
 	pid_t	 pt_pid;	/* process id (for debugging) */
 	minor_t	 pt_minor;	/* Minor number of this pty */
@@ -58,8 +58,8 @@ struct pt_ttys {
  * pt_state values
  */
 #define	PTLOCK		0x01	/* master/slave pair is locked */
-#define	PTMOPEN 	0x02  	/* master side is open */
-#define	PTSOPEN 	0x04	/* slave side is open */
+#define	PTMOPEN		0x02	/* master side is open */
+#define	PTSOPEN		0x04	/* slave side is open */
 #define	PTSTTY		0x08	/* slave side is tty */
 
 /*
@@ -104,7 +104,7 @@ struct pt_ttys {
  * ptms_lock and pt_cnt are defined in ptms_conf.c
  */
 extern kmutex_t		ptms_lock;
-extern dev_info_t 	*pts_dip;	/* private copy of devinfo ptr */
+extern dev_info_t	*pts_dip;	/* private copy of devinfo ptr */
 
 extern void ptms_init(void);
 extern struct pt_ttys *pt_ttys_alloc(void);

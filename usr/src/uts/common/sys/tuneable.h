@@ -20,13 +20,11 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _SYS_TUNEABLE_H
 #define	_SYS_TUNEABLE_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"	/* SVr4.0 11.7 */
 
 #ifdef	__cplusplus
 extern "C" {
@@ -39,7 +37,7 @@ typedef struct tune {
 	int	t_fsflushr;	/* The rate at which fsflush is run in	*/
 				/* seconds.				*/
 	int	t_minarmem;	/* The minimum available resident (not	*/
-				/* swappable) memory to maintain in 	*/
+				/* swappable) memory to maintain in	*/
 				/* order to avoid deadlock.  In pages.	*/
 	int	t_minasmem;	/* The minimum available swappable	*/
 				/* memory to maintain in order to avoid	*/

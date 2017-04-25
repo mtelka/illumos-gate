@@ -27,8 +27,6 @@
 #ifndef _CS_PRIV_H
 #define	_CS_PRIV_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -173,7 +171,7 @@ typedef struct cisregister_t {
  *
  * CS_MAX_CIS is one greater than CIS_MAX_FUNCTIONS since the CIS parser
  *	puts the global CIS chain on the CS_GLOBAL_CIS function index as
- * 	follows:
+ *	follows:
  *
  *	For single-function cards:
  *	    sp->cis[0] - CIS chain

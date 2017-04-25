@@ -62,8 +62,8 @@ extern "C" {
 #define	FZC_PROM		0xc80000
 #define	RESERVED_8		0xd00000
 #define	FZC_PIM			0xd80000
-#define	RESERVED_9_START 	0xe00000
-#define	RESERVED_9_END 		0xf80000
+#define	RESERVED_9_START	0xe00000
+#define	RESERVED_9_END		0xf80000
 
 /* PIO		(0x000000) */
 
@@ -75,7 +75,7 @@ extern "C" {
 
 
 
-/* FZC_IPP 	(0x280000) */
+/* FZC_IPP	(0x280000) */
 
 
 /* FFLP		(0x300000), Header Parser */
@@ -91,7 +91,7 @@ extern "C" {
 /* FZC_ZCP	(0x580000), Neptune Only */
 
 
-/* DMC 		(0x600000), register offset (32 DMA channels) */
+/* DMC		(0x600000), register offset (32 DMA channels) */
 
 /* Transmit Ring Register Offset (32 Channels) */
 #define	TX_RNG_CFIG		(DMC + 0x40000)

@@ -575,7 +575,7 @@ typedef struct sadbp_s
 {
 	uint32_t	s_satype;
 	uint32_t	*s_acquire_timeout;
-	void 		(*s_acqfn)(ipsacq_t *, mblk_t *, netstack_t *);
+	void		(*s_acqfn)(ipsacq_t *, mblk_t *, netstack_t *);
 	sadb_t		s_v4;
 	sadb_t		s_v6;
 	uint32_t	s_addflags;
@@ -637,7 +637,7 @@ typedef struct templist_s
  * the outer addresses (transport mode).  Tunnel mode MUST have <proto>
  * set to either IPPROTO_ENCAP or IPPPROTO_IPV6.
  */
-#define	SA_UNIQUE_ID(srcport, dstport, proto, iproto) 	\
+#define	SA_UNIQUE_ID(srcport, dstport, proto, iproto)	\
 	((srcport) | ((uint64_t)(dstport) << 16U) | \
 	((uint64_t)(proto) << 32U) | ((uint64_t)(iproto) << 40U))
 
@@ -646,7 +646,7 @@ typedef struct templist_s
  * from a packet to an SA.
  */
 
-#define	SA_UNIQUE_MASK(srcport, dstport, proto, iproto) 	\
+#define	SA_UNIQUE_MASK(srcport, dstport, proto, iproto)		\
 	SA_UNIQUE_ID((srcport != 0) ? 0xffff : 0,		\
 		    (dstport != 0) ? 0xffff : 0,		\
 		    (proto != 0) ? 0xff : 0,			\
@@ -825,7 +825,7 @@ extern void ipsec_assocfailure(short, short, char, ushort_t, char *, uint32_t,
  * Algorithm types.
  */
 
-#define	IPSEC_NALGTYPES 	2
+#define	IPSEC_NALGTYPES		2
 
 typedef enum ipsec_algtype {
 	IPSEC_ALG_AUTH = 0,

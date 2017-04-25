@@ -74,14 +74,14 @@
  * _POINTER_ALIGNMENT / _FLOAT_ALIGNMENT:
  *	The ABI defines alignment requirements of each of the primitive
  *	object types.  Some, if not all, may be hardware requirements as
- * 	well.  The values are expressed in "byte-alignment" units.
+ *	well.  The values are expressed in "byte-alignment" units.
  *
  * _MAX_ALIGNMENT:
  *	The most stringent alignment requirement as specified by the ABI.
  *	Equal to the maximum of all the above _XXX_ALIGNMENT values.
  *
  * _MAX_ALIGNMENT_TYPE:
- * 	The name of the C type that has the value descried in _MAX_ALIGNMENT.
+ *	The name of the C type that has the value descried in _MAX_ALIGNMENT.
  *
  * _ALIGNMENT_REQUIRED:
  *	True or false (1 or 0) whether or not the hardware requires the ABI

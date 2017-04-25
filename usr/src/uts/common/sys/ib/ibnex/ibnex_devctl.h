@@ -329,7 +329,7 @@ typedef struct ibnex_ctl_hca_info_s {
 						/* mem that can be registered */
 	uint_t		hca_max_mem_win;	/* Max Memory windows in HCA */
 
-	uint_t		hca_max_rsc; 		/* Max Responder Resources of */
+	uint_t		hca_max_rsc;		/* Max Responder Resources of */
 						/* this HCA for RDMAR/Atomics */
 						/* with this HCA as target. */
 	uint8_t		hca_max_rdma_in_chan;	/* Max RDMAR/Atomics in per */
@@ -424,7 +424,7 @@ typedef struct ibnex_ctl_hca_info_32_s {
 						/* mem that can be registered */
 	uint_t		hca_max_mem_win;	/* Max Memory windows in HCA */
 
-	uint_t		hca_max_rsc; 		/* Max Responder Resources of */
+	uint_t		hca_max_rsc;		/* Max Responder Resources of */
 						/* this HCA for RDMAR/Atomics */
 						/* with this HCA as target. */
 	uint8_t		hca_max_rdma_in_chan;	/* Max RDMAR/Atomics in per */

@@ -99,17 +99,17 @@ union scsi_cdb {		/* scsi command description block */
 			uchar_t addr0;	/* low part of address */
 			uchar_t count0;	/* usually block count */
 #if defined(_BIT_FIELDS_LTOH)
-			uchar_t link	:1; /* another command follows 	*/
-			uchar_t flag	:1; /* interrupt when done 	*/
-			uchar_t naca	:1; /* normal ACA  		*/
-			uchar_t rsvd	:3; /* reserved 		*/
+			uchar_t link	:1; /* another command follows	*/
+			uchar_t flag	:1; /* interrupt when done	*/
+			uchar_t naca	:1; /* normal ACA		*/
+			uchar_t rsvd	:3; /* reserved			*/
 			uchar_t vu_56	:1; /* vendor unique (byte 5 bit6) */
 			uchar_t vu_57	:1; /* vendor unique (byte 5 bit7) */
 #elif defined(_BIT_FIELDS_HTOL)
 			uchar_t vu_57	:1; /* vendor unique (byte 5 bit 7) */
 			uchar_t vu_56	:1; /* vendor unique (byte 5 bit 6) */
 			uchar_t rsvd	:3; /* reserved */
-			uchar_t naca	:1; /* normal ACA  		*/
+			uchar_t naca	:1; /* normal ACA		*/
 			uchar_t flag	:1; /* interrupt when done */
 			uchar_t link	:1; /* another command follows */
 #else
@@ -143,10 +143,10 @@ union scsi_cdb {		/* scsi command description block */
 			uchar_t count1;	/* transfer length (msb) */
 			uchar_t count0;	/* transfer length (lsb) */
 #if defined(_BIT_FIELDS_LTOH)
-			uchar_t link	:1; /* another command follows 	*/
-			uchar_t flag	:1; /* interrupt when done 	*/
+			uchar_t link	:1; /* another command follows	*/
+			uchar_t flag	:1; /* interrupt when done	*/
 			uchar_t naca	:1; /* normal ACA		*/
-			uchar_t rsvd0	:3; /* reserved 		*/
+			uchar_t rsvd0	:3; /* reserved			*/
 			uchar_t vu_96	:1; /* vendor unique (byte 9 bit6) */
 			uchar_t vu_97	:1; /* vendor unique (byte 9 bit7) */
 #elif defined(_BIT_FIELDS_HTOL)
@@ -198,10 +198,10 @@ union scsi_cdb {		/* scsi command description block */
 			uchar_t count0;	/* transfer length (lsb) */
 			uchar_t rsvd1;	/* reserved */
 #if defined(_BIT_FIELDS_LTOH)
-			uchar_t link	:1; /* another command follows 	*/
-			uchar_t flag	:1; /* interrupt when done 	*/
+			uchar_t link	:1; /* another command follows	*/
+			uchar_t flag	:1; /* interrupt when done	*/
 			uchar_t naca	:1; /* normal ACA		*/
-			uchar_t rsvd0	:3; /* reserved 		*/
+			uchar_t rsvd0	:3; /* reserved			*/
 			uchar_t vu_156	:1; /* vendor unique (byte 15 bit6) */
 			uchar_t vu_157	:1; /* vendor unique (byte 15 bit7) */
 #elif defined(_BIT_FIELDS_HTOL)
@@ -245,10 +245,10 @@ union scsi_cdb {		/* scsi command description block */
 			uchar_t count0;
 			uchar_t rsvd1;	/* reserved */
 #if defined(_BIT_FIELDS_LTOH)
-			uchar_t link	:1; /* another command follows 	*/
-			uchar_t flag	:1; /* interrupt when done 	*/
+			uchar_t link	:1; /* another command follows	*/
+			uchar_t flag	:1; /* interrupt when done	*/
 			uchar_t naca	:1; /* normal ACA		*/
-			uchar_t rsvd0	:3; /* reserved 		*/
+			uchar_t rsvd0	:3; /* reserved			*/
 			uchar_t vu_116	:1; /* vendor unique (byte 11 bit6) */
 			uchar_t vu_117	:1; /* vendor unique (byte 11 bit7) */
 #elif defined(_BIT_FIELDS_HTOL)
@@ -394,7 +394,7 @@ union scsi_cdb {		/* scsi command description block */
 
 #define	FORMG0COUNT(cdb, cnt)	(cdb)->g0_count0  = (cnt)
 
-#define	FORMG0ADDR(cdb, addr) 	(cdb)->g0_addr2  = (addr) >> 16; \
+#define	FORMG0ADDR(cdb, addr)	(cdb)->g0_addr2  = (addr) >> 16; \
 				(cdb)->g0_addr1  = ((addr) >> 8) & 0xFF; \
 				(cdb)->g0_addr0  = (addr) & 0xFF
 
@@ -629,7 +629,7 @@ struct scsi_defect_list {	/* BFI format list */
 struct scsi_reassign_blk {
 	ushort_t reserved;
 	ushort_t length;	/* defect length in bytes (defects * 4) */
-	uint_t 	defect;		/* Logical block address of defect */
+	uint_t	defect;		/* Logical block address of defect */
 };
 
 /*
@@ -649,17 +649,17 @@ struct scsi_capacity_16 {
 	uint64_t	sc_capacity;
 	uint_t		sc_lbasize;
 #if defined(_BIT_FIELDS_LTOH)
-	uchar_t 	sc_rto_en	:1;
-	uchar_t 	sc_prot_en	:1;
-	uchar_t 	sc_rsvd0	:6;
+	uchar_t		sc_rto_en	:1;
+	uchar_t		sc_prot_en	:1;
+	uchar_t		sc_rsvd0	:6;
 #elif defined(_BIT_FIELDS_HTOL)
-	uchar_t 	sc_rsvd0	:6;
-	uchar_t 	sc_prot_en	:1;
-	uchar_t 	sc_rto_en	:1;
+	uchar_t		sc_rsvd0	:6;
+	uchar_t		sc_prot_en	:1;
+	uchar_t		sc_rto_en	:1;
 #else
 #error	One of _BIT_FIELDS_LTOH or _BIT_FIELDS_HTOL must be defined
 #endif	/* _BIT_FIELDS_LTOH */
-	uchar_t 	sc_rsvd1[19];
+	uchar_t		sc_rsvd1[19];
 };
 
 #ifdef	_KERNEL
@@ -670,13 +670,13 @@ struct scsi_capacity_16 {
  * scsi_setup_cdb()
  */
 
-extern void 	makecom_g0(struct scsi_pkt *pkt, struct scsi_device *devp,
+extern void	makecom_g0(struct scsi_pkt *pkt, struct scsi_device *devp,
 				int flag, int cmd, int addr, int cnt);
-extern void 	makecom_g0_s(struct scsi_pkt *pkt, struct scsi_device *devp,
+extern void	makecom_g0_s(struct scsi_pkt *pkt, struct scsi_device *devp,
 				int flag, int cmd, int cnt, int fixbit);
-extern void 	makecom_g1(struct scsi_pkt *pkt, struct scsi_device *devp,
+extern void	makecom_g1(struct scsi_pkt *pkt, struct scsi_device *devp,
 				int flag, int cmd, int addr, int cnt);
-extern void 	makecom_g5(struct scsi_pkt *pkt, struct scsi_device *devp,
+extern void	makecom_g5(struct scsi_pkt *pkt, struct scsi_device *devp,
 				int flag, int cmd, int addr, int cnt);
 extern int	scsi_setup_cdb(union scsi_cdb *cdbp, uchar_t cmd, uint_t addr,
 				uint_t cnt, uint_t addtl_cdb_data);

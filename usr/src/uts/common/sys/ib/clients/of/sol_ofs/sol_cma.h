@@ -124,20 +124,20 @@ typedef enum {
 
 /*
  * This is used to track the state of a client side CMID.
- * 	CONNECT_NONE	Server side CMID, or CMID for which
- * 			rdma_connect() has not been called.
+ *	CONNECT_NONE	Server side CMID, or CMID for which
+ *			rdma_connect() has not been called.
  *
- * 	CLIENT_NONE	Client side CMID for which connection
- * 			has been torn down.
+ *	CLIENT_NONE	Client side CMID for which connection
+ *			has been torn down.
  *
- * 			For UDP it also represents connection
- * 			established (no more IBTF CM events
- * 			expected).
+ *			For UDP it also represents connection
+ *			established (no more IBTF CM events
+ *			expected).
  *
- * 	INITIATED	rdma_connect() has been called not yet
- * 			established.
+ *	INITIATED	rdma_connect() has been called not yet
+ *			established.
  *
- * 	ESTABLISHED	Client CMID has connection established.
+ *	ESTABLISHED	Client CMID has connection established.
  */
 typedef enum {
 	SOL_CMA_CONNECT_NONE = 0,
@@ -150,20 +150,20 @@ typedef enum {
  * This is used to track the state of CMIDs created for Connection
  * Requests and listening CMID.
  *
- * 	NONE		Client CMID, listen CMID with no REQs yet.
+ *	NONE		Client CMID, listen CMID with no REQs yet.
  *
- * 	SERVER_DONE	REQ CMID connection done, no more events.
+ *	SERVER_DONE	REQ CMID connection done, no more events.
  *
- * 			For listening CMID all REQ CMIDs have events
- * 			completed.
+ *			For listening CMID all REQ CMIDs have events
+ *			completed.
  *
- * 	CREATED		listening CMID with > 1 REQ CMID with events
- * 			pending.
+ *	CREATED		listening CMID with > 1 REQ CMID with events
+ *			pending.
  *
- * 	QUEUED		REQ CMID in REQ AVL tree of listening CMID
+ *	QUEUED		REQ CMID in REQ AVL tree of listening CMID
  *
- * 	ACCEPTED	REQ CMID accepted and in ACPT AVL tree of the
- * 			listening CMID.
+ *	ACCEPTED	REQ CMID accepted and in ACPT AVL tree of the
+ *			listening CMID.
  */
 typedef enum {
 	REQ_CMID_NONE = 0,
@@ -192,10 +192,10 @@ typedef enum {
 
 /*
  * CMID_DESTROYED	- Flag to indicate rdma_destroy_id has been
- * 			called for this CMID
+ *			called for this CMID
  *
  * EVENT_PROGRESS	- RDMACM Event for this CMID been passed to
- * 			the sol_ofs client.
+ *			the sol_ofs client.
  *
  * API_PROGRESS		- rdma_resolve_addr() / rdma_resolve_route() /
  *			rdma_listen() is in progress.

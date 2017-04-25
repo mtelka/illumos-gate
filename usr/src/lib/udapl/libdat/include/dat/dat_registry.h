@@ -31,8 +31,6 @@
 #ifndef _DAT_REGISTRY_H_
 #define	_DAT_REGISTRY_H_
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  *
  * HEADER: dat_registry.h
@@ -40,16 +38,16 @@
  * PURPOSE: DAT registration API signatures
  *
  * Description: Contains registration external reference signatures for
- * 		dat registry functions. This file is *only* included by
+ *		dat registry functions. This file is *only* included by
  *		providers, not consumers.
  *
- * 		Header file for "uDAPL: User Direct Access Programming
+ *		Header file for "uDAPL: User Direct Access Programming
  *		Library, Version: 1.2"
  *
  * Mapping rules:
- * 	All global symbols are prepended with "DAT_" or "dat_"
- * 	All DAT objects have an 'api' tag which, such as 'ep' or 'lmr'
- * 	The method table is in the provider definition structure.
+ *	All global symbols are prepended with "DAT_" or "dat_"
+ *	All DAT objects have an 'api' tag which, such as 'ep' or 'lmr'
+ *	The method table is in the provider definition structure.
  *
  *
  *
@@ -83,7 +81,7 @@ extern DAT_RETURN dat_registry_add_provider(
 	IN  const DAT_PROVIDER_INFO*);		/* provider info */
 
 extern DAT_RETURN dat_registry_remove_provider(
-	IN  DAT_PROVIDER*, 			/* provider */
+	IN  DAT_PROVIDER*,			/* provider */
 	IN  const DAT_PROVIDER_INFO*);		/* provider info */
 
 /*

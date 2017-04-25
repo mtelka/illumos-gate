@@ -97,7 +97,7 @@ typedef id_t	netstackid_t;
  */
 #ifdef _KERNEL
 typedef struct {
-	uint16_t 	nms_flags;
+	uint16_t	nms_flags;
 	kcondvar_t	nms_cv;
 } nm_state_t;
 

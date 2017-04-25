@@ -254,63 +254,63 @@ extern "C" {
 /*
  *	GART and GTT entry format table
  *
- * 		AMD64 GART entry
- * 	from bios and kernel develop guide for amd64
+ *		AMD64 GART entry
+ *	from bios and kernel develop guide for amd64
  *	 -----------------------------
- * 	Bits		Description	|
- * 	0		valid		|
- * 	1		coherent	|
- * 	3:2		reserved	|
- * 	11:4		physaddr[39:32]	|
- * 	31:12	physaddr[31:12]	|
- * 	-----------------------------
+ *	Bits		Description	|
+ *	0		valid		|
+ *	1		coherent	|
+ *	3:2		reserved	|
+ *	11:4		physaddr[39:32]	|
+ *	31:12	physaddr[31:12]	|
+ *	-----------------------------
  *		Intel GTT entry
- * 	Intel video programming manual
- * 	-----------------------------
- * 	Bits		descrition	|
- * 	0		valid		|
- * 	2:1		memory type	|
- * 	29:12		PhysAddr[29:12]	|
- * 	31:30		reserved	|
- * 	-----------------------------
+ *	Intel video programming manual
+ *	-----------------------------
+ *	Bits		descrition	|
+ *	0		valid		|
+ *	2:1		memory type	|
+ *	29:12		PhysAddr[29:12]	|
+ *	31:30		reserved	|
+ *	-----------------------------
  *		AGP entry
- * 	from AGP protocol 3.0
- * 	-----------------------------
- * 	Bits		descrition	|
- * 	0		valid		|
- * 	1		coherent	|
- * 	3:2		reserved	|
- * 	11:4		PhysAddr[39:32]	|
- * 	31:12	PhysAddr[31:12]		|
- * 	63:32	PhysAddr[71:40]		|
+ *	from AGP protocol 3.0
+ *	-----------------------------
+ *	Bits		descrition	|
+ *	0		valid		|
+ *	1		coherent	|
+ *	3:2		reserved	|
+ *	11:4		PhysAddr[39:32]	|
+ *	31:12	PhysAddr[31:12]		|
+ *	63:32	PhysAddr[71:40]		|
  *	 -----------------------------
  */
 
 /*
  *	gart and gtt table base register format
  *
- *  		AMD64 register format
- * 	from bios and kernel develop guide for AMD64
- * 	---------------------------------------------
- * 	Bits			Description		|
- * 	3:0			reserved		|
- * 	31:4			physical addr 39:12	|
- * 	----------------------------------------------
- * 		INTEL AGPGART table base register format
- * 	from AGP protocol 3.0 p142, only support 32 bits
- * 	---------------------------------------------
- * 	Bits			Description		|
- * 	11:0			reserved		|
- * 	31:12		physical addr 31:12		|
- * 	63:32		physical addr 63:32		|
- * 	---------------------------------------------
- * 		INTEL i810 GTT table base register format
- * 	_____________________________________________
- * 	Bits			Description		|
- * 	0			GTT table enable bit	|
- * 	11:1			reserved		|
- * 	31:12			physical addr 31:12	|
- * 	---------------------------------------------
+ *		AMD64 register format
+ *	from bios and kernel develop guide for AMD64
+ *	---------------------------------------------
+ *	Bits			Description		|
+ *	3:0			reserved		|
+ *	31:4			physical addr 39:12	|
+ *	----------------------------------------------
+ *		INTEL AGPGART table base register format
+ *	from AGP protocol 3.0 p142, only support 32 bits
+ *	---------------------------------------------
+ *	Bits			Description		|
+ *	11:0			reserved		|
+ *	31:12		physical addr 31:12		|
+ *	63:32		physical addr 63:32		|
+ *	---------------------------------------------
+ *		INTEL i810 GTT table base register format
+ *	_____________________________________________
+ *	Bits			Description		|
+ *	0			GTT table enable bit	|
+ *	11:1			reserved		|
+ *	31:12			physical addr 31:12	|
+ *	---------------------------------------------
  */
 
 /* Intel agp bridge specific */

@@ -354,7 +354,7 @@ bool_t smb_quota_set_xdr(XDR *, smb_quota_set_t *);
 
 typedef struct dfs_referral_query {
 	dfs_reftype_t	rq_type;
-	char 		*rq_path;
+	char		*rq_path;
 } dfs_referral_query_t;
 
 typedef struct dfs_referral_response {

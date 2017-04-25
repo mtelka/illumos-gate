@@ -28,8 +28,6 @@
 #ifndef	_NETINET_IGMP_H
 #define	_NETINET_IGMP_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -144,7 +142,7 @@ typedef struct igmp3qa_s {
 #define	IGMP_DVMRP			0x13	/* DVMRP routing message    */
 #define	IGMP_PIM			0x14	/* PIM routing message	    */
 
-#define	IGMP_MTRACE_RESP		0x1e  	/* traceroute resp to sender */
+#define	IGMP_MTRACE_RESP		0x1e	/* traceroute resp to sender */
 #define	IGMP_MTRACE			0x1f	/* mcast traceroute messages */
 
 #define	IGMP_MAX_HOST_REPORT_DELAY	10	/* max delay for response to */

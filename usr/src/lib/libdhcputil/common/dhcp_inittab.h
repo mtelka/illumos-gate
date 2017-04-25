@@ -26,8 +26,6 @@
 #ifndef	_DHCP_INITTAB_H
 #define	_DHCP_INITTAB_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 #include <dhcp_symbol.h>
 #include <limits.h>
@@ -48,7 +46,7 @@ extern "C" {
  */
 #define	ITAB_INITTAB_PATH	"/etc/dhcp/inittab"
 #define	ITAB_INITTAB6_PATH	"/etc/dhcp/inittab6"
-#define	ITAB_MAX_LINE_LEN	8192 		/* bytes */
+#define	ITAB_MAX_LINE_LEN	8192		/* bytes */
 #define	ITAB_MAX_NUMBER_LEN	30		/* digits */
 #define	ITAB_COMMENT_CHAR	'#'
 #define	ITAB_CODE_MAX		UCHAR_MAX	/* for now */

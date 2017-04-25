@@ -47,8 +47,8 @@ typedef struct smdevice_info {
 	uchar_t	sm_version;
 	int32_t	sm_interface_type;	/* Interface type */
 	char	*sm_vendor_name;	/* Vendor name */
-	char 	*sm_product_name;	/* Product name */
-	char 	*sm_firmware_version;	/* Firmware version */
+	char	*sm_product_name;	/* Product name */
+	char	*sm_firmware_version;	/* Firmware version */
 }smdevice_info_t;
 
 typedef	void	*smedia_handle_t;
@@ -102,9 +102,9 @@ typedef struct smmedium_property {
 #define	SM_STATUS_UNKNOWN		(PASSWD|0xFF)
 
 #define	SM_UNPROTECTED			SM_WRITE_PROTECT_DISABLE
-#define	SM_WRITE_PROTECTED 		SM_WRITE_PROTECT_NOPASSWD
-#define	SM_WRITE_PROTECTED_WP   	SM_WRITE_PROTECT_PASSWD
-#define	SM_READ_WRITE_PROTECTED 	SM_READ_WRITE_PROTECT
+#define	SM_WRITE_PROTECTED		SM_WRITE_PROTECT_NOPASSWD
+#define	SM_WRITE_PROTECTED_WP		SM_WRITE_PROTECT_PASSWD
+#define	SM_READ_WRITE_PROTECTED		SM_READ_WRITE_PROTECT
 
 
 typedef struct smwp_state {

@@ -27,8 +27,6 @@
 #ifndef	_SYS_PSHOT_H
 #define	_SYS_PSHOT_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -105,7 +103,7 @@ struct pshot {
 	ndi_event_hdl_t	ndi_event_hdl;
 	ndi_event_set_t	ndi_events;
 	ddi_iblock_cookie_t	iblock_cookie;
-	ddi_callback_id_t 	callback_cache[PSHOT_MAX_CBCACHE];
+	ddi_callback_id_t	callback_cache[PSHOT_MAX_CBCACHE];
 	ddi_callback_id_t	test_callback_cache[PSHOT_MAX_TSTCACHE];
 
 	pshot_minor_t	nodes[PSHOT_MAX_MINOR_PERINST];

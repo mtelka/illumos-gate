@@ -27,8 +27,6 @@
 #ifndef	_SYS_SOBJECT_H
 #define	_SYS_SOBJECT_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 #include <sys/thread.h>
 
@@ -49,7 +47,7 @@ extern "C" {
 #define	SOBJ_SEMA	4	/* semaphore synchonization object */
 #define	SOBJ_USER	5	/* user-level synchronization object */
 #define	SOBJ_USER_PI	6	/* user-level sobj having Prio Inheritance */
-#define	SOBJ_SHUTTLE 	7	/* shuttle synchronization object */
+#define	SOBJ_SHUTTLE	7	/* shuttle synchronization object */
 
 /*
  * The following data structure is used to map

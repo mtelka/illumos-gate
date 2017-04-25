@@ -103,10 +103,10 @@ struct vifctl {
  */
 struct mfcctl {
     struct	in_addr	mfcc_origin;	/* ip origin of mcasts	*/
-    struct	in_addr	mfcc_mcastgrp; 	/* multicast group associated */
+    struct	in_addr	mfcc_mcastgrp;	/* multicast group associated */
     vifi_t		mfcc_parent;	/* incoming vif	*/
     uint_t		mfcc_pkt_cnt;	/* pkt count for src-grp	*/
-    uchar_t		mfcc_ttls[MAXVIFS]; 	/* forwarding ttls on vifs    */
+    uchar_t		mfcc_ttls[MAXVIFS];	/* forwarding ttls on vifs    */
 };
 
 /*
@@ -131,11 +131,11 @@ struct mrtstat {
     uint_t	mrts_pkt2large;		/* pkts dropped - size > BKT SIZE  */
     uint_t	mrts_vifctlSize;	/* Size of vifctl		   */
     uint_t	mrts_mfcctlSize;	/* Size of mfcctl		   */
-    uint_t 	mrts_pim_badversion;    /* dtgrms dropped - bad version */
-    uint_t 	mrts_pim_rcv_badcsum;   /* dtgrms dropped - bad checksum */
-    uint_t 	mrts_pim_badregisters;  /* dtgrms dropped - bad register pkts */
-    uint_t 	mrts_pim_regforwards;   /* dtgrms to be forwd - register pkts */
-    uint_t 	mrts_pim_regsend_drops; /* dtgrms dropped - register send */
+    uint_t	mrts_pim_badversion;    /* dtgrms dropped - bad version */
+    uint_t	mrts_pim_rcv_badcsum;   /* dtgrms dropped - bad checksum */
+    uint_t	mrts_pim_badregisters;  /* dtgrms dropped - bad register pkts */
+    uint_t	mrts_pim_regforwards;   /* dtgrms to be forwd - register pkts */
+    uint_t	mrts_pim_regsend_drops; /* dtgrms dropped - register send */
     uint_t	mrts_pim_malformed;	/* dtgrms dropped - packet malformed */
     uint_t	mrts_pim_nomemory;	/* dtgrms dropped - no memory to fwd. */
 };
@@ -173,7 +173,7 @@ struct vif {
 	struct tbf	*v_tbf;		/* Token bkt structure at intf.	*/
 	struct in_addr	v_lcl_addr;	/* Local interface address	*/
 	struct in_addr	v_rmt_addr;	/* Remote address(tunnels only)	*/
-	struct ipif_s 	*v_ipif;	/* Pointer to logical interface	*/
+	struct ipif_s	*v_ipif;	/* Pointer to logical interface	*/
 	uint_t		v_pkt_in;	/* # Pkts in on interface	*/
 	uint_t		v_pkt_out;	/* # Pkts out on interface	*/
 	uint_t		v_bytes_in;	/* # Bytes in on interface	*/
@@ -184,7 +184,7 @@ struct vif {
 	 *				Used in bsd for performance
 	 */
 	uint_t			v_refcnt;
-	uchar_t 		v_marks;
+	uchar_t			v_marks;
 	kmutex_t		v_lock;
 	ilm_t			*v_ilm;	/* allmulti join */
 };
@@ -207,17 +207,17 @@ struct vif {
  */
 struct mfc {
     struct in_addr	mfc_origin;	/* ip origin of mcasts	*/
-    struct in_addr  	mfc_mcastgrp;	/* multicast group associated */
+    struct in_addr	mfc_mcastgrp;	/* multicast group associated */
     vifi_t		mfc_parent;	/* incoming vif	*/
     uchar_t		mfc_ttls[MAXVIFS];	/* forwarding ttls on vifs    */
     uint_t		mfc_pkt_cnt;	/* pkt count for src-grp	*/
     uint_t		mfc_byte_cnt;	/* byte count for src-grp	*/
     uint_t		mfc_wrong_if;	/* wrong if for src-grp	*/
-    struct timespec  	mfc_last_assert;	/* last time I sent an assert */
+    struct timespec	mfc_last_assert;	/* last time I sent an assert */
     struct rtdetq	*mfc_rte;	/* pending upcall	*/
     timeout_id_t	mfc_timeout_id;	/* qtimeout return id	*/
     struct mfc		*mfc_next;
-    uchar_t 		mfc_marks;
+    uchar_t		mfc_marks;
     kmutex_t		mfc_mutex;	/* protects fields and rte list */
 };
 
@@ -273,21 +273,21 @@ struct igmpmsg {
 /*
  * Token Bucket filter code
  */
-#define	MAX_BKT_SIZE	10000		/* 10K bytes size 		*/
-#define	MAXQSIZE	10		/* max # of pkts in queue 	*/
+#define	MAX_BKT_SIZE	10000		/* 10K bytes size		*/
+#define	MAXQSIZE	10		/* max # of pkts in queue	*/
 #define	TOKEN_SIZE	8		/* number of bits in token	*/
 
 /*
  * The token bucket filter at each vif
  */
 struct tbf {
-    timespec_t 		tbf_last_pkt_t; /* arr. time of last pkt 	*/
-    uint_t 		tbf_n_tok;	/* no of tokens in bucket 	*/
-    uint_t 		tbf_q_len;    	/* length of queue at this vif	*/
-    uint_t 		tbf_max_q_len;  /* max queue length		*/
+    timespec_t		tbf_last_pkt_t; /* arr. time of last pkt	*/
+    uint_t		tbf_n_tok;	/* no of tokens in bucket	*/
+    uint_t		tbf_q_len;	/* length of queue at this vif	*/
+    uint_t		tbf_max_q_len;  /* max queue length		*/
     mblk_t		*tbf_q;		/* Packet queue	*/
     mblk_t		*tbf_t;		/* Tail-insertion pointer	*/
-    kmutex_t 		tbf_lock;	/* lock on the tbf		*/
+    kmutex_t		tbf_lock;	/* lock on the tbf		*/
 };
 
 #endif /* _KERNEL */

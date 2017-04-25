@@ -29,8 +29,6 @@
 #ifndef	_SYS_FS_HSFS_NODE_H
 #define	_SYS_FS_HSFS_NODE_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -39,7 +37,7 @@ extern "C" {
 
 struct	hs_direntry {
 	uint_t		ext_lbn;	/* LBN of start of extent */
-	uint_t		ext_size;    	/* no. of data bytes in extent */
+	uint_t		ext_size;	/* no. of data bytes in extent */
 	struct timeval	cdate;		/* creation date */
 	struct timeval	mdate;		/* last modification date */
 	struct timeval	adate;		/* last access date */
@@ -55,7 +53,7 @@ struct	hs_direntry {
 	uchar_t		intlf_sz;	/* intleaving size */
 	uchar_t		intlf_sk;	/* intleaving skip factor */
 	ushort_t	sym_link_flag;	/* flags for sym link */
-	char		*sym_link; 	/* path of sym link for readlink() */
+	char		*sym_link;	/* path of sym link for readlink() */
 };
 
 struct	ptable {
@@ -105,7 +103,7 @@ struct  hsnode {
 	int		hs_num_contig;  /* Count of contiguous reads */
 	int		hs_ra_bytes;    /* Bytes to readahead */
 	kmutex_t	hs_contents_lock;	/* protects hsnode contents */
-						/* 	except hs_offset */
+						/*	except hs_offset */
 };
 
 /* hs_flags */
@@ -129,7 +127,7 @@ struct  hsfid {
  * initialized.
  */
 struct	hs_volume {
-	ulong_t		vol_size; 	/* no. of Logical blocks in Volume */
+	ulong_t		vol_size;	/* no. of Logical blocks in Volume */
 	uint_t		lbn_size;	/* no. of bytes in a block */
 	uint_t		lbn_shift;	/* shift to convert lbn to bytes */
 	uint_t		lbn_secshift;	/* shift to convert lbn to sec */

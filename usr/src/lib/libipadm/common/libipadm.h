@@ -100,7 +100,7 @@ typedef enum {
  *
  *  - IPADM_OPT_PERSIST:
  *	For all the create/delete/up/down/set/get functions,
- * 	requests to persist the configuration so that it can be
+ *	requests to persist the configuration so that it can be
  *	re-enabled or reapplied on boot.
  *
  *  - IPADM_OPT_ACTIVE:
@@ -347,7 +347,7 @@ extern ipadm_status_t	ipadm_get_prop(ipadm_handle_t, const char *, char *,
 /*
  * miscellaneous helper functions.
  */
-extern const char 	*ipadm_status2str(ipadm_status_t);
+extern const char	*ipadm_status2str(ipadm_status_t);
 extern int		ipadm_str2nvlist(const char *, nvlist_t **, uint_t);
 extern size_t		ipadm_nvlist2str(nvlist_t *, char *, size_t);
 extern char		*ipadm_proto2str(uint_t);

@@ -26,8 +26,6 @@
 #ifndef _TNFCTL_H
 #define	_TNFCTL_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 #include <gelf.h>
 
@@ -127,7 +125,7 @@ typedef enum {
 	TNFCTL_ERR_BUSY,	/* kernel/process already tracing */
 	TNFCTL_ERR_INVALIDPROBE, /* probe no longer valid (dlclos'ed) */
 	TNFCTL_ERR_USR1,	/* error extensions - semantics */
-	TNFCTL_ERR_USR2,	/* 	set by user */
+	TNFCTL_ERR_USR2,	/*	set by user */
 	TNFCTL_ERR_USR3,
 	TNFCTL_ERR_USR4,
 	TNFCTL_ERR_USR5
@@ -152,7 +150,7 @@ typedef enum {
 
 typedef enum {
 	TNFCTL_TARG_DEFAULT,	/* kills target if it was started with */
-				/* 	tnfctl_exec_open() */
+				/*	tnfctl_exec_open() */
 	TNFCTL_TARG_KILL,	/* kills target */
 	TNFCTL_TARG_RESUME,	/* target is let free */
 	TNFCTL_TARG_SUSPEND	/* target is suspended */
@@ -171,7 +169,7 @@ typedef struct tnfctl_ind_obj_info {
 
 typedef int tnfctl_ind_obj_f(
 	void *,					/* opaque prochandle */
-	const struct tnfctl_ind_obj_info *, 	/* info about this object */
+	const struct tnfctl_ind_obj_info *,	/* info about this object */
 	void *);				/* client supplied data */
 
 typedef struct tnfctl_ind_config {
@@ -190,7 +188,7 @@ const char *tnfctl_strerror(tnfctl_errcode_t);
  * interfaces to open a tnfctl handle
  */
 tnfctl_errcode_t tnfctl_pid_open(
-	pid_t, 			/* pid */
+	pid_t,			/* pid */
 	tnfctl_handle_t **);	/* return value */
 
 tnfctl_errcode_t tnfctl_indirect_open(

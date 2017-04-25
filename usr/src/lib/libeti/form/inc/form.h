@@ -20,13 +20,11 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1988 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _FORM_H
 #define	_FORM_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"	/* SVr4.0 1.10	*/
 
 #include <curses.h>
 #include <eti.h>
@@ -43,8 +41,8 @@ typedef struct typenode {
 
 	int			status;		/* flags		*/
 	int			ref;		/* reference count	*/
-	struct typenode *	left;		/* ptr to operand for |	*/
-	struct typenode *	right;		/* ptr to operand for |	*/
+	struct typenode		*left;		/* ptr to operand for |	*/
+	struct typenode		*right;		/* ptr to operand for |	*/
 	PTF_charP		makearg;	/* make fieldtype arg	*/
 	PTF_charP		copyarg;	/* copy fieldtype arg	*/
 	PTF_void		freearg;	/* free fieldtype arg	*/
@@ -91,14 +89,14 @@ typedef struct fieldnode {
 	chtype			fore;		/* foreground attribute	*/
 	chtype			back;		/* background attribute	*/
 	OPTIONS			opts;		/* options		*/
-	struct fieldnode *	snext;		/* sorted order pointer	*/
-	struct fieldnode *	sprev;		/* sorted order pointer	*/
-	struct fieldnode *	link;		/* linked field chain	*/
-	struct formnode *	form;		/* containing form	*/
+	struct fieldnode	*snext;		/* sorted order pointer	*/
+	struct fieldnode	*sprev;		/* sorted order pointer	*/
+	struct fieldnode	*link;		/* linked field chain	*/
+	struct formnode		*form;		/* containing form	*/
 	FIELDTYPE *		type;		/* field type		*/
-	char *			arg;		/* argument for type	*/
-	char *			buf;		/* field buffers	*/
-	char *			usrptr;		/* user pointer		*/
+	char			*arg;		/* argument for type	*/
+	char			*buf;		/* field buffers	*/
+	char			*usrptr;	/* user pointer		*/
 }
 	FIELD;
 
@@ -127,7 +125,7 @@ typedef struct formnode {
 	FIELD **		field;		/* field [maxfield]	*/
 	FIELD *			current;	/* current field	*/
 	_PAGE *			page;		/* page [maxpage]	*/
-	char *			usrptr;		/* user pointer		*/
+	char			*usrptr;	/* user pointer		*/
 	PTF_void		forminit;	/* user function	*/
 	PTF_void		formterm;	/* user function	*/
 	PTF_void		fieldinit;	/* user function	*/
@@ -280,7 +278,7 @@ extern int		set_max_field(FIELD *, int);
 extern int		move_field(FIELD *, int, int);
 extern int		set_field_type(FIELD *, FIELDTYPE *, ...);
 extern FIELDTYPE *	field_type(FIELD *);
-extern char *		field_arg(FIELD *);
+extern char		*field_arg(FIELD *);
 extern int		set_new_page(FIELD *, int);
 extern int		new_page(FIELD *);
 extern int		set_field_just(FIELD *, int);
@@ -292,11 +290,11 @@ extern chtype		field_back(FIELD *);
 extern int		set_field_pad(FIELD *, int);
 extern int		field_pad(FIELD *);
 extern int		set_field_buffer(FIELD *, int, char *);
-extern char *		field_buffer(FIELD *, int);
+extern char		*field_buffer(FIELD *, int);
 extern int		set_field_status(FIELD *, int);
 extern int		field_status(FIELD *);
 extern int		set_field_userptr(FIELD *, char *);
-extern char *		field_userptr(FIELD *);
+extern char		*field_userptr(FIELD *);
 extern int		set_field_opts(FIELD *, OPTIONS);
 extern OPTIONS		field_opts(FIELD *);
 extern int		field_opts_on(FIELD *, OPTIONS);
@@ -334,7 +332,7 @@ extern int		unpost_form(FORM *);
 extern int		pos_form_cursor(FORM *);
 extern int		form_driver(FORM *, int);
 extern int		set_form_userptr(FORM *, char *);
-extern char *		form_userptr(FORM *);
+extern char		*form_userptr(FORM *);
 extern int		set_form_opts(FORM *, OPTIONS);
 extern OPTIONS		form_opts(FORM *);
 extern int		form_opts_on(FORM *, OPTIONS);
@@ -368,7 +366,7 @@ extern int		set_max_field();
 extern int		move_field();
 extern int		set_field_type();
 extern FIELDTYPE *	field_type();
-extern char *		field_arg();
+extern char		*field_arg();
 extern int		set_new_page();
 extern int		new_page();
 extern int		set_field_just();
@@ -380,11 +378,11 @@ extern chtype		field_back();
 extern int		set_field_pad();
 extern int		field_pad();
 extern int		set_field_buffer();
-extern char *		field_buffer();
+extern char		*field_buffer();
 extern int		set_field_status();
 extern int		field_status();
 extern int		set_field_userptr();
-extern char *		field_userptr();
+extern char		*field_userptr();
 extern int		set_field_opts();
 extern OPTIONS		field_opts();
 extern int		field_opts_on();
@@ -422,7 +420,7 @@ extern int		unpost_form();
 extern int		pos_form_cursor();
 extern int		form_driver();
 extern int		set_form_userptr();
-extern char *		form_userptr();
+extern char		*form_userptr();
 extern int		set_form_opts();
 extern OPTIONS		form_opts();
 extern int		form_opts_on();

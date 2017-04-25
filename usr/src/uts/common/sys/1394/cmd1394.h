@@ -27,8 +27,6 @@
 #ifndef _SYS_1394_CMD1394_H
 #define	_SYS_1394_CMD1394_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * cmd1394.h
  *    Contains the enums, command structures, and error codes used with
@@ -190,7 +188,7 @@ typedef struct cmd1394_cmd
 #define	CMD1394_EDEVICE_ERROR		(-20)  /* bad tcode or ack or... */
 
 /* cmd1394_cmd.result - Returned with completion_callback */
-#define	CMD1394_CMDSUCCESS 		(0)
+#define	CMD1394_CMDSUCCESS		(0)
 #define	CMD1394_EDEVICE_BUSY		(-30)
 #define	CMD1394_ERETRIES_EXCEEDED	(-31)
 #define	CMD1394_ETYPE_ERROR		(-32)

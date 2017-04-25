@@ -70,13 +70,13 @@ typedef enum {				/* socket ... */
 } sof_event_t;
 
 /* Filter callbacks */
-typedef sof_rval_t 	(*sof_attach_active_fn_t)(sof_handle_t, int, int, int,
+typedef sof_rval_t	(*sof_attach_active_fn_t)(sof_handle_t, int, int, int,
     cred_t *, void **);
-typedef sof_rval_t 	(*sof_attach_passive_fn_t)(sof_handle_t, sof_handle_t,
+typedef sof_rval_t	(*sof_attach_passive_fn_t)(sof_handle_t, sof_handle_t,
     void *, struct sockaddr *, socklen_t, struct sockaddr *, socklen_t,
     void **);
-typedef void 		(*sof_detach_fn_t)(sof_handle_t, void *, cred_t *);
-typedef mblk_t 		*(*sof_data_in_fn_t)(sof_handle_t, void *, mblk_t *,
+typedef void		(*sof_detach_fn_t)(sof_handle_t, void *, cred_t *);
+typedef mblk_t		*(*sof_data_in_fn_t)(sof_handle_t, void *, mblk_t *,
     int, size_t *);
 typedef mblk_t		*(*sof_data_in_proc_fn_t)(sof_handle_t, void *,
     mblk_t *, cred_t *, size_t *);
@@ -95,7 +95,7 @@ typedef sof_rval_t	(*sof_getsockname_fn_t)(sof_handle_t, void *,
     struct sockaddr *, socklen_t *, cred_t *);
 typedef sof_rval_t	(*sof_getpeername_fn_t)(sof_handle_t, void *,
     struct sockaddr *, socklen_t *, cred_t *);
-typedef sof_rval_t 		(*sof_setsockopt_fn_t)(sof_handle_t, void *,
+typedef sof_rval_t		(*sof_setsockopt_fn_t)(sof_handle_t, void *,
     int, int, void *, socklen_t *, cred_t *);
 typedef sof_rval_t	(*sof_getsockopt_fn_t)(sof_handle_t, void *,
     int, int, void *, socklen_t *, cred_t *);
@@ -135,13 +135,13 @@ extern int	sof_unregister(const char *);
 extern void	sof_newconn_ready(sof_handle_t);
 extern void	sof_bypass(sof_handle_t);
 extern void	*sof_get_cookie(sof_handle_t);
-extern void 	*sof_cas_cookie(sof_handle_t, void *, void *);
+extern void	*sof_cas_cookie(sof_handle_t, void *, void *);
 extern int	sof_inject_data_out(sof_handle_t, mblk_t *, struct nmsghdr *,
     boolean_t *);
 extern int	sof_inject_data_in(sof_handle_t, mblk_t *, size_t, int,
     boolean_t *);
-extern void 	sof_rcv_flowctrl(sof_handle_t, boolean_t);
-extern void 	sof_snd_flowctrl(sof_handle_t, boolean_t);
+extern void	sof_rcv_flowctrl(sof_handle_t, boolean_t);
+extern void	sof_snd_flowctrl(sof_handle_t, boolean_t);
 extern boolean_t sof_newconn_move(sof_handle_t, sof_handle_t);
 
 #ifdef	__cplusplus

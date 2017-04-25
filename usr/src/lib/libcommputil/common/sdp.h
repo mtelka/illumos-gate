@@ -27,8 +27,6 @@
 #ifndef _SDP_H
 #define	_SDP_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -90,8 +88,8 @@ typedef struct sdp_list {
  */
 typedef struct sdp_origin {
 	char			*o_username;
-	uint64_t 		o_id;
-	uint64_t 		o_version;
+	uint64_t		o_id;
+	uint64_t		o_version;
 	char			*o_nettype;
 	char			*o_addrtype;
 	char			*o_address;
@@ -105,7 +103,7 @@ typedef struct sdp_conn {
 	char			*c_nettype;
 	char			*c_addrtype;
 	char			*c_address;
-	int 			c_addrcount;
+	int			c_addrcount;
 	struct sdp_conn		*c_next;
 	uint8_t			c_ttl;
 } sdp_conn_t;
@@ -117,7 +115,7 @@ typedef struct sdp_conn {
 typedef struct sdp_repeat {
 	uint64_t		r_interval;
 	uint64_t		r_duration;
-	sdp_list_t 		*r_offset;
+	sdp_list_t		*r_offset;
 	struct sdp_repeat	*r_next;
 } sdp_repeat_t;
 
@@ -126,9 +124,9 @@ typedef struct sdp_repeat {
  * t=<start-time> <stop-time>
  */
 typedef struct sdp_time {
-	uint64_t 		t_start;
-	uint64_t 		t_stop;
-	sdp_repeat_t 		*t_repeat;
+	uint64_t		t_start;
+	uint64_t		t_stop;
+	sdp_repeat_t		*t_repeat;
 	struct sdp_time		*t_next;
 } sdp_time_t;
 
@@ -137,7 +135,7 @@ typedef struct sdp_time {
  * z=<adjustment time> <offset> <adjustment time> <offset> ....
  */
 typedef struct sdp_zone {
-	uint64_t 		z_time;
+	uint64_t		z_time;
 	char			*z_offset;
 	struct sdp_zone		*z_next;
 } sdp_zone_t;
@@ -158,7 +156,7 @@ typedef struct sdp_attr {
  */
 typedef struct sdp_bandwidth {
 	char			*b_type;
-	uint64_t 		b_value;
+	uint64_t		b_value;
 	struct sdp_bandwidth	*b_next;
 } sdp_bandwidth_t;
 
@@ -183,32 +181,32 @@ typedef struct sdp_media {
 	uint_t			m_port;
 	int			m_portcount;
 	char			*m_proto;
-	sdp_list_t 		*m_format;
+	sdp_list_t		*m_format;
 	char			*m_info;
-	sdp_conn_t 		*m_conn;
-	sdp_bandwidth_t 	*m_bw;
-	sdp_key_t 		*m_key;
-	sdp_attr_t 		*m_attr;
-	struct sdp_media 	*m_next;
+	sdp_conn_t		*m_conn;
+	sdp_bandwidth_t		*m_bw;
+	sdp_key_t		*m_key;
+	sdp_attr_t		*m_attr;
+	struct sdp_media	*m_next;
 	sdp_session_t		*m_session;
 } sdp_media_t;
 
 struct sdp_session {
 	int			sdp_session_version;
-	int 			s_version;
-	sdp_origin_t 		*s_origin;
+	int			s_version;
+	sdp_origin_t		*s_origin;
 	char			*s_name;
 	char			*s_info;
 	char			*s_uri;
-	sdp_list_t 		*s_email;
-	sdp_list_t 		*s_phone;
-	sdp_conn_t 		*s_conn;
-	sdp_bandwidth_t 	*s_bw;
-	sdp_time_t 		*s_time;
-	sdp_zone_t 		*s_zone;
-	sdp_key_t 		*s_key;
-	sdp_attr_t 		*s_attr;
-	sdp_media_t 		*s_media;
+	sdp_list_t		*s_email;
+	sdp_list_t		*s_phone;
+	sdp_conn_t		*s_conn;
+	sdp_bandwidth_t		*s_bw;
+	sdp_time_t		*s_time;
+	sdp_zone_t		*s_zone;
+	sdp_key_t		*s_key;
+	sdp_attr_t		*s_attr;
+	sdp_media_t		*s_media;
 };
 
 extern int		sdp_parse(const char *, int, int, sdp_session_t **,

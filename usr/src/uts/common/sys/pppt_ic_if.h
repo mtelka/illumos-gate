@@ -84,8 +84,8 @@ typedef struct stmf_ic_msg {
  * Register port message.
  */
 typedef struct {
-	scsi_devid_desc_t 	*icrp_port_id;
-	uint16_t 		icrp_relative_port_id;
+	scsi_devid_desc_t	*icrp_port_id;
+	uint16_t		icrp_relative_port_id;
 	/* opaque callback data */
 	uint16_t		icrp_cb_arg_len;
 	uint8_t			*icrp_cb_arg;
@@ -95,7 +95,7 @@ typedef struct {
  * Deregister port message.
  */
 typedef struct {
-	scsi_devid_desc_t 	*icdp_port_id;
+	scsi_devid_desc_t	*icdp_port_id;
 	/* opaque callback data */
 	uint16_t		icdp_cb_arg_len;
 	uint8_t			*icdp_cb_arg;
@@ -105,7 +105,7 @@ typedef struct {
  * Register/deregister lun message.
  */
 typedef struct {
-	uint8_t 		icrl_lun_id[16];
+	uint8_t			icrl_lun_id[16];
 	char			*icrl_lu_provider_name;
 	/* opaque callback data */
 	uint16_t		icrl_cb_arg_len;
@@ -120,7 +120,7 @@ typedef struct {
 	scsi_devid_desc_t	*icsc_ini_devid;
 	scsi_devid_desc_t	*icsc_tgt_devid;
 	stmf_remote_port_t	*icsc_rport;
-	uint8_t 		icsc_lun_id[16];
+	uint8_t			icsc_lun_id[16];
 	/*
 	 * fields from scsi_task_t
 	 */
@@ -128,7 +128,7 @@ typedef struct {
 	uint8_t		icsc_task_lun_no[8];
 	uint32_t	icsc_task_expected_xfer_length;
 	uint16_t	icsc_task_cdb_length;
-	uint8_t 	*icsc_task_cdb;
+	uint8_t		*icsc_task_cdb;
 	uint8_t		icsc_task_flags;	/* See def. for task flags */
 	uint8_t		icsc_task_priority;	/* As per SAM-3 */
 	uint8_t		icsc_task_mgmt_function;	/* if is a TM req */
@@ -307,15 +307,15 @@ stmf_ic_msg_t *stmf_ic_dereg_lun_msg_alloc(
 /* Allocate a scsi cmd message */
 typedef
 stmf_ic_msg_t *(*stmf_ic_scsi_cmd_msg_alloc_func_t)(
-    stmf_ic_msgid_t 	task_msgid,
-    scsi_task_t 	*scsi_task,
+    stmf_ic_msgid_t	task_msgid,
+    scsi_task_t		*scsi_task,
     uint32_t		immed_data_len,
     uint8_t		*immed_data,
     stmf_ic_msgid_t msgid);
 
 stmf_ic_msg_t *stmf_ic_scsi_cmd_msg_alloc(
-    stmf_ic_msgid_t 	task_msgid,
-    scsi_task_t 	*scsi_task,
+    stmf_ic_msgid_t	task_msgid,
+    scsi_task_t		*scsi_task,
     uint32_t		immed_data_len,
     uint8_t		*immed_data,
     stmf_ic_msgid_t msgid);
@@ -323,7 +323,7 @@ stmf_ic_msg_t *stmf_ic_scsi_cmd_msg_alloc(
 /* Allocate a scsi data message */
 typedef
 stmf_ic_msg_t *(*stmf_ic_scsi_data_msg_alloc_func_t)(
-    stmf_ic_msgid_t 	task_msgid,
+    stmf_ic_msgid_t	task_msgid,
     uint64_t		session_id,
     uint8_t		*lun_id,
     uint64_t		data_len,
@@ -331,7 +331,7 @@ stmf_ic_msg_t *(*stmf_ic_scsi_data_msg_alloc_func_t)(
     stmf_ic_msgid_t msgid);
 
 stmf_ic_msg_t *stmf_ic_scsi_data_msg_alloc(
-    stmf_ic_msgid_t 	task_msgid,
+    stmf_ic_msgid_t	task_msgid,
     uint64_t		session_id,
     uint8_t		*lun_id,
     uint64_t		data_len,
@@ -341,13 +341,13 @@ stmf_ic_msg_t *stmf_ic_scsi_data_msg_alloc(
 /* Allocate a scsi transfer done message */
 typedef
 stmf_ic_msg_t *(*stmf_ic_scsi_data_xfer_done_msg_alloc_func_t)(
-    stmf_ic_msgid_t 	task_msgid,
+    stmf_ic_msgid_t	task_msgid,
     uint64_t		session_id,
     stmf_status_t	status,
     stmf_ic_msgid_t	msgid);
 
 stmf_ic_msg_t *stmf_ic_scsi_data_xfer_done_msg_alloc(
-    stmf_ic_msgid_t 	task_msgid,
+    stmf_ic_msgid_t	task_msgid,
     uint64_t		session_id,
     stmf_status_t	status,
     stmf_ic_msgid_t	msgid);
@@ -355,13 +355,13 @@ stmf_ic_msg_t *stmf_ic_scsi_data_xfer_done_msg_alloc(
 
 /* Allocate a scsi status message */
 stmf_ic_msg_t *stmf_ic_scsi_status_msg_alloc(
-    stmf_ic_msgid_t 	task_msgid,
+    stmf_ic_msgid_t	task_msgid,
     uint64_t		session_id,
     uint8_t		*lun_id,
     uint8_t		response,		/* was command processed? */
     uint8_t		status,
     uint8_t		flags,
-    uint32_t 		resid,
+    uint32_t		resid,
     uint8_t		sense_len,
     uint8_t		*sense,
     stmf_ic_msgid_t msgid);	/* must match corresponding scsi cmd msgid */
@@ -369,7 +369,7 @@ stmf_ic_msg_t *stmf_ic_scsi_status_msg_alloc(
 
 /* Allocate a scsi ready to transfer (r2t) message */
 stmf_ic_msg_t *stmf_ic_r2t_msg_alloc(
-    stmf_ic_msgid_t 	task_msgid,
+    stmf_ic_msgid_t	task_msgid,
     uint64_t		session_id,
     uint32_t		offset,
     uint32_t		length,
@@ -379,7 +379,7 @@ stmf_ic_msg_t *stmf_ic_r2t_msg_alloc(
 stmf_ic_msg_t *stmf_ic_status_msg_alloc(
     stmf_status_t	status,
     stmf_ic_msg_type_t	msg_type,	/* msg type reporting status on */
-    stmf_ic_msgid_t 	msgid);		/* id of msg reporting status on */
+    stmf_ic_msgid_t	msgid);		/* id of msg reporting status on */
 
 /* Allocate a session create message */
 typedef

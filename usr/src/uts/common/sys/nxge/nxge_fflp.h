@@ -43,13 +43,13 @@ typedef	struct _fflp_errlog {
 } fflp_errlog_t, *p_fflp_errlog_t;
 
 typedef struct _fflp_stats {
-	uint32_t 		tcam_entries;
-	uint32_t 		fcram_entries;
-	uint32_t 		tcam_parity_err;
-	uint32_t 		tcam_ecc_err;
-	uint32_t 		vlan_parity_err;
-	uint32_t 		hash_lookup_err;
-	uint32_t 		hash_pio_err[MAX_PARTITION];
+	uint32_t		tcam_entries;
+	uint32_t		fcram_entries;
+	uint32_t		tcam_parity_err;
+	uint32_t		tcam_ecc_err;
+	uint32_t		vlan_parity_err;
+	uint32_t		hash_lookup_err;
+	uint32_t		hash_pio_err[MAX_PARTITION];
 	fflp_errlog_t		errlog;
 } nxge_fflp_stats_t, *p_nxge_fflp_stats_t;
 
@@ -108,20 +108,20 @@ typedef struct _fflp_stats {
 	 */
 
 typedef struct _fcram_cell {
-	uint32_t 		type:8;
-	uint32_t 		occupied:8;
-	uint32_t 		shadow_loc:16;
+	uint32_t		type:8;
+	uint32_t		occupied:8;
+	uint32_t		shadow_loc:16;
 } fcram_cell_t, *p_fcram_cell_t;
 
 typedef struct _fcram_parition {
-	uint8_t 		id;
-	uint8_t 		base;
-	uint8_t 		mask;
-	uint8_t 		reloc;
-	uint32_t 		flags;
+	uint8_t			id;
+	uint8_t			base;
+	uint8_t			mask;
+	uint8_t			reloc;
+	uint32_t		flags;
 #define	HASH_PARTITION_ENABLED 1
-	uint32_t 		offset;
-	uint32_t 		size;
+	uint32_t		offset;
+	uint32_t		size;
 } fcram_parition_t, *p_fcram_partition_t;
 
 
@@ -199,19 +199,19 @@ typedef struct _vlan_rdcgrp_map {
 #define	NXGE_INIT_VLAN_RDCG_TBL	32
 
 typedef struct _nxge_classify {
-	nxge_os_mutex_t 	tcam_lock;
+	nxge_os_mutex_t		tcam_lock;
 	nxge_os_mutex_t		fcram_lock;
 	nxge_os_mutex_t		hash_lock[MAX_PARTITION];
-	uint32_t 		tcam_size;
+	uint32_t		tcam_size;
 	uint32_t		tcam_entry_cnt;
-	uint32_t 		state;
+	uint32_t		state;
 #define	NXGE_FFLP_HW_RESET	0x1
 #define	NXGE_FFLP_HW_INIT	0x2
 #define	NXGE_FFLP_SW_INIT	0x4
 #define	NXGE_FFLP_FCRAM_PART	0x80000000
 	p_nxge_fflp_stats_t	fflp_stats;
 
-	tcam_flow_spec_t    	*tcam_entries;
+	tcam_flow_spec_t	*tcam_entries;
 	uint8_t			tcam_top;
 	uint8_t			tcam_location;
 	uint64_t		tcam_l2_prog_cls[NXGE_L2_PROG_CLS];

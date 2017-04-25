@@ -25,12 +25,10 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 #ifndef _SYS_TIMOD_H
 #define	_SYS_TIMOD_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/types.h>
 #include <sys/stream.h>
@@ -40,7 +38,7 @@ extern "C" {
 #endif
 
 /* Timod ioctls */
-#define		TIMOD 		('T'<<8)
+#define		TIMOD		('T'<<8)
 #define		TI_GETINFO	(TIMOD|140)
 #define		TI_OPTMGMT	(TIMOD|141)
 #define		TI_BIND		(TIMOD|142)
@@ -112,7 +110,7 @@ struct ti_sync_ack {
 
 /*
  * TSAF_EXP_QUEUED:
- * 	set/clear significant when TSRF_IS_EXP_IN_RCVBUF is set on request
+ *	set/clear significant when TSRF_IS_EXP_IN_RCVBUF is set on request
  */
 #define	TSAF_EXP_QUEUED	0x1
 

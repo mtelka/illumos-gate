@@ -26,8 +26,6 @@
 #ifndef _SYS_KICONV_TC_H
 #define	_SYS_KICONV_TC_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,7 +52,7 @@ extern "C" {
 /* Valid EUC-TW sequence or not. */
 #define	KICONV_TC_IS_VALID_EUCTW_SEQ(ib)				\
 	    ((isplane1 && (KICONV_IS_VALID_EUC_BYTE(*((ib) + 1)))) ||	\
-	    (plane_no <= 16 && plane_no >= 2 && 			\
+	    (plane_no <= 16 && plane_no >= 2 &&				\
 	    KICONV_IS_VALID_EUC_BYTE(*((ib) + 2)) &&			\
 	    KICONV_IS_VALID_EUC_BYTE(*((ib) + 3))))
 

@@ -26,8 +26,6 @@
 #ifndef	_SYS_SCSI_GENERIC_STATUS_H
 #define	_SYS_SCSI_GENERIC_STATUS_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -44,14 +42,14 @@ extern "C" {
 
 struct scsi_status {
 #if defined(_BIT_FIELDS_LTOH)
-	uchar_t	sts_vu0		: 1,	/* vendor unique 		*/
-		sts_chk		: 1,	/* check condition 		*/
-		sts_cm		: 1,	/* condition met 		*/
-		sts_busy	: 1,	/* device busy or reserved 	*/
-		sts_is		: 1,	/* intermediate status sent 	*/
-		sts_vu6		: 1,	/* vendor unique 		*/
-		sts_vu7		: 1,	/* vendor unique 		*/
-		sts_resvd	: 1;	/* reserved 			*/
+	uchar_t	sts_vu0		: 1,	/* vendor unique		*/
+		sts_chk		: 1,	/* check condition		*/
+		sts_cm		: 1,	/* condition met		*/
+		sts_busy	: 1,	/* device busy or reserved	*/
+		sts_is		: 1,	/* intermediate status sent	*/
+		sts_vu6		: 1,	/* vendor unique		*/
+		sts_vu7		: 1,	/* vendor unique		*/
+		sts_resvd	: 1;	/* reserved			*/
 #elif defined(_BIT_FIELDS_HTOL)
 	uchar_t	sts_resvd	: 1,	/* reserved */
 		sts_vu7		: 1,	/* vendor unique */

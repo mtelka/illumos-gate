@@ -88,7 +88,7 @@ typedef struct htable htable_t;
  * HTABLE_VLP - this is the top level htable of a VLP HAT.
  *
  * HTABLE_SHARED_PFN - this htable had its PFN assigned from sharing another
- * 	htable. Used by hat_share() for ISM.
+ *	htable. Used by hat_share() for ISM.
  */
 #define	HTABLE_VLP		(0x01)
 #define	HTABLE_SHARED_PFN	(0x02)
@@ -317,7 +317,7 @@ extern int xen_kpm_page(pfn_t, uint_t);
 #define	XPV_ALLOW_PAGETABLE_UPDATES()					\
 	{								\
 		if (IN_XPV_PANIC())					\
-			setcr0((getcr0() & ~CR0_WP) & 0xffffffff); 	\
+			setcr0((getcr0() & ~CR0_WP) & 0xffffffff);	\
 	}
 #define	XPV_DISALLOW_PAGETABLE_UPDATES()				\
 	{								\

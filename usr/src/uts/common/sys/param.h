@@ -25,7 +25,7 @@
  */
 
 /*	Copyright (c) 1983, 1984, 1985, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * University Copyright- Copyright (c) 1982, 1986, 1988
@@ -237,7 +237,7 @@ extern "C" {
 #define	MAXBSIZE	8192
 #define	DEV_BSIZE	512
 #define	DEV_BSHIFT	9		/* log2(DEV_BSIZE) */
-#define	MAXFRAG 	8
+#define	MAXFRAG		8
 #ifdef	_SYSCALL32
 #define	MAXOFF32_T	0x7fffffff
 #endif
@@ -247,7 +247,7 @@ extern "C" {
 #else
 #define	MAXOFF_T	0x7fffffffl
 #ifdef _LONGLONG_TYPE
-#define	MAXOFFSET_T 	0x7fffffffffffffffLL
+#define	MAXOFFSET_T	0x7fffffffffffffffLL
 #else
 #define	MAXOFFSET_T	0x7fffffff
 #endif

@@ -25,7 +25,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 #ifndef _SYS_SIGINFO_H
 #define	_SYS_SIGINFO_H
@@ -63,7 +63,7 @@ union sigval32 {
 
 #endif	/* _SYSCALL32 */
 
-#else 				/* needed in siginfo_t structure */
+#else				/* needed in siginfo_t structure */
 
 union __sigval {
 	int	__sival_int;	/* integer value */
@@ -234,12 +234,12 @@ struct sigevent32 {
 #include <sys/types.h>		/* for definitions of pid_t, etc. */
 
 #if !defined(__XOPEN_OR_POSIX) || defined(__EXTENSIONS__)
-typedef struct siginfo { 		/* pollutes POSIX/XOPEN namespace */
+typedef struct siginfo {		/* pollutes POSIX/XOPEN namespace */
 #else
 typedef struct {
 #endif
 	int	si_signo;			/* signal from signal.h	*/
-	int 	si_code;			/* code from above	*/
+	int	si_code;			/* code from above	*/
 	int	si_errno;			/* error from errno.h	*/
 #ifdef _LP64
 	int	si_pad;		/* _LP64 union starts on an 8-byte boundary */
@@ -271,7 +271,7 @@ typedef struct {
 		} __proc;
 
 		struct {	/* SIGSEGV, SIGBUS, SIGILL, SIGTRAP, SIGFPE */
-			void 	*__addr;	/* faulting address	*/
+			void	*__addr;	/* faulting address	*/
 			int	__trapno;	/* illegal trap number	*/
 			caddr_t	__pc;		/* instruction address	*/
 		} __fault;
@@ -378,7 +378,7 @@ typedef struct siginfo32 {
 
 typedef struct k_siginfo {
 	int	si_signo;			/* signal from signal.h	*/
-	int 	si_code;			/* code from above	*/
+	int	si_code;			/* code from above	*/
 	int	si_errno;			/* error from errno.h	*/
 #ifdef _LP64
 	int	si_pad;		/* _LP64 union starts on an 8-byte boundary */
@@ -402,7 +402,7 @@ typedef struct k_siginfo {
 		} __proc;
 
 		struct {	/* SIGSEGV, SIGBUS, SIGILL, SIGTRAP, SIGFPE */
-			void 	*__addr;	/* faulting address	*/
+			void	*__addr;	/* faulting address	*/
 			int	__trapno;	/* illegal trap number	*/
 			caddr_t	__pc;		/* instruction address	*/
 		} __fault;

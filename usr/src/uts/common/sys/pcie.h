@@ -545,10 +545,10 @@ extern "C" {
  * AER Secondary Uncorrectable Error Register
  */
 #define	PCIE_AER_SUCE_TA_ON_SC		0x1	/* Target Abort on Split Comp */
-#define	PCIE_AER_SUCE_MA_ON_SC 		0x2	/* Master Abort on Split Comp */
+#define	PCIE_AER_SUCE_MA_ON_SC		0x2	/* Master Abort on Split Comp */
 #define	PCIE_AER_SUCE_RCVD_TA		0x4	/* Received Target Abort */
-#define	PCIE_AER_SUCE_RCVD_MA 		0x8	/* Received Master Abort */
-#define	PCIE_AER_SUCE_USC_ERR 		0x20	/* Unexpected Split Comp Err */
+#define	PCIE_AER_SUCE_RCVD_MA		0x8	/* Received Master Abort */
+#define	PCIE_AER_SUCE_USC_ERR		0x20	/* Unexpected Split Comp Err */
 #define	PCIE_AER_SUCE_USC_MSG_DATA_ERR	0x40	/* USC Message Data Error */
 #define	PCIE_AER_SUCE_UC_DATA_ERR	0x80	/* Uncorrectable Data Error */
 #define	PCIE_AER_SUCE_UC_ATTR_ERR	0x100	/* UC Attribute Err */

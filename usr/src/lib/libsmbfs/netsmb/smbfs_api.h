@@ -48,7 +48,7 @@ extern "C" {
  * EAUTH is used for CIFS authentication errors.
  */
 #ifndef EBADRPC
-#define	EBADRPC 	113
+#define	EBADRPC		113
 #endif
 #ifndef EAUTH
 #define	EAUTH		114

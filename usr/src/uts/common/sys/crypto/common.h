@@ -404,7 +404,7 @@ typedef enum {
 	CRYPTO_LOGICAL_PROVIDER
 } crypto_provider_type_t;
 
-typedef uint32_t 	crypto_provider_id_t;
+typedef uint32_t	crypto_provider_id_t;
 #define	KCF_PROVID_INVALID	((uint32_t)-1)
 
 typedef struct crypto_provider_entry {

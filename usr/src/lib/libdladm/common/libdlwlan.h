@@ -168,10 +168,10 @@ typedef struct dladm_wlan_linkattr {
 	dladm_wlan_attr_t	la_wlan_attr;
 } dladm_wlan_linkattr_t;
 
-#define	DLADM_WLAN_WEPKEY64_LEN		5 	/* per WEP spec */
-#define	DLADM_WLAN_WEPKEY128_LEN	13 	/* per WEP spec */
+#define	DLADM_WLAN_WEPKEY64_LEN		5	/* per WEP spec */
+#define	DLADM_WLAN_WEPKEY128_LEN	13	/* per WEP spec */
 #define	DLADM_WLAN_MAX_KEY_LEN		64	/* per WEP/WPA spec */
-#define	DLADM_WLAN_MAX_WEPKEYS		4 	/* MAX_NWEPKEYS */
+#define	DLADM_WLAN_MAX_WEPKEYS		4	/* MAX_NWEPKEYS */
 #define	DLADM_WLAN_MAX_KEYNAME_LEN	64
 typedef struct dladm_wlan_key {
 	uint_t		wk_idx;

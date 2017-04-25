@@ -236,7 +236,7 @@ typedef struct mib2_ip {
 	int	ipRouteEntrySize;
 		/* {ip 22} */
 	int	ipNetToMediaEntrySize;
-		/* # of valid route entries discarded 	{ip 23} */
+		/* # of valid route entries discarded	{ip 23} */
 	Counter	ipRoutingDiscards;
 /*
  * following defined in MIB-II as part of TCP & UDP groups:
@@ -322,11 +322,11 @@ typedef struct mib2_ipv6IfStatsEntry {
 	Counter	ipv6InHdrErrors;
 	/* # exceeds outgoing link MTU		{ ipv6IfStatsEntry 3 } */
 	Counter	ipv6InTooBigErrors;
-	/* # discarded due to no route to dest 	{ ipv6IfStatsEntry 4 } */
+	/* # discarded due to no route to dest	{ ipv6IfStatsEntry 4 } */
 	Counter	ipv6InNoRoutes;
 	/* # invalid or unsupported addresses	{ ipv6IfStatsEntry 5 } */
 	Counter	ipv6InAddrErrors;
-	/* # unknown next header 		{ ipv6IfStatsEntry 6 } */
+	/* # unknown next header		{ ipv6IfStatsEntry 6 } */
 	Counter	ipv6InUnknownProtos;
 	/* # too short packets			{ ipv6IfStatsEntry 7 } */
 	Counter	ipv6InTruncatedPkts;
@@ -445,11 +445,11 @@ typedef struct mib2_ipIfStatsEntry {
 	Counter	ipIfStatsInHdrErrors;
 	/* # exceeds outgoing link MTU(v6 only)	{ ipv6IfStatsEntry 3 } */
 	Counter	ipIfStatsInTooBigErrors;
-	/* # discarded due to no route to dest 	{ ipIfStatsEntry 8 } */
+	/* # discarded due to no route to dest	{ ipIfStatsEntry 8 } */
 	Counter	ipIfStatsInNoRoutes;
 	/* # invalid or unsupported addresses	{ ipIfStatsEntry 9 } */
 	Counter	ipIfStatsInAddrErrors;
-	/* # unknown next header 		{ ipIfStatsEntry 10 } */
+	/* # unknown next header		{ ipIfStatsEntry 10 } */
 	Counter	ipIfStatsInUnknownProtos;
 	/* # too short packets			{ ipIfStatsEntry 11 } */
 	Counter	ipIfStatsInTruncatedPkts;
@@ -484,7 +484,7 @@ typedef struct mib2_ipIfStatsEntry {
 	 * In addition to defined MIBs
 	 */
 
-	/* # discarded due to no route to dest 	{ ipSystemStatsEntry 22 } */
+	/* # discarded due to no route to dest	{ ipSystemStatsEntry 22 } */
 	Counter	ipIfStatsOutNoRoutes;
 	/* # of complete duplicates in reassembly */
 	Counter	ipIfStatsReasmDuplicates;
@@ -540,7 +540,7 @@ typedef struct mib2_ipIfStatsEntry {
 	Counter64	ipIfStatsHCOutRequests;
 	/* # forwarded out interface		{ ipIfStatsEntry 23 } */
 	Counter64	ipIfStatsHCOutForwDatagrams;
-	/* # dg's requiring fragmentation 	{ ipIfStatsEntry 26 } */
+	/* # dg's requiring fragmentation	{ ipIfStatsEntry 26 } */
 	Counter		ipIfStatsOutFragReqds;
 	/* # output datagrams			{ ipIfStatsEntry 31 } */
 	Counter64	ipIfStatsHCOutTransmits;
@@ -698,13 +698,13 @@ typedef struct mib2_ipRouteEntry {
 	IpAddress	ipRouteDest;
 		/* unique interface index for this hop	{ipRouteEntry 2 } RW */
 	DeviceName	ipRouteIfIndex;
-		/* primary route metric 		{ipRouteEntry 3 } RW */
+		/* primary route metric			{ipRouteEntry 3 } RW */
 	int		ipRouteMetric1;
-		/* alternate route metric 		{ipRouteEntry 4 } RW */
+		/* alternate route metric		{ipRouteEntry 4 } RW */
 	int		ipRouteMetric2;
-		/* alternate route metric 		{ipRouteEntry 5 } RW */
+		/* alternate route metric		{ipRouteEntry 5 } RW */
 	int		ipRouteMetric3;
-		/* alternate route metric 		{ipRouteEntry 6 } RW */
+		/* alternate route metric		{ipRouteEntry 6 } RW */
 	int		ipRouteMetric4;
 		/* ip addr of next hop on this route	{ipRouteEntry 7 } RW */
 	IpAddress	ipRouteNextHop;
@@ -714,9 +714,9 @@ typedef struct mib2_ipRouteEntry {
 	int		ipRouteProto;
 		/* sec's since last update of route	{ipRouteEntry 10} RW */
 	int		ipRouteAge;
-		/* 					{ipRouteEntry 11} RW */
+		/*					{ipRouteEntry 11} RW */
 	IpAddress	ipRouteMask;
-		/* alternate route metric 		{ipRouteEntry 12} RW */
+		/* alternate route metric		{ipRouteEntry 12} RW */
 	int		ipRouteMetric5;
 		/* additional info from ire's		{ipRouteEntry 13 } */
 	struct ipRouteInfo_s {
@@ -738,7 +738,7 @@ typedef struct mib2_ipRouteEntry {
 		 */
 		DeviceName	re_in_ill;	/* Input interface */
 		IpAddress	re_in_src_addr;	/* Input source address */
-	} 		ipRouteInfo;
+	}		ipRouteInfo;
 } mib2_ipRouteEntry_t;
 
 /*
@@ -760,16 +760,16 @@ typedef struct mib2_ipRouteEntry {
 typedef struct mib2_ipv6RouteEntry {
 		/* dest ip addr for this route		{ ipv6RouteEntry 1 } */
 	Ip6Address	ipv6RouteDest;
-		/* prefix length 			{ ipv6RouteEntry 2 } */
+		/* prefix length			{ ipv6RouteEntry 2 } */
 	int		ipv6RoutePfxLength;
-		/* unique route index 			{ ipv6RouteEntry 3 } */
+		/* unique route index			{ ipv6RouteEntry 3 } */
 	unsigned	ipv6RouteIndex;
 		/* unique interface index for this hop	{ ipv6RouteEntry 4 } */
 	DeviceName	ipv6RouteIfIndex;
 		/* IPv6 addr of next hop on this route	{ ipv6RouteEntry 5 } */
 	Ip6Address	ipv6RouteNextHop;
 		/* other(1), discard(2), local(3), remote(4) */
-		/* 					{ ipv6RouteEntry 6 } */
+		/*					{ ipv6RouteEntry 6 } */
 	int		ipv6RouteType;
 		/* mechanism by which route was learned	{ ipv6RouteEntry 7 } */
 		/*
@@ -798,7 +798,7 @@ typedef struct mib2_ipv6RouteEntry {
 		Counter		re_obpkt;
 		Counter		re_ibpkt;
 		int		re_flags;
-	} 		ipv6RouteInfo;
+	}		ipv6RouteInfo;
 } mib2_ipv6RouteEntry_t;
 
 /*
@@ -1372,7 +1372,7 @@ typedef struct mib2_tcpConnEntry {
 		Gauge		ce_mss;
 				/* actual internal state */
 		int		ce_state;
-	} 		tcpConnEntryInfo;
+	}		tcpConnEntryInfo;
 
 	/* pid of the processes that created this connection */
 	uint32_t	tcpConnCreationProcess;
@@ -1427,7 +1427,7 @@ typedef struct mib2_tcp6ConnEntry {
 		Gauge		ce_mss;
 				/* actual internal state */
 		int		ce_state;
-	} 		tcp6ConnEntryInfo;
+	}		tcp6ConnEntryInfo;
 
 	/* pid of the processes that created this connection */
 	uint32_t	tcp6ConnCreationProcess;
@@ -1539,7 +1539,7 @@ typedef	struct mib2_udp6Entry {
 	Ip6Address	udp6LocalAddress;
 		/* local port of listener		{ ipv6UdpEntry 2 } */
 	int		udp6LocalPort;		/* In host byte order */
-		/* interface index or zero 		{ ipv6UdpEntry 3 } */
+		/* interface index or zero		{ ipv6UdpEntry 3 } */
 	DeviceIndex	udp6IfIndex;
 	struct udp6EntryInfo_s {
 		int	ue_state;
@@ -1754,7 +1754,7 @@ typedef struct mib2_sctp {
 		/* # of received SACK chunks with duplicate TSN */
 	Counter		sctpInDupAck;
 		/* # of SACK chunks acking unsent data */
-	Counter 	sctpInAckUnsent;
+	Counter		sctpInAckUnsent;
 		/* # of Fragmented User Messages	{ sctpStats 14 } */
 	Counter64	sctpFragUsrMsgs;
 		/* # of Reassembled User Messages	{ sctpStats 15 } */

@@ -2211,8 +2211,8 @@ extern void dtrace_probe(dtrace_id_t, uintptr_t arg0, uintptr_t arg1,
  */
 typedef struct dtrace_helper_probedesc {
 	char *dthpb_mod;			/* probe module */
-	char *dthpb_func; 			/* probe function */
-	char *dthpb_name; 			/* probe name */
+	char *dthpb_func;			/* probe function */
+	char *dthpb_name;			/* probe name */
 	uint64_t dthpb_base;			/* base address */
 	uint32_t *dthpb_offs;			/* offsets array */
 	uint32_t *dthpb_enoffs;			/* is-enabled offsets array */

@@ -113,14 +113,14 @@ typedef struct {
 	uint_t			di_sap;
 	int			di_timeout;
 	dl_qos_cl_sel1_t	di_qos_sel;
-	dl_qos_cl_range1_t 	di_qos_range;
+	dl_qos_cl_range1_t	di_qos_range;
 } dlpi_info_t;
 
 /*
  * DLPI send information; see dlpi_send(3DLPI).
  */
 typedef struct {
-	uint_t 		dsi_sap;
+	uint_t		dsi_sap;
 	dl_priority_t	dsi_prio;
 } dlpi_sendinfo_t;
 
@@ -136,10 +136,10 @@ typedef enum {
  * DLPI receive information; see dlpi_recv(3DLPI).
  */
 typedef struct {
-	uchar_t 	dri_destaddr[DLPI_PHYSADDR_MAX];
-	uchar_t 	dri_destaddrlen;
+	uchar_t		dri_destaddr[DLPI_PHYSADDR_MAX];
+	uchar_t		dri_destaddrlen;
 	dlpi_addrtype_t	dri_destaddrtype;
-	size_t  	dri_totmsglen;
+	size_t		dri_totmsglen;
 } dlpi_recvinfo_t;
 
 /*
@@ -161,7 +161,7 @@ typedef struct {
 #define	dni_speed		dni_data.dniu_speed
 #define	dni_size		dni_data.dniu_size
 #define	dni_physaddr		dni_data.dniu_addr.physaddr
-#define	dni_physaddrlen 	dni_data.dniu_addr.physaddrlen
+#define	dni_physaddrlen		dni_data.dniu_addr.physaddrlen
 
 typedef struct __dlpi_handle *dlpi_handle_t;
 
@@ -177,8 +177,8 @@ typedef struct __dlpi_notifyid *dlpi_notifyid_t;
 typedef void dlpi_notifyfunc_t(dlpi_handle_t, dlpi_notifyinfo_t *, void *);
 
 extern const char	*dlpi_mactype(uint_t);
-extern const char 	*dlpi_strerror(int);
-extern const char 	*dlpi_linkname(dlpi_handle_t);
+extern const char	*dlpi_strerror(int);
+extern const char	*dlpi_linkname(dlpi_handle_t);
 
 typedef boolean_t dlpi_walkfunc_t(const char *, void *);
 

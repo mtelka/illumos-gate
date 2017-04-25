@@ -93,7 +93,7 @@ typedef struct fc_tgt_hba_adapter_attributes {
 #define	FCT_HBA_PORT_ATTRIBUTES_VERSION	1
 typedef struct fc_tgt_hba_port_attributes {
 	uint32_t		version; /* FC_HBA_PORT_ATTRIBUTES_VERSION */
-	uint32_t    		reserved_1;
+	uint32_t		reserved_1;
 	uint64_t		lastChange;
 	uint8_t			NodeWWN[8];
 	uint8_t			PortWWN[8];
@@ -115,7 +115,7 @@ typedef struct fc_tgt_hba_port_attributes {
 #define	FCT_HBA_ADAPTER_PORT_STATS_VERSION   1
 typedef struct fc_tgt_hba_adapter_port_stats {
 	uint32_t		version; /* FC_HBA_ADAPTER_PORT_STATS_VERSION */
-	uint32_t    		reserved_1;
+	uint32_t		reserved_1;
 	uint64_t		SecondsSinceLastReset;
 	uint64_t		TxFrames;
 	uint64_t		TxWords;

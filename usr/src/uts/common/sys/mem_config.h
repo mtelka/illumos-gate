@@ -26,8 +26,6 @@
 #ifndef	_SYS_MEM_CONFIG_H
 #define	_SYS_MEM_CONFIG_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * Memory add/delete interfaces.
  */
@@ -63,7 +61,7 @@ typedef struct {
 typedef struct {
 	pgcnt_t	phys_pages;	/* total physical pages */
 	pgcnt_t	managed;	/* providing this many managed pages */
-	pgcnt_t	collected; 	/* done when == managed */
+	pgcnt_t	collected;	/* done when == managed */
 } memdelstat_t;
 
 extern int kphysm_del_gethandle(memhandle_t *);

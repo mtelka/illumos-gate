@@ -26,8 +26,6 @@
 #ifndef	_SYS_SYSEVENT_DEV_H
 #define	_SYS_SYSEVENT_DEV_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/sysevent/eventdefs.h>
 
 #ifdef	__cplusplus
@@ -37,7 +35,7 @@ extern "C" {
 /*
  * Event schema for EC_DEV_ADD/ESC_DISK
  *
- *	Event Class 	- EC_DEV_ADD
+ *	Event Class	- EC_DEV_ADD
  *	Event Sub-Class - ESC_DISK
  *
  *	Attribute Name	- EV_VERSION
@@ -69,7 +67,7 @@ extern "C" {
  *
  * Event schema for EC_DEV_ADD/ESC_NETWORK
  *
- *	Event Class 	- EC_DEV_ADD
+ *	Event Class	- EC_DEV_ADD
  *	Event Sub-Class - ESC_NETWORK
  *
  *	Attribute Name	- EV_VERSION
@@ -102,7 +100,7 @@ extern "C" {
  *
  * Event schema for EC_DEV_ADD/ESC_PRINTER
  *
- *	Event Class 	- EC_DEV_ADD
+ *	Event Class	- EC_DEV_ADD
  *	Event Sub-Class - ESC_PRINTER
  *
  *	Attribute Name	- EV_VERSION
@@ -135,7 +133,7 @@ extern "C" {
  *
  * Event schema for EC_DEV_REMOVE/ESC_DISK
  *
- *	Event Class 	- EC_DEV_REMOVE
+ *	Event Class	- EC_DEV_REMOVE
  *	Event Sub-Class - ESC_DISK
  *
  *	Attribute Name	- EV_VERSION
@@ -163,7 +161,7 @@ extern "C" {
  *
  * Event schema for EC_DEV_REMOVE/ESC_NETWORK
  *
- *	Event Class 	- EC_DEV_REMOVE
+ *	Event Class	- EC_DEV_REMOVE
  *	Event Sub-Class - ESC_NETWORK
  *
  *	Attribute Name	- EV_VERSION
@@ -192,7 +190,7 @@ extern "C" {
  *
  * Event schema for EC_DEV_REMOVE/ESC_PRINTER
  *
- *	Event Class 	- EC_DEV_REMOVE
+ *	Event Class	- EC_DEV_REMOVE
  *	Event Sub-Class - ESC_PRINTER
  *
  *	Attribute Name	- EV_VERSION
@@ -221,7 +219,7 @@ extern "C" {
  *
  * Event schema for EC_DEV_BRANCH/ESC_DEV_BRANCH_ADD or ESC_DEV_BRANCH_REMOVE
  *
- *	Event Class 	- EC_DEV_BRANCH
+ *	Event Class	- EC_DEV_BRANCH
  *	Event Sub-Class - ESC_DEV_BRANCH_ADD or ESC_DEV_BRANCH_REMOVE
  *
  *	Attribute Name	- EV_VERSION

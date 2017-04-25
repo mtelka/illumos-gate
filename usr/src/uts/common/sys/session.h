@@ -24,13 +24,11 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _SYS_SESSION_H
 #define	_SYS_SESSION_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -53,7 +51,7 @@ extern "C" {
  * to modify the contents of a session structure it must hold multiple
  * locks.  The locking order for all the locks that may need to be
  * acquired is:
- * 	sd_lock -> pidlock -> p_splock -> s_lock
+ *	sd_lock -> pidlock -> p_splock -> s_lock
  *
  * If a caller requires access to a session structure for long
  * periods of time or across operations that may block it should
@@ -86,7 +84,7 @@ typedef struct sess {
 	struct pid *s_sidp;		/* session ID info, never changes */
 
 	kmutex_t s_lock;		/* protects everything below */
-	uint_t s_ref; 			/* reference count */
+	uint_t s_ref;			/* reference count */
 	boolean_t s_sighuped;		/* ctty had sighup sent to it */
 
 	boolean_t s_exit;		/* sesion leader is exiting */

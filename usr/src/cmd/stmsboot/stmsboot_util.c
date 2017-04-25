@@ -51,8 +51,8 @@
 #define	VHCI_CTL_NODE	"/devices/scsi_vhci:devctl"
 
 /* nvlist property names, these are ALL string types */
-#define	NVL_DEVID 	"nvl-devid"
-#define	NVL_PATH 	"nvl-path"
+#define	NVL_DEVID	"nvl-devid"
+#define	NVL_PATH	"nvl-path"
 #define	NVL_PHYSPATH	"nvl-physpath"
 #define	NVL_MPXPATH	"nvl-mpxiopath"
 #define	NVL_MPXEN	"nvl-mpxioenabled"

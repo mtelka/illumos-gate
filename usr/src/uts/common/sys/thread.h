@@ -194,7 +194,7 @@ typedef struct _kthread {
 	 * it should be grabbed only by thread_lock().
 	 */
 	disp_lock_t	*t_lockp;	/* pointer to the dispatcher lock */
-	ushort_t 	t_oldspl;	/* spl level before dispatcher locked */
+	ushort_t	t_oldspl;	/* spl level before dispatcher locked */
 	volatile char	t_pre_sys;	/* pre-syscall work needed */
 	lock_t		t_lock_flush;	/* for lock_mutex_flush() impl */
 	struct _disp	*t_disp_queue;	/* run queue for chosen CPU */
@@ -203,7 +203,7 @@ typedef struct _kthread {
 
 	/*
 	 * Post-syscall / post-trap flags.
-	 * 	No lock is required to set these.
+	 *	No lock is required to set these.
 	 *	These must be cleared only by the thread itself.
 	 *
 	 *	t_astflag indicates that some post-trap processing is required,
@@ -212,7 +212,7 @@ typedef struct _kthread {
 	 *	t_post_sys indicates that some unusualy post-system call
 	 *		handling is required, such as an error or tracing.
 	 *	t_sig_check indicates that some condition in ISSIG() must be
-	 * 		checked, but doesn't prevent returning to user.
+	 *		checked, but doesn't prevent returning to user.
 	 *	t_post_sys_ast is a way of checking whether any of these three
 	 *		flags are set.
 	 */
@@ -350,7 +350,7 @@ typedef struct _kthread {
 /*
  * Thread flag (t_flag) definitions.
  *	These flags must be changed only for the current thread,
- * 	and not during preemption code, since the code being
+ *	and not during preemption code, since the code being
  *	preempted could be modifying the flags.
  *
  *	For the most part these flags do not need locking.
@@ -502,10 +502,10 @@ typedef struct _kthread {
  *	convert a thread pointer to its proc pointer.
  *
  * ttoproj(x)
- * 	convert a thread pointer to its project pointer.
+ *	convert a thread pointer to its project pointer.
  *
  * ttozone(x)
- * 	convert a thread pointer to its zone pointer.
+ *	convert a thread pointer to its zone pointer.
  *
  * lwptot(x)
  *	convert a lwp pointer to its thread pointer.
@@ -634,12 +634,12 @@ extern int default_binding_mode;
  * Point it at the transition lock, which is always held.
  * The previosly held lock is dropped.
  */
-#define	THREAD_TRANSITION(tp) 	thread_transition(tp);
+#define	THREAD_TRANSITION(tp)	thread_transition(tp);
 /*
  * Set the thread's lock to be the transition lock, without dropping
  * previosly held lock.
  */
-#define	THREAD_TRANSITION_NOLOCK(tp) 	((tp)->t_lockp = &transition_lock)
+#define	THREAD_TRANSITION_NOLOCK(tp)	((tp)->t_lockp = &transition_lock)
 
 /*
  * Put thread in run state, and set the lock pointer to the dispatcher queue

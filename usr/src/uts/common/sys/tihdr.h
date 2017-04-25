@@ -434,7 +434,7 @@ struct T_info_ack {
  * Flag XPG4_1:
  *		transport provider supports TPI modifications motivated by and
  *		in conjunction with XTI inspired TPI support and all the
- * 		compatibility baggage that implies.
+ *		compatibility baggage that implies.
  *    It implies, - primitives T_ADDR_REQ & T_ADDR_ACK supported
  *		  - primitives O_T_BIND_REQ & T_BIND_REQ separately supported
  *		  - primitives T_SVR4_OPTMGMT_REQ & T_OPTMGMT_REQ separately
@@ -520,12 +520,12 @@ struct T_addr_ack {
  * subsume the functionality of T_INFO_{REQ,ACK}.
  */
 struct T_capability_req {
-	t_scalar_t	PRIM_type;	/* always T_CAPABILITY_REQ 	*/
+	t_scalar_t	PRIM_type;	/* always T_CAPABILITY_REQ	*/
 	t_uscalar_t	CAP_bits1;	/* capability bits #1		*/
 };
 
 struct T_capability_ack {
-	t_scalar_t	PRIM_type;	/* always T_CAPABILITY_ACK 	*/
+	t_scalar_t	PRIM_type;	/* always T_CAPABILITY_ACK	*/
 	t_uscalar_t	CAP_bits1;	/* capability bits #1		*/
 	struct T_info_ack
 			INFO_ack;	/* info acknowledgement		*/

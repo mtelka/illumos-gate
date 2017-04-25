@@ -218,7 +218,7 @@ extern int	cpr_debug;
 /*
  * CPR FILE FORMAT:
  *
- * 	Dump Header: general dump data:
+ *	Dump Header: general dump data:
  *		cpr_dump_desc
  *
  *	Machdep descriptor: cpr_machdep_desc
@@ -226,11 +226,11 @@ extern int	cpr_debug;
  *		cpr_sun4m_machdep
  *		cpr_sun4u_machdep, var length prom words
  *
- * 	Page Map: bitmap record consisting of a descriptor and data:
+ *	Page Map: bitmap record consisting of a descriptor and data:
  *		cpr_bitmap_desc
  *		(char) bitmap[cpr_bitmap_desc.cbd_size]
  *
- * 	Page data: Contains one or more physical page records,
+ *	Page data: Contains one or more physical page records,
  *		each record consists of a descriptor and data:
  *		cpr_page_desc
  *		(char) page_data[cpr_page_desc.cpd_offset]
@@ -270,12 +270,12 @@ typedef struct cpr_dump_desc cdd_t;
  */
 struct cpr_bitmap_desc {
 	uint_t		cbd_magic;	/* so we can spot it better */
-	pfn_t		cbd_spfn;   	/* starting pfn */
+	pfn_t		cbd_spfn;	/* starting pfn */
 	pfn_t		cbd_epfn;	/* ending pfn */
 	size_t		cbd_size;	/* size of this bitmap, in bytes */
 	cpr_ptr		cbd_reg_bitmap;	/* regular bitmap */
 	cpr_ptr		cbd_vlt_bitmap; /* volatile bitmap */
-	cpr_ptr		cbd_auxmap; 	/* aux bitmap used during thaw */
+	cpr_ptr		cbd_auxmap;	/* aux bitmap used during thaw */
 };
 typedef struct cpr_bitmap_desc cbd_t;
 
@@ -310,7 +310,7 @@ typedef struct cpr_storage_desc csd_t;
  */
 struct cpr_page_desc {
 	uint_t	cpd_magic;	/* so we can spot it better */
-	pfn_t	cpd_pfn;   	/* kern physical address page # */
+	pfn_t	cpd_pfn;	/* kern physical address page # */
 	pgcnt_t	cpd_pages;	/* number of contiguous pages */
 	size_t	cpd_length;	/* data segment size in bytes */
 	uint_t	cpd_flag;	/* see below */
@@ -467,7 +467,7 @@ struct cpr_event {
 	long	ce_ntests;		/* num of the events since loaded */
 	ctd_t	ce_sec;			/* cpr time in sec on this event */
 	ctd_t	ce_msec;		/* cpr time in 100*millisec */
-	char 	ce_name[CPR_E_NAMELEN];
+	char	ce_name[CPR_E_NAMELEN];
 };
 
 struct cpr_stat {
@@ -507,7 +507,7 @@ typedef struct cpr {
 	int		c_substate;	/* tracking suspend progress */
 	int		c_fcn;		/* uadmin subcommand */
 	vnode_t		*c_vp;		/* vnode for statefile */
-	cbd_t  		*c_bmda;	/* bitmap descriptor array */
+	cbd_t		*c_bmda;	/* bitmap descriptor array */
 	caddr_t		c_mapping_area;	/* reserve for dumping kas phys pages */
 	struct cpr_stat	c_stat;
 	char		c_alloc_cnt;	/* # of statefile alloc retries */

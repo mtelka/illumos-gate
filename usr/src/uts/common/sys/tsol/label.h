@@ -138,8 +138,8 @@ extern void		label_rele(ts_label_t *);
 extern m_label_t	*label2bslabel(ts_label_t *);
 extern uint32_t		label2doi(ts_label_t *);
 extern boolean_t	label_equal(const ts_label_t *, const ts_label_t *);
-extern cred_t 		*newcred_from_bslabel(m_label_t *, uint32_t, int);
-extern cred_t 		*copycred_from_bslabel(const cred_t *, m_label_t *,
+extern cred_t		*newcred_from_bslabel(m_label_t *, uint32_t, int);
+extern cred_t		*copycred_from_bslabel(const cred_t *, m_label_t *,
 			    uint32_t, int);
 extern cred_t		*copycred_from_tslabel(const cred_t *, ts_label_t *,
 			    int);

@@ -225,12 +225,12 @@ typedef struct ndr_service {
  *		    conn->binding_pool, N_BINDING_POOL);
  */
 typedef struct ndr_binding {
-	struct ndr_binding 	*next;
+	struct ndr_binding	*next;
 	ndr_p_context_id_t	p_cont_id;
 	unsigned char		which_side;
 	struct ndr_client	*clnt;
 	ndr_service_t		*service;
-	void 			*instance_specific;
+	void			*instance_specific;
 } ndr_binding_t;
 
 #define	NDR_BIND_SIDE_CLIENT	1
@@ -247,7 +247,7 @@ typedef struct ndr_binding {
 #define	NDR_N_BINDING_POOL	2
 
 typedef struct ndr_pipe {
-	void 			*np_listener;
+	void			*np_listener;
 	const char		*np_endpoint;
 	smb_netuserinfo_t	*np_user;
 	int			(*np_send)(struct ndr_pipe *, void *, size_t);

@@ -235,7 +235,7 @@ extern char	curs_parm_err[],
 #ifdef	_VR3_COMPAT_CODE
 
 extern	_ochtype	*acs_map;
-extern chtype 	*acs32map;
+extern chtype	*acs32map;
 
 /* definitions for Vr3 source compatibility */
 
@@ -264,7 +264,7 @@ extern	SCREEN	*newterm();
 /* declarations for mini-curses */
 
 #ifdef	__STDC__
-extern	WINDOW 	*m_initscr(void);
+extern	WINDOW	*m_initscr(void);
 
 extern	SCREEN	*m_newterm(char *, FILE *, FILE *);
 
@@ -303,7 +303,7 @@ extern int wgetch(WINDOW *); /* it can return KEY_*, for instance. */
 
 extern char *longname(void);	/* long name of terminal */
 extern char *termname(void);	/* effective terminal name */
-extern char *keyname(int); 	/* name of token returned by wgetch() */
+extern char *keyname(int);	/* name of token returned by wgetch() */
 extern char *slk_label(int);
 extern char erasechar(void);
 extern char killchar(void);
@@ -487,7 +487,7 @@ extern int winwstr(WINDOW *, wchar_t *);
 extern	SCREEN	*newscreen(),	/* termname, lines, cols, tabsiz, fout, fin */
 		*setcurscreen(); /* screenptr */
 
-extern	WINDOW 	*initscr(),
+extern	WINDOW	*initscr(),
 		*newwin(),		/* nlines, ncols, begy, begx */
 		*newpad(),		/* nlines, ncols */
 		*derwin(),		/* orig, nlines, ncols, begy, begx */
@@ -534,7 +534,7 @@ extern	int	mvprintw(), mvscanw(), mvwprintw(), mvwscanw(),
 extern	int	mvwin(), mvderwin(), napms(), newkey(), filter(),
 		pair_content(), pechochar(), pnoutrefresh(), prefresh();
 
-extern 	int	putwin(), wredrawln(), scr_dump(), setupterm();
+extern	int	putwin(), wredrawln(), scr_dump(), setupterm();
 
 extern	int	slk_attrof(), slk_attrof(), slk_attrset(),
 		slk_clear(), slk_noutrefresh(), slk_set(),
@@ -591,7 +591,7 @@ extern int	pechowchar(), ungetwch(), waddnwstr(), waddwch(),
 #define	getparx(win)		((win)->_parx)
 #define	getbkgd(win)		((win)->_bkgd)
 #define	getattrs(win)		((win)->_attrs)
-#else 	/* defined(CURS_PERFORMANCE) && !defined(__lint) */
+#else	/* defined(CURS_PERFORMANCE) && !defined(__lint) */
 
 #ifdef __STDC__
 extern int getcury(WINDOW *);

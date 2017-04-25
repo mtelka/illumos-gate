@@ -27,8 +27,6 @@
 #ifndef	_SYS_LOMBUS_H
 #define	_SYS_LOMBUS_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -41,7 +39,7 @@ extern "C" {
  *	Fault codes
  *
  * LOMbus child regspecs are triples, in the form
- * 	<space>, <base>, <size>
+ *	<space>, <base>, <size>
  */
 typedef struct {
 	int lombus_space;

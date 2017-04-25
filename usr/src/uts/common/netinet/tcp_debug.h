@@ -7,9 +7,6 @@
 #ifndef	_NETINET_TCP_DEBUG_H
 #define	_NETINET_TCP_DEBUG_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-/* tcp_debug.h 1.8 88/08/19 SMI; from UCB 7.1 6/5/86	*/
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -24,7 +21,7 @@ struct	tcp_debug {
 	struct	tcpcb td_cb;
 };
 
-#define	TA_INPUT 	0
+#define	TA_INPUT	0
 #define	TA_OUTPUT	1
 #define	TA_USER		2
 #define	TA_RESPOND	3

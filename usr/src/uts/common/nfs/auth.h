@@ -46,10 +46,10 @@
  * const A_MAXPATH	= 1024;
  *
  * struct auth_req {
- * 	netobj 	req_client;		# client's address
- * 	string	req_netid<>;		# Netid of address
- * 	string	req_path<A_MAXPATH>;	# export path
- * 	int	req_flavor;		# auth flavor
+ *	netobj	req_client;		# client's address
+ *	string	req_netid<>;		# Netid of address
+ *	string	req_path<A_MAXPATH>;	# export path
+ *	int	req_flavor;		# auth flavor
  *	uid_t	req_clnt_uid;		# client's uid
  *	gid_t	req_clnt_gid;		# client's gid
  *	gid_t	req_clnt_gids<>;	# client's supplemental groups
@@ -60,7 +60,7 @@
  * const NFSAUTH_RW	  = 0x04;	# Read-write
  * const NFSAUTH_ROOT	  = 0x08;	# Root access
  * const NFSAUTH_WRONGSEC = 0x10;	# Advise NFS v4 clients to
- * 					# try a different flavor
+ *					# try a different flavor
  * const NFSAUTH_UIDMAP   = 0x100;	# uid mapped
  * const NFSAUTH_GIDMAP   = 0x200;	# gid mapped
  * const NFSAUTH_GROUPS   = 0x400;	# translated supplemental groups
@@ -72,21 +72,21 @@
  * const NFSAUTH_LIMITED = 0x80;	# Access limited to visible nodes
  *
  * struct auth_res {
- * 	int	auth_perm;
+ *	int	auth_perm;
  *	uid_t	auth_srv_uid;		# translated uid
  *	gid_t	auth_srv_gid;		# translated gid
  *	gid_t	auth_srv_gids<>;	# translated supplemental groups
  * };
  *
  * program NFSAUTH_PROG {
- * 	version NFSAUTH_VERS {
+ *	version NFSAUTH_VERS {
  *		#
  *		# Authorization Request
  *		#
- * 		auth_res
- * 		NFSAUTH_ACCESS(auth_req) = 1;
+ *		auth_res
+ *		NFSAUTH_ACCESS(auth_req) = 1;
  *
- * 	} = 1;
+ *	} = 1;
  * } = 100231;
  */
 

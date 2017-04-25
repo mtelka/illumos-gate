@@ -27,8 +27,6 @@
 #ifndef	_SYS_IB_MGT_SA_RECS_H
 #define	_SYS_IB_MGT_SA_RECS_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * This file contains the definitions of the SA-specific records in IB spec
  * volume 1, release 1.1, chapter 15.
@@ -232,7 +230,7 @@ typedef struct sa_switchinfo_record_s {
 #define	SA_SWITCHINFO_COMPMASK_LINEARFDBTOP		0x20
 #define	SA_SWITCHINFO_COMPMASK_DEFAULTPORT		0x40
 #define	SA_SWITCHINFO_COMPMASK_DEFAULTMCASTPPORT	0x80
-#define	SA_SWITCHINFO_COMPMASK_DEFAULTMCASTNPPORT 	0x100
+#define	SA_SWITCHINFO_COMPMASK_DEFAULTMCASTNPPORT	0x100
 #define	SA_SWITCHINFO_COMPMASK_LIFETIMEVALUE		0x200
 #define	SA_SWITCHINFO_COMPMASK_PORTSTATECHANGE		0x400
 #define	SA_SWITCHINFO_COMPMASK_RESERVED2		0x800
@@ -337,7 +335,7 @@ typedef struct _sminfo_record_s {
 /* P_Key Table Record: Table 166 */
 typedef struct sa_pkey_table_record_s {
 	ib_lid_t	LID;
-	uint16_t 	BlockNum;
+	uint16_t	BlockNum;
 	uint8_t		PortNum;
 	uint8_t		Reserved[3];
 	sm_pkey_table_t	P_KeyTable;
@@ -345,7 +343,7 @@ typedef struct sa_pkey_table_record_s {
 
 #define	SA_PKEY_COMPMASK_PORTLID		0x1
 #define	SA_PKEY_COMPMASK_BLOCKNUM		0x2
-#define	SA_PKEY_COMPMASK_PORTNUM 		0x4
+#define	SA_PKEY_COMPMASK_PORTNUM		0x4
 #define	SA_PKEY_COMPMASK_RESERVED		0x8
 #define	SA_PKEY_COMPMASK_PKEYTABLE		0x10
 
@@ -524,7 +522,7 @@ typedef struct sa_path_record_s {
 #define	SA_PR_COMPMASK_PREFERENCE	0x400000
 
 #define	SA_PR_RAWTRAFFIC_PKEY		0x1
-#define	SA_PR_RAWTRAFFIC_NO_PKEY 	0x0
+#define	SA_PR_RAWTRAFFIC_NO_PKEY	0x0
 #define	SA_PR_MTU_SEL_GREATER		0x0
 #define	SA_PR_MTU_SEL_LESS		0x1
 #define	SA_PR_MTU_SEL_EXACTLY		0x2

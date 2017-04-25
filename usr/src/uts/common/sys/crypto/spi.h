@@ -643,7 +643,7 @@ typedef uint32_t crypto_func_group_t;
 
 /* Bit mask for all the dual operations */
 #define	CRYPTO_FG_MAC_CIPHER_MASK	(CRYPTO_FG_ENCRYPT_MAC |	\
-    CRYPTO_FG_MAC_DECRYPT | CRYPTO_FG_ENCRYPT_MAC_ATOMIC | 		\
+    CRYPTO_FG_MAC_DECRYPT | CRYPTO_FG_ENCRYPT_MAC_ATOMIC |		\
     CRYPTO_FG_MAC_DECRYPT_ATOMIC)
 
 /* Add other combos to CRYPTO_FG_DUAL_MASK */

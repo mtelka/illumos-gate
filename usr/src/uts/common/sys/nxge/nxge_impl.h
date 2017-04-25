@@ -85,24 +85,24 @@ extern "C" {
 #include	<sys/taskq.h>
 #include	<sys/atomic.h>
 
-#include 	<sys/nxge/nxge_defs.h>
-#include 	<sys/nxge/nxge_hw.h>
-#include 	<sys/nxge/nxge_mac.h>
+#include	<sys/nxge/nxge_defs.h>
+#include	<sys/nxge/nxge_hw.h>
+#include	<sys/nxge/nxge_mac.h>
 #include	<sys/nxge/nxge_mii.h>
 #include	<sys/nxge/nxge_fm.h>
 #include	<sys/netlb.h>
 
 #include	<sys/ddi_intr.h>
-#include 	<sys/mac_provider.h>
+#include	<sys/mac_provider.h>
 #include	<sys/mac_ether.h>
 
 #if	defined(sun4v)
 #include	<sys/hypervisor_api.h>
-#include 	<sys/machsystm.h>
-#include 	<sys/hsvc.h>
+#include	<sys/machsystm.h>
+#include	<sys/hsvc.h>
 #endif
 
-#include 	<sys/dld.h>
+#include	<sys/dld.h>
 
 /*
  * Handy macros (taken from bge driver)
@@ -206,7 +206,7 @@ extern "C" {
 #define	NPI_V2REG_ADD_HANDLE_GET(nxgep) (nxgep->npi_v2reg_handle.regp)
 
 #define	NPI_DMA_ACC_HANDLE_SET(dmap, ah) (dmap->npi_handle.regh = ah)
-#define	NPI_DMA_ACC_HANDLE_GET(dmap) 	(dmap->npi_handle.regh)
+#define	NPI_DMA_ACC_HANDLE_GET(dmap)	(dmap->npi_handle.regh)
 
 /*
  * DMA handles.
@@ -562,7 +562,7 @@ struct _nxge_dma_common_t {
 	void			*ioaddr_pp;
 	void			*first_ioaddr_pp;
 	void			*last_ioaddr_pp;
-	ddi_dma_cookie_t 	dma_cookie;
+	ddi_dma_cookie_t	dma_cookie;
 	uint32_t		ncookies;
 
 	ddi_dma_handle_t	dma_handle;
@@ -721,7 +721,7 @@ typedef struct _dev_regs_t {
 	void			*nxge_regp;	/* mapped device registers */
 
 	nxge_os_acc_handle_t	nxge_msix_regh;	/* MSI/X DDI handle (BAR 2) */
-	void 			*nxge_msix_regp; /* MSI/X register */
+	void			*nxge_msix_regp; /* MSI/X register */
 
 	nxge_os_acc_handle_t	nxge_vir_regh;	/* virtualization (BAR 4) */
 	unsigned char		*nxge_vir_regp;	/* virtualization register */
@@ -744,7 +744,7 @@ typedef struct _nxge_mac_addr_t {
  * for each XMAC port and supports 1 unique MAC and 7 alternate MACs
  * for each BMAC port.  The number of MACs assigned by the factory is
  * different and is as follows,
- * 	BMAC port:		   num_factory_mmac = num_mmac = 7
+ *	BMAC port:		   num_factory_mmac = num_mmac = 7
  *	XMAC port on a 2-port NIC: num_factory_mmac = num_mmac - 1 = 15
  *	XMAC port on a 4-port NIC: num_factory_mmac = 7
  * So num_factory_mmac is smaller than num_mmac.  nxge_m_mmac_add uses
@@ -797,8 +797,8 @@ typedef struct _nxge_mmac_stats_t {
 #define	NXGE_ROCK_COMPATIBLE		"SUNW,rock-pciex108e,abcd"
 #define	NXGE_EROM_LEN			1048576
 
-#include 	<sys/nxge/nxge_common_impl.h>
-#include 	<sys/nxge/nxge_common.h>
+#include	<sys/nxge/nxge_common_impl.h>
+#include	<sys/nxge/nxge_common.h>
 #include	<sys/nxge/nxge_txc.h>
 #include	<sys/nxge/nxge_rxdma.h>
 #include	<sys/nxge/nxge_txdma.h>
@@ -812,7 +812,7 @@ typedef struct _nxge_mmac_stats_t {
 #include	<npi_espc.h>
 #include	<npi_vir.h>
 
-#include 	<sys/nxge/nxge.h>
+#include	<sys/nxge/nxge.h>
 
 #include	<sys/modctl.h>
 #include	<sys/pattr.h>

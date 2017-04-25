@@ -27,8 +27,6 @@
 #ifndef	_SYS_LOM_IO_H
 #define	_SYS_LOM_IO_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * I/O header file for LOMlite Driver.
  */
@@ -190,7 +188,7 @@ struct {
 #define	LOMIOCMPROG	_IOW('a', 32, lom_mprog_t)
 #define	LOMIOCMREAD	_IOR('a', 33, lom_mprog_t)
 
-#define	LOMIOCLEDSTATE 	_IOR('a', 34, lom_led_state_t)
+#define	LOMIOCLEDSTATE	_IOR('a', 34, lom_led_state_t)
 
 /*
  * command to tell the driver to output debug information. This information

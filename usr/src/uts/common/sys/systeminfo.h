@@ -26,7 +26,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _SYS_SYSTEMINFO_H
@@ -68,7 +68,7 @@ extern char platform[];
 /* UI defined `get' commands (1-256) */
 #define	SI_SYSNAME		1	/* return name of operating system */
 #define	SI_HOSTNAME		2	/* return name of node */
-#define	SI_RELEASE 		3	/* return release of operating system */
+#define	SI_RELEASE		3	/* return release of operating system */
 #define	SI_VERSION		4	/* return version field of utsname */
 #define	SI_MACHINE		5	/* return kind of machine */
 #define	SI_ARCHITECTURE		6	/* return instruction set arch */

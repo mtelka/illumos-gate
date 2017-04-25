@@ -26,8 +26,6 @@
 #ifndef _SYS_KOBJ_H
 #define	_SYS_KOBJ_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/modctl.h>
 #include <sys/elf.h>
 #include <sys/machelf.h>
@@ -121,7 +119,7 @@ struct _buf {
 	intptr_t	 _fd;
 	char		*_ptr;
 	char		*_base;
-	char 		*_name;
+	char		*_name;
 	char		*_dbuf;
 	int		 _size;
 	int		_cnt;

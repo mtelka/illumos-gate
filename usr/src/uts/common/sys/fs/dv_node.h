@@ -139,13 +139,13 @@ struct dv_fid {
 #define	VATTR_MP_MERGE(attr, mp)				\
 	attr.va_uid = mp.mp_uid;				\
 	attr.va_gid = mp.mp_gid;				\
-	attr.va_mode = 						\
+	attr.va_mode =						\
 	    (attr.va_mode & ~S_IAMB) | (mp.mp_mode & S_IAMB);
 
 #define	VATTRP_MP_MERGE(attrp, mp)				\
 	attrp->va_uid = mp.mp_uid;				\
 	attrp->va_gid = mp.mp_gid;				\
-	attrp->va_mode = 					\
+	attrp->va_mode =					\
 	    (attrp->va_mode & ~S_IAMB) | (mp.mp_mode & S_IAMB);
 
 /*

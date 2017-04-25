@@ -26,22 +26,20 @@
 
 /*	Copyright (c) 1990, 1991 UNIX System Laboratories, Inc.	*/
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989, 1990 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 #ifndef	_SYS_SEGMENT_H
 #define	_SYS_SEGMENT_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
 /* access rights for data segments */
-#define	UDATA_ACC1	0xF2 	/* present dpl=3 writable */
+#define	UDATA_ACC1	0xF2	/* present dpl=3 writable */
 #define	DATA_ACC2	0xC	/* 4Kbyte gran. 4Gb limit avl=0 */
 #define	DATA_ACC2_S	0x4	/* 1 byte gran., 32bit operands, avl=0 */
-#define	UTEXT_ACC1	0xFA 	/* present dpl=3 readable */
+#define	UTEXT_ACC1	0xFA	/* present dpl=3 readable */
 #define	TEXT_ACC2	0xC	/* 4Kbyte gran., 32 bit operands avl=0 */
 #define	TEXT_ACC2_S	0x4	/* 1 byte gran., 32 bit operands avl=0 */
 #define	LDT_UACC1	0xE2	/* present dpl=3 type=ldt */

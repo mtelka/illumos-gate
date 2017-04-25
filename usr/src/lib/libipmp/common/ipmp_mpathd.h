@@ -79,7 +79,7 @@ typedef struct mi_ping {
  * offline that must exist for the operation to succeed.
  */
 typedef struct mi_offline {
-	uint32_t 	mio_command;
+	uint32_t	mio_command;
 	char		mio_ifname[LIFNAMSIZ];
 	uint32_t	mio_min_redundancy;
 } mi_offline_t;

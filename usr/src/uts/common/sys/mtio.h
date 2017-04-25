@@ -34,8 +34,6 @@
 #ifndef	_SYS_MTIO_H
 #define	_SYS_MTIO_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 
 #ifdef	__cplusplus
@@ -305,8 +303,8 @@ struct mt_tape_info {
 #define	MTIOCGETERROR		(MTIOC|11)	/* Get recently error record */
 #define	MTIOCSTATE		(MTIOC|13)	/* Inquire insert/eject state */
 
-#define	MTIOCREADIGNOREILI  	(MTIOC|14)	/* Enable/Disable ILI */
-#define	MTIOCREADIGNOREEOFS 	(MTIOC|15)	/* Enable/Disable Ignore EOF */
+#define	MTIOCREADIGNOREILI	(MTIOC|14)	/* Enable/Disable ILI */
+#define	MTIOCREADIGNOREEOFS	(MTIOC|15)	/* Enable/Disable Ignore EOF */
 #define	MTIOCSHORTFMK		(MTIOC|16)	/* Enable/Disable Short FMK */
 #define	MTIOCGETPOS		(MTIOC|17)	/* Get drive position */
 #define	MTIOCRESTPOS		(MTIOC|18)	/* Go back to position */

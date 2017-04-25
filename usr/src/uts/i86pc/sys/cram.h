@@ -21,12 +21,10 @@
  */
 /*	Copyright (c) 1990, 1991 UNIX System Laboratories, Inc.	*/
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989, 1990 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 #ifndef _SYS_CRAM_H
 #define	_SYS_CRAM_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/types.h>
 #include <sys/ksynch.h>
@@ -73,7 +71,7 @@ extern unsigned char	CMOSread();
 
 /* Ports for interacting with chip at */
 
-#define	CMOSADDR	0x70 	/* Use to select RAM address */
+#define	CMOSADDR	0x70	/* Use to select RAM address */
 #define	CMOSDATA	0x71	/* R/W data */
 
 /* Number of cmos bytes */

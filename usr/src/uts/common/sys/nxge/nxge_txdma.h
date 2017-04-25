@@ -72,15 +72,15 @@ typedef enum {
 } nxge_tx_mode_t;
 
 typedef struct _tx_msg_t {
-	nxge_os_block_mv_t 	flags;		/* DMA, BCOPY, DVMA (?) */
+	nxge_os_block_mv_t	flags;		/* DMA, BCOPY, DVMA (?) */
 	nxge_os_dma_common_t	buf_dma;	/* premapped buffer blocks */
 	nxge_os_dma_handle_t	buf_dma_handle; /* premapped buffer handle */
-	nxge_os_dma_handle_t 	dma_handle;	/* DMA handle for normal send */
-	nxge_os_dma_handle_t 	dvma_handle;	/* Fast DVMA  handle */
+	nxge_os_dma_handle_t	dma_handle;	/* DMA handle for normal send */
+	nxge_os_dma_handle_t	dvma_handle;	/* Fast DVMA  handle */
 	struct _tx_msg_t	*nextp;
 
-	p_mblk_t 		tx_message;
-	uint32_t 		tx_msg_size;
+	p_mblk_t		tx_message;
+	uint32_t		tx_msg_size;
 	size_t			bytes_used;
 	int			head;
 	int			tail;
@@ -99,12 +99,12 @@ typedef struct _nxge_tx_ring_stats_t {
 
 	uint32_t		mbox_err;
 	uint32_t		pkt_size_err;
-	uint32_t 		tx_ring_oflow;
-	uint32_t 		pre_buf_par_err;
-	uint32_t 		nack_pref;
-	uint32_t 		nack_pkt_rd;
-	uint32_t 		conf_part_err;
-	uint32_t 		pkt_part_err;
+	uint32_t		tx_ring_oflow;
+	uint32_t		pre_buf_par_err;
+	uint32_t		nack_pref;
+	uint32_t		nack_pkt_rd;
+	uint32_t		conf_part_err;
+	uint32_t		pkt_part_err;
 	uint32_t		tx_starts;
 	uint32_t		tx_nocanput;
 	uint32_t		tx_msgdup_fail;
@@ -126,7 +126,7 @@ typedef struct _nxge_tx_ring_stats_t {
 typedef struct _tx_ring_t {
 	nxge_os_dma_common_t	tdc_desc;
 	struct _nxge_t		*nxgep;
-	p_tx_msg_t 		tx_msg_ring;
+	p_tx_msg_t		tx_msg_ring;
 	uint32_t		tnblocks;
 	tx_rng_cfig_t		tx_ring_cfig;
 	tx_ring_hdl_t		tx_ring_hdl;
@@ -154,38 +154,38 @@ typedef struct _tx_ring_t {
 	nxge_os_mutex_t		lock;
 	mac_ring_handle_t	tx_ring_handle;
 	ddi_taskq_t		*taskq;
-	uint16_t 		index;
+	uint16_t		index;
 	uint16_t		tdc;
 	struct nxge_tdc_cfg	*tdc_p;
-	int 			tx_ring_size;
-	uint32_t 		num_chunks;
+	int			tx_ring_size;
+	uint32_t		num_chunks;
 
-	uint_t 			tx_wrap_mask;
-	uint_t 			rd_index;
-	uint_t 			wr_index;
+	uint_t			tx_wrap_mask;
+	uint_t			rd_index;
+	uint_t			wr_index;
 	boolean_t		wr_index_wrap;
 	tx_ring_hdl_t		ring_head;
 	tx_ring_kick_t		ring_kick_tail;
 	txdma_mailbox_t		tx_mbox;
 
-	int 			descs_pending;
-	boolean_t 		queueing;
+	int			descs_pending;
+	boolean_t		queueing;
 
 	nxge_os_mutex_t		sq_lock;
-	p_mblk_t 		head;
-	p_mblk_t 		tail;
+	p_mblk_t		head;
+	p_mblk_t		tail;
 
 	uint16_t		ldg_group_id;
 	p_nxge_tx_ring_stats_t tdc_stats;
 
-	nxge_os_mutex_t 	dvma_lock;
-	uint_t 			dvma_wr_index;
-	uint_t 			dvma_rd_index;
-	uint_t 			dvma_pending;
-	uint_t 			dvma_available;
-	uint_t 			dvma_wrap_mask;
+	nxge_os_mutex_t		dvma_lock;
+	uint_t			dvma_wr_index;
+	uint_t			dvma_rd_index;
+	uint_t			dvma_pending;
+	uint_t			dvma_available;
+	uint_t			dvma_wrap_mask;
 
-	nxge_os_dma_handle_t 	*dvma_ring;
+	nxge_os_dma_handle_t	*dvma_ring;
 
 #if	defined(sun4v) && defined(NIU_LP_WORKAROUND)
 	uint64_t		hv_tx_buf_base_ioaddr_pp;
@@ -199,7 +199,7 @@ typedef struct _tx_ring_t {
 
 /* Transmit Mailbox */
 typedef struct _tx_mbox_t {
-	nxge_os_mutex_t 	lock;
+	nxge_os_mutex_t		lock;
 	uint16_t		index;
 	struct _nxge_t		*nxgep;
 	uint16_t		tdc;
@@ -209,7 +209,7 @@ typedef struct _tx_mbox_t {
 } tx_mbox_t, *p_tx_mbox_t;
 
 typedef struct _tx_rings_t {
-	p_tx_ring_t 		*rings;
+	p_tx_ring_t		*rings;
 	boolean_t		txdesc_allocated;
 	uint32_t		ndmas;
 	nxge_os_dma_common_t	tdc_dma;
@@ -218,7 +218,7 @@ typedef struct _tx_rings_t {
 
 
 typedef struct _tx_mbox_areas_t {
-	p_tx_mbox_t 		*txmbox_areas_p;
+	p_tx_mbox_t		*txmbox_areas_p;
 	boolean_t		txmbox_allocated;
 } tx_mbox_areas_t, *p_tx_mbox_areas_t;
 

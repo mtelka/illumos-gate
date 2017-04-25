@@ -360,8 +360,8 @@ typedef struct nodef_s {
  */
 
 typedef struct node_s {
-	uint32_t 	ref;		/* ref (see below) state */
-	uint32_t 	cnt;		/* ref count */
+	uint32_t	ref;		/* ref (see below) state */
+	uint32_t	cnt;		/* ref count */
 	int32_t		size;		/* object size (-1 = UNKNOWN) */
 	uint32_t	mss;		/* mblk(s) in size mss */
 	uint64_t	ctag;		/* usr defined cache tag, 0 => no tag */
@@ -833,7 +833,7 @@ typedef struct lru_s {
 	node_t		*phead;	/* Phys LRU list head (MRU) */
 	node_t		*ptail;	/* Phys LRU list tail (LRU) */
 	node_t		*vhead;	/* Virt LRU list head (MRU) */
-	node_t 		*vtail;	/* Virt LRU list tail (LRU) */
+	node_t		*vtail;	/* Virt LRU list tail (LRU) */
 
 	uint32_t	pcount;	/* Phys count of node_t members */
 	uint32_t	vcount;	/* Virt count of node_t members */

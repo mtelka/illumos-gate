@@ -26,8 +26,6 @@
 #ifndef	_SYS_SYSEVENT_DR_H
 #define	_SYS_SYSEVENT_DR_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -40,7 +38,7 @@ extern "C" {
 
 /*
  * Event type EC_DR/ESC_DR_AP_STATE_CHANGE event schema
- *	Event Class 	- EC_DR
+ *	Event Class	- EC_DR
  *	Event Sub-Class - ESC_DR_AP_STATE_CHANGE
  *	Event Publisher	- SUNW:kern:[dr_subsystem_name]
  *	Attribute Name	- DR_AP_ID
@@ -92,15 +90,15 @@ extern "C" {
 					DR_REQ_OUTGOING_RES : \
 					DR_REQ_INVESTIGATE_RES)
 /*
- * 	Event Class 	- EC_DR
- * 	Event Sub-Class - ESC_DR_TARGET_STATE_CHANGE
- * 	Event Publisher	- SUNW:kern:<driver-name>
- * 	Attribute Name	- DR_TARGET_ID
- * 	Attribute Type	- [SE_DATA_TYPE_STRING]
- * 	Attribute Value	- </physical_path_to_hba:target>
- * 	Attribute Name	- DR_HINT
- * 	Attribute Type	- [SE_DATA_TYPE_STRING]
- * 	Attribute Value	- DR_RESERVED_ATTR | DR_HINT_INSERT | DR_HINT_REMOVE
+ *	Event Class	- EC_DR
+ *	Event Sub-Class - ESC_DR_TARGET_STATE_CHANGE
+ *	Event Publisher	- SUNW:kern:<driver-name>
+ *	Attribute Name	- DR_TARGET_ID
+ *	Attribute Type	- [SE_DATA_TYPE_STRING]
+ *	Attribute Value	- </physical_path_to_hba:target>
+ *	Attribute Name	- DR_HINT
+ *	Attribute Type	- [SE_DATA_TYPE_STRING]
+ *	Attribute Value	- DR_RESERVED_ATTR | DR_HINT_INSERT | DR_HINT_REMOVE
  */
 #define	DR_TARGET_ID	"dr_target_id"
 

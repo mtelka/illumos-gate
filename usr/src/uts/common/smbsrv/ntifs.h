@@ -366,7 +366,7 @@ typedef enum _FILE_FS_INFORMATION_CLASS {
  *		If this flag is not set,
  *		the ACE is an effective ACE which controls access to the object
  *		to which it is attached.
- * 		Both effective and inherit-only ACEs can be inherited
+ *		Both effective and inherit-only ACEs can be inherited
  *		depending on the state of the other inheritance flags.
  *
  * INHERITED_ACE: Windows 2000/XP: Indicates that the ACE was inherited.
@@ -557,10 +557,10 @@ typedef struct smb_acl {
 typedef struct smb_sd {
 	uint8_t		sd_revision;
 	uint16_t	sd_control;
-	smb_sid_t 	*sd_owner;	/* SID file owner */
-	smb_sid_t 	*sd_group;	/* SID group (for POSIX) */
-	smb_acl_t 	*sd_sacl;	/* ACL System (audits) */
-	smb_acl_t 	*sd_dacl;	/* ACL Discretionary (perm) */
+	smb_sid_t	*sd_owner;	/* SID file owner */
+	smb_sid_t	*sd_group;	/* SID group (for POSIX) */
+	smb_acl_t	*sd_sacl;	/* ACL System (audits) */
+	smb_acl_t	*sd_dacl;	/* ACL Discretionary (perm) */
 } smb_sd_t;
 
 /*

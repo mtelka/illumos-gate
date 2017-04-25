@@ -108,7 +108,7 @@ struct	pathcnf32 {
  * _PC_ERROR is used as the first bit to indicate total failure
  * (all info invalid).
  * To check for an error something like
- * 	_PC_ISSET(_PC_PATHMAX, foo.pc_mask) != 0
+ *	_PC_ISSET(_PC_PATHMAX, foo.pc_mask) != 0
  * is used.
  */
 

@@ -679,7 +679,7 @@ typedef unsigned short oss_peaks_t[MAX_PEAK_CHANNELS];
 	"Phone", "Mono", "Video", "Radio", "Depth",		           \
 	"Rear", "Center", "Side" }
 
-#define	SOUND_DEVICE_NAMES { 						\
+#define	SOUND_DEVICE_NAMES {						\
 	"vol", "bass", "treble", "synth", "pcm", "speaker", "line",	\
 	"mic", "cd", "mix", "pcm2", "rec", "igain", "ogain",		\
 	"aux1", "aux2", "aux3", "dig1", "dig2", "dig3",			\

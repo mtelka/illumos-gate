@@ -25,7 +25,7 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * University Copyright- Copyright (c) 1982, 1986, 1988
@@ -77,7 +77,7 @@ typedef struct segvn_crargs {
  *	amp
  *	vpage
  *
- * 	softlockcnt
+ *	softlockcnt
  * is written by acquiring either the readers lock on the segment and
  * freemem lock, or any lock combination which guarantees exclusive use
  * of this segment (e.g., adress space writers lock,
@@ -176,7 +176,7 @@ typedef struct	segvn_data {
 	((struct segvn_crargs *)(argsp))->vp == NULL)
 
 #define	SVNTR_HASH_FUNC(vp)	(((((uintptr_t)(vp)) >> 4) ^		\
-				    (((uintptr_t)(vp)) >> 11)) & 	\
+				    (((uintptr_t)(vp)) >> 11)) &	\
 					(svntr_hashtab_sz - 1))
 
 #define	SEGVN_TR_ADDSTAT(stat)						\

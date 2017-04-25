@@ -26,8 +26,6 @@
 #ifndef	_SYS_MAC_NXGE_MAC_HW_H
 #define	_SYS_MAC_NXGE_MAC_HW_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -54,7 +52,7 @@ typedef enum  {
 #define	NXGE_LINK_RESETS		8	/* Max PHY resets to wait for */
 						/* linkup */
 
-#define	FILTER_M_CTL 			0xDCEF1
+#define	FILTER_M_CTL			0xDCEF1
 #define	HASH_BITS			8
 #define	NMCFILTER_BITS			(1 << HASH_BITS)
 #define	HASH_REG_WIDTH			16
@@ -472,7 +470,7 @@ typedef union _bxif_config_t {
 #define	MAC_ADDR_FILT0_REG		0x298	/* bits [47:32] (HI 0, p2) */
 #define	MAC_ADDR_FILT1_REG		0x2a0	/* bits [31:16] */
 #define	MAC_ADDR_FILT2_REG		0x2a8	/* bits [15:0]  */
-#define	MAC_ADDR_FILT12_MASK_REG 	0x2b0	/* addr filter 2 & 1 mask */
+#define	MAC_ADDR_FILT12_MASK_REG	0x2b0	/* addr filter 2 & 1 mask */
 #define	MAC_ADDR_FILT00_MASK_REG	0x2b8	/* addr filter 0 mask */
 #define	MAC_HASH_TBL0_REG		0x2c0	/* hash table 0 reg */
 #define	MAC_HASH_TBL1_REG		0x2c8	/* hash table 1 reg */
@@ -694,7 +692,7 @@ typedef union _xmac_cfg_t {
 #define	XMAC_ADDR_FILT0_REG		0x818	/* [47:32] addr filter (HI18) */
 #define	XMAC_ADDR_FILT1_REG		0x820	/* [31:16] of addr filter */
 #define	XMAC_ADDR_FILT2_REG		0x828	/* [15:0] of addr filter */
-#define	XMAC_ADDR_FILT12_MASK_REG 	0x830	/* addr filter 2 & 1 mask */
+#define	XMAC_ADDR_FILT12_MASK_REG	0x830	/* addr filter 2 & 1 mask */
 #define	XMAC_ADDR_FILT0_MASK_REG	0x838	/* addr filter 0 mask */
 #define	XMAC_HASH_TBL0_REG		0x840	/* hash table 0 reg */
 #define	XMAC_HASH_TBL1_REG		0x848	/* hash table 1 reg */
@@ -838,9 +836,9 @@ typedef union _xmac_cfg_t {
 #define	MAC_RX_CFG_STRIP_PAD		0x00000002 /* not supported, set to 0 */
 #define	MAC_RX_CFG_STRIP_FCS		0x00000004 /* strip last 4bytes (CRC) */
 #define	MAC_RX_CFG_PROMISC		0x00000008 /* promisc mode enable */
-#define	MAC_RX_CFG_PROMISC_GROUP  	0x00000010 /* accept all MC frames */
+#define	MAC_RX_CFG_PROMISC_GROUP	0x00000010 /* accept all MC frames */
 #define	MAC_RX_CFG_HASH_FILTER_EN	0x00000020 /* use hash table */
-#define	MAC_RX_CFG_ADDR_FILTER_EN    	0x00000040 /* use address filter */
+#define	MAC_RX_CFG_ADDR_FILTER_EN	0x00000040 /* use address filter */
 #define	MAC_RX_CFG_DISABLE_DISCARD	0x00000080 /* do not set abort bit */
 #define	MAC_RX_MAC2IPP_PKT_CNT_EN	0x00000200 /* rx pkt cnt -> BMAC-IPP */
 #define	MAC_RX_MAC_REG_RW_TEST_MASK	0x00000c00 /* BMAC reg RW test */
@@ -863,10 +861,10 @@ typedef union _xmac_cfg_t {
 #define	BMAC_MIN_FRAME_MASK		0x3FF	   /* 10-bit reg */
 
 /* MAC Max Frame Size Register */
-#define	BMAC_MAX_BURST_MASK    		0x3FFF0000 /* max burst size [30:16] */
-#define	BMAC_MAX_BURST_SHIFT   		16
-#define	BMAC_MAX_FRAME_MASK    		0x00007FFF /* max frame size [14:0] */
-#define	BMAC_MAX_FRAME_SHIFT   		0
+#define	BMAC_MAX_BURST_MASK		0x3FFF0000 /* max burst size [30:16] */
+#define	BMAC_MAX_BURST_SHIFT		16
+#define	BMAC_MAX_FRAME_MASK		0x00007FFF /* max frame size [14:0] */
+#define	BMAC_MAX_FRAME_SHIFT		0
 
 /* MAC Preamble size register */
 #define	BMAC_PA_SIZE_MASK		0x000003FF
@@ -929,7 +927,7 @@ typedef union _xmac_cfg_t {
 #define	BMAC_ADDRN_CMPEN(x)		(BMAC_ADDR0_CMP_EN << (x))
 
 /* MAC Host Info Table Registers */
-#define	BMAC_MAX_HOST_INFO_ENTRY	9 	/* 9 host entries */
+#define	BMAC_MAX_HOST_INFO_ENTRY	9	/* 9 host entries */
 
 /*
  * ********************* XMAC registers *********************************
@@ -996,7 +994,7 @@ typedef union _xmac_cfg_t {
 /* XRX MAC config bits */
 #define	XMAC_RX_CFG_RX_ENABLE		0x00000100 /* enable XRX MAC */
 #define	XMAC_RX_CFG_PROMISC		0x00000200 /* promisc mode enable */
-#define	XMAC_RX_CFG_PROMISC_GROUP  	0x00000400 /* accept all MC frames */
+#define	XMAC_RX_CFG_PROMISC_GROUP	0x00000400 /* accept all MC frames */
 #define	XMAC_RX_CFG_ERR_CHK_DISABLE	0x00000800 /* do not set abort bit */
 #define	XMAC_RX_CFG_CRC_CHK_DISABLE	0x00001000 /* disable CRC logic */
 #define	XMAC_RX_CFG_RESERVED_MCAST	0x00002000 /* reserved MCaddr compare */
@@ -1080,7 +1078,7 @@ typedef union _xmac_cfg_t {
 #define	XMAC_IS1_OPP_TXMAC_STAT_MASK	0x0000000F
 #define	XMAC_IS1_OPP_TXMAC_STAT_SHIFT	0
 #define	XMAC_IS1_OPP_TXMAC_ABORT	0x00000010
-#define	XMAC_IS1_OPP_TXMAC_TAG 		0x00000020
+#define	XMAC_IS1_OPP_TXMAC_TAG		0x00000020
 #define	XMAC_IS1_OPP_TXMAC_ACK		0x00000040
 #define	XMAC_IS1_TXMAC_OPP_REQ		0x00000080
 #define	XMAC_IS1_RXMAC_IPP_STAT_MASK	0x0FFFFF00
@@ -2516,7 +2514,7 @@ typedef	union _xpcs_config_t {
 #define	NXGE_VAL_SET(fieldname, regval, val)		\
 {							\
 	(regval) &= ~((fieldname) ## _MASK);		\
-	(regval) |= ((val) << (fieldname ## _SHIFT)); 	\
+	(regval) |= ((val) << (fieldname ## _SHIFT));	\
 }
 
 

@@ -382,7 +382,7 @@ int ddi_dev_pathname(void) { }
  * HACK ALERT
  * struct buf hack for ddict.
  * SDBC currently violates in struct buf
- * 	b_pages
+ *	b_pages
  *	b_proc
  * which we will define as the pad fields for ddict since
  * we can not overload the definition of struct buf with our own stuff.
@@ -490,9 +490,9 @@ typedef union la_wwn {
 	} w;
 } la_wwn_t;
 
-insque(void) { }
-remque(void) { }
-snprintf(void) { }
+int insque(void) { }
+int remque(void) { }
+int snprintf(void) { }
 
 /*
  * STE uses inq_serial and inq_ackqreqq from struct scsi_inquiry

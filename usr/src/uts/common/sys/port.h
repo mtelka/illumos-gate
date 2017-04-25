@@ -88,7 +88,7 @@ typedef struct port_event32 {
 
 typedef	struct	port_notify32 {
 	int		portnfy_port;	/* bind request(s) to port */
-	caddr32_t 	portnfy_user;	/* user defined */
+	caddr32_t	portnfy_user;	/* user defined */
 } port_notify32_t;
 
 #endif /* _SYSCALL32 */

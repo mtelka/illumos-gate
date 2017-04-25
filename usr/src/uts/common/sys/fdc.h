@@ -43,9 +43,9 @@ typedef struct xlate_tbl {
  * the floppy disk minor device number is interpreted as follows:
  *
  *	 7 6 5 4 3 2 1 0
- * 	+---------+-----+
- * 	|  drive  | part|
- * 	+---------+-----+
+ *	+---------+-----+
+ *	|  drive  | part|
+ *	+---------+-----+
  * where:
  *		drive = instance
  *		part = partition
@@ -106,7 +106,7 @@ struct fdattr {
 struct fdisk {
 	struct fcu_obj	*d_obj;
 	int		d_media;	/* drive media capacities */
-	struct kstat 	*d_iostat;	/* pointer to iostat statistics */
+	struct kstat	*d_iostat;	/* pointer to iostat statistics */
 	int		d_bpsshf;	/* shift count for bytes to sector */
 
 	ksema_t		d_ocsem;	/* sem for serializing opens/closes */
@@ -362,7 +362,7 @@ struct fcobjops {
 
 struct fcu_obj {
 	ulong_t		fj_flags;	/* state information */
-	kmutex_t 	fj_lock;	/* unit mutex */
+	kmutex_t	fj_lock;	/* unit mutex */
 	caddr_t		fj_data;
 	struct fd_drive *fj_drive;	/* pointer to drive characteristics */
 	struct fd_char	*fj_chars;	/* ptr to diskette characteristics */

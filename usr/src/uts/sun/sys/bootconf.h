@@ -61,7 +61,7 @@ struct bsys_mem {
 	struct memlist *physinstalled;	/* amt of physmem installed */
 	struct memlist *physavail;	/* amt of physmem avail for use */
 	struct memlist *virtavail;	/* amt of virtmem avail for use */
-	uint_t		extent; 	/* number of bytes in the space */
+	uint_t		extent;		/* number of bytes in the space */
 };
 
 #define	BO_VERSION	9		/* bootops interface revision # */

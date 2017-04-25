@@ -26,8 +26,6 @@
 #ifndef _SYS_MODHASH_IMPL_H
 #define	_SYS_MODHASH_IMPL_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * Internal details for the kernel's generic hash implementation.
  */
@@ -81,8 +79,8 @@ struct mod_hash {
 
 /*
  * MH_SIZE()
- * 	Compute the size of a mod_hash_t, in bytes, given the number of
- * 	elements it contains.
+ *	Compute the size of a mod_hash_t, in bytes, given the number of
+ *	elements it contains.
  */
 #define	MH_SIZE(n) \
 	(sizeof (mod_hash_t) + ((n) - 1) * (sizeof (struct mod_hash_entry *)))

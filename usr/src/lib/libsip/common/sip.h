@@ -27,8 +27,6 @@
 #ifndef	_SIP_H
 #define	_SIP_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -43,7 +41,7 @@ extern "C" {
 /* Enable multiple dialogs if a request is forked */
 #define	SIP_DIALOG_ON_FORK	0x0010
 
-#define	SIP_CRLF 		"\r\n"
+#define	SIP_CRLF		"\r\n"
 #define	SKIP_CRLF(msg_ptr)	(msg_ptr = msg_ptr + 2)
 #define	SIP_VERSION		"SIP/2.0"
 #define	SIP			"SIP"
@@ -108,7 +106,7 @@ extern "C" {
 /* 1XX - Provisional */
 #define	SIP_TRYING			100
 #define	SIP_RINGING			180
-#define	SIP_CALL_IS_BEING_FORWARDED 	181
+#define	SIP_CALL_IS_BEING_FORWARDED	181
 #define	SIP_QUEUED			182
 #define	SIP_SESSION_PROGRESS		183
 
@@ -166,7 +164,7 @@ extern "C" {
 /* 6XX - Global Failures */
 #define	SIP_BUSY_EVERYWHERE		600
 #define	SIP_DECLINE			601
-#define	SIP_DOES_NOT_EXIST_ANYWHERE 	604
+#define	SIP_DOES_NOT_EXIST_ANYWHERE	604
 #define	SIP_NOT_ACCEPTABLE_ANYWHERE	606
 
 /* Response error types */
@@ -188,12 +186,12 @@ extern "C" {
 
 /* Client Transaction States */
 #define	SIP_CLNT_CALLING		1
-#define	SIP_CLNT_INV_PROCEEDING 	2
-#define	SIP_CLNT_INV_TERMINATED 	3
+#define	SIP_CLNT_INV_PROCEEDING		2
+#define	SIP_CLNT_INV_TERMINATED		3
 #define	SIP_CLNT_INV_COMPLETED		4
-#define	SIP_CLNT_TRYING		5
-#define	SIP_CLNT_NONINV_PROCEEDING 	6
-#define	SIP_CLNT_NONINV_TERMINATED 	7
+#define	SIP_CLNT_TRYING			5
+#define	SIP_CLNT_NONINV_PROCEEDING	6
+#define	SIP_CLNT_NONINV_TERMINATED	7
 #define	SIP_CLNT_NONINV_COMPLETED	8
 
 /* Server Transaction States */
@@ -401,9 +399,9 @@ typedef struct sip_io_pointers_s {
 	void	(*sip_rel_conn_object)(sip_conn_object_t);
 	boolean_t	(*sip_conn_is_stream)(sip_conn_object_t);
 	boolean_t	(*sip_conn_is_reliable)(sip_conn_object_t);
-	int 	(*sip_conn_remote_address)(sip_conn_object_t, struct sockaddr *,
+	int	(*sip_conn_remote_address)(sip_conn_object_t, struct sockaddr *,
 		    socklen_t *);
-	int 	(*sip_conn_local_address)(sip_conn_object_t, struct sockaddr *,
+	int	(*sip_conn_local_address)(sip_conn_object_t, struct sockaddr *,
 		    socklen_t *);
 	int	(*sip_conn_transport)(sip_conn_object_t);
 	int	(*sip_conn_timer1)(sip_conn_object_t);
@@ -451,7 +449,7 @@ extern void		(*sip_refhold_conn)(sip_conn_object_t);
 extern void		(*sip_refrele_conn)(sip_conn_object_t);
 extern boolean_t	(*sip_is_conn_stream)(sip_conn_object_t);
 extern boolean_t	(*sip_is_conn_reliable)(sip_conn_object_t);
-extern int 		(*sip_conn_rem_addr)(sip_conn_object_t,
+extern int		(*sip_conn_rem_addr)(sip_conn_object_t,
 			    struct sockaddr *, socklen_t *);
 extern int		(*sip_conn_local_addr)(sip_conn_object_t,
 			    struct sockaddr *, socklen_t *);
@@ -473,34 +471,34 @@ extern int		sip_sendmsg(sip_conn_object_t, sip_msg_t, sip_dialog_t,
 			    uint32_t);
 extern void		sip_process_new_packet(sip_conn_object_t, void *,
 			    size_t);
-extern char 		*sip_guid();
+extern char		*sip_guid();
 extern char		*sip_sent_by_to_str(int *);
 extern int		sip_register_sent_by(char *);
 extern void		sip_unregister_sent_by(char *);
 extern void		sip_unregister_all_sent_by();
-extern char 		*sip_branchid(sip_msg_t);
+extern char		*sip_branchid(sip_msg_t);
 extern uint32_t		sip_get_cseq();
 extern uint32_t		sip_get_rseq();
 extern int		sip_get_num_via(sip_msg_t, int *);
 
-extern int 		sip_add_from(sip_msg_t, char *, char *, char *,
+extern int		sip_add_from(sip_msg_t, char *, char *, char *,
 			    boolean_t, char *);
-extern int 		sip_add_to(sip_msg_t, char *, char *, char *,
+extern int		sip_add_to(sip_msg_t, char *, char *, char *,
 			    boolean_t, char *);
-extern int 		sip_add_response_line(sip_msg_t, int, char *);
-extern int 		sip_add_request_line(sip_msg_t, sip_method_t, char *);
-extern int 		sip_add_via(sip_msg_t, char *, char *, int, char *);
-extern int 		sip_add_maxforward(sip_msg_t, uint_t);
-extern int 		sip_add_callid(sip_msg_t, char *);
-extern int 		sip_add_cseq(sip_msg_t, sip_method_t, uint32_t);
-extern int 		sip_add_content_type(sip_msg_t, char *, char *);
-extern int 		sip_add_content(sip_msg_t, char *);
-extern int 		sip_add_contact(sip_msg_t, char *, char *, boolean_t,
+extern int		sip_add_response_line(sip_msg_t, int, char *);
+extern int		sip_add_request_line(sip_msg_t, sip_method_t, char *);
+extern int		sip_add_via(sip_msg_t, char *, char *, int, char *);
+extern int		sip_add_maxforward(sip_msg_t, uint_t);
+extern int		sip_add_callid(sip_msg_t, char *);
+extern int		sip_add_cseq(sip_msg_t, sip_method_t, uint32_t);
+extern int		sip_add_content_type(sip_msg_t, char *, char *);
+extern int		sip_add_content(sip_msg_t, char *);
+extern int		sip_add_contact(sip_msg_t, char *, char *, boolean_t,
 			    char *);
-extern int 		sip_add_route(sip_msg_t, char *, char *, char *);
-extern int 		sip_add_record_route(sip_msg_t, char *, char *, char *);
-extern int 		sip_add_branchid_to_via(sip_msg_t, char *);
-extern int 		sip_add_accept(sip_msg_t, char *, char *, char *,
+extern int		sip_add_route(sip_msg_t, char *, char *, char *);
+extern int		sip_add_record_route(sip_msg_t, char *, char *, char *);
+extern int		sip_add_branchid_to_via(sip_msg_t, char *);
+extern int		sip_add_accept(sip_msg_t, char *, char *, char *,
 			    char *);
 extern int		sip_add_author(sip_msg_t, char *,  char *);
 extern int		sip_add_authen_info(sip_msg_t, char *);
@@ -626,7 +624,7 @@ extern sip_msg_t	sip_create_response(const sip_msg_t, int, char *,
 			    char *, char *);
 extern int		sip_create_OKack(const sip_msg_t, sip_msg_t, char *,
 			    char *, int, char *);
-extern char 		*sip_get_resp_desc(int);
+extern char		*sip_get_resp_desc(int);
 extern char		*sip_get_branchid(const sip_msg_t, int *);
 
 extern const struct sip_header	*sip_get_header(sip_msg_t, char *, sip_header_t,
@@ -674,8 +672,8 @@ extern const sip_str_t	*sip_get_via_sent_protocol_name(sip_header_value_t,
 			    int *);
 extern const sip_str_t	*sip_get_via_sent_transport(sip_header_value_t,
 			    int *);
-extern int 		sip_get_maxforward(sip_msg_t, int *);
-extern int 		sip_get_content_length(sip_msg_t, int *);
+extern int		sip_get_maxforward(sip_msg_t, int *);
+extern int		sip_get_content_length(sip_msg_t, int *);
 extern const sip_str_t	*sip_get_content_type(sip_msg_t, int *);
 extern const sip_str_t	*sip_get_content_sub_type(sip_msg_t, int *);
 extern char		*sip_get_content(sip_msg_t, int *);
@@ -741,7 +739,7 @@ extern const struct sip_uri	*sip_get_uri_parsed(sip_header_value_t, int *);
 
 /* Transaction functions */
 extern const struct sip_xaction	*sip_get_trans(sip_msg_t, int, int *);
-extern char 			*sip_get_trans_branchid(sip_transaction_t,
+extern char			*sip_get_trans_branchid(sip_transaction_t,
 				    int *);
 extern sip_method_t		sip_get_trans_method(sip_transaction_t,
 				    int *);

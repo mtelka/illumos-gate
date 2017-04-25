@@ -167,8 +167,8 @@ typedef unsigned char	_sd_bitmap_t;
  * Thus they can take any convenient value, however, they must be
  * distinct and non-zero.
  */
-#define	CC_INUSE 	0x01	/* Cache entry is in use */
-#define	CC_PAGEIO 	0x02	/* Pagelist IO is active for cache entry */
+#define	CC_INUSE	0x01	/* Cache entry is in use */
+#define	CC_PAGEIO	0x02	/* Pagelist IO is active for cache entry */
 
 /*
  * Real cc_flag values.
@@ -205,7 +205,7 @@ typedef struct _sd_cctl_sync {
 } _sd_cctl_sync_t;
 
 typedef struct sd_addr_s {		/* Generic address structure */
-	unsigned char 	*sa_virt;	/* Virtual address of data */
+	unsigned char	*sa_virt;	/* Virtual address of data */
 } sd_addr_t;
 
 /*
@@ -221,7 +221,7 @@ typedef struct _sd_cctl {
 	struct _sd_cctl *cc_dirty_net_next; /* for chaining net writes */
 	struct _sd_cctl *cc_dirty_net_link; /* for chaining net lists   */
 	uint_t		cc_seq;		/* sequence number: for lru optim */
-	volatile int	net_iostatus;	/* net status of io 	*/
+	volatile int	net_iostatus;	/* net status of io	*/
 	volatile _sd_bitmap_t net_dirty; /* net cache block dirty mask */
 	_sd_bitmap_t	cc_valid;	/* Cache block valid mask	   */
 	_sd_bitmap_t	cc_toflush;	/* Cache block deferred dirty mask */
@@ -370,7 +370,7 @@ typedef struct sdbc_allocbuf_impl_s {
 typedef struct _dm_process_vars {
 	kcondvar_t	thread_dm_cv;
 	kmutex_t	thread_dm_lock;
-	int	sd_dealloc_flagx; 	/* gen'l purpose bit flag */
+	int	sd_dealloc_flagx;	/* gen'l purpose bit flag */
 	int	monitor_dynmem_process; /* bit flag indicating what to report */
 	int	max_dyn_list;		/* max num of pages to allow list to */
 					/* grow */
@@ -489,7 +489,7 @@ typedef struct _sd_net {
 	unsigned char	sn_configured;	/* is this network configured */
 	size_t	sn_csize;		/* Cache size in bytes */
 	uint_t	sn_wsize;		/* Write size in bytes */
-	int 	sn_cpages;		/* number of pages for Cache	  */
+	int	sn_cpages;		/* number of pages for Cache	  */
 }_sd_net_t;
 
 #endif /* _KERNEL || _KMEMUSER */
@@ -535,7 +535,7 @@ typedef struct _sd_cd_info {
 	strategy_fn_t cd_strategy;	/* Cached copy of strategy func */
 	dev_t cd_crdev;			/* The device this represents	*/
 	nsc_iodev_t *cd_iodev;		/* I/O device for callbacks	*/
-	kmutex_t cd_lock; 		/* spinlock guarding this cd	*/
+	kmutex_t cd_lock;		/* spinlock guarding this cd	*/
 	volatile uchar_t  cd_writer;	/* Disk writer status		*/
 	unsigned int  cd_hint;		/* Hints for this descriptor	*/
 	ss_voldata_t *cd_global;  /* RM information for this cd   */
@@ -564,12 +564,12 @@ typedef struct _sd_buf_hlist {
 /*
  * Index into the following st_mem_sizes[] array
  */
-#define	_SD_LOCAL_MEM 	0x00	/* type of memory to allocate */
+#define	_SD_LOCAL_MEM	0x00	/* type of memory to allocate */
 #define	_SD_CACHE_MEM	0x01
 #define	_SD_IOBUF_MEM	0x02
 #define	_SD_HASH_MEM	0x03
-#define	_SD_GLOBAL_MEM 	0x04
-#define	_SD_STATS_MEM 	0x05
+#define	_SD_GLOBAL_MEM	0x04
+#define	_SD_STATS_MEM	0x05
 #define	_SD_MAX_MEM	_SD_STATS_MEM + 1
 
 /* maintain stat struct layout */
@@ -840,7 +840,7 @@ typedef struct _sd_map_info {
 
 #define	FULLY_DIRTY(cc_entry)   ((cc_entry)->cc_dirty == BLK_FBA_BITS)
 
-#define	_SD_BIT_ISSET(bmap, bit) 	((bmap & (1 << bit)) ? 1 : 0)
+#define	_SD_BIT_ISSET(bmap, bit)	((bmap & (1 << bit)) ? 1 : 0)
 #define	_SD_BMAP_ISFULL(bmap)		(bmap == BLK_FBA_BITS)
 
 #endif /* _KERNEL || _KMEMUSER */
@@ -863,7 +863,7 @@ typedef struct _sd_map_info {
 #define	CACHE_READ_HIT		_sd_cache_stats->st_rdhits++
 #define	CACHE_READ_MISS		_sd_cache_stats->st_rdmiss++
 #define	CACHE_WRITE_HIT		_sd_cache_stats->st_wrhits++
-#define	CACHE_WRITE_MISS 	_sd_cache_stats->st_wrmiss++
+#define	CACHE_WRITE_MISS	_sd_cache_stats->st_wrmiss++
 
 #define	CACHE_WRITE_CANCELLATION(cd) {\
 	if ((cd) < sdbc_max_devs)\
@@ -946,7 +946,7 @@ typedef struct _sd_map_info {
 
 /* defines for sh_alloc */
 
-#define	CD_ALLOC_IN_PROGRESS 	0x0001
+#define	CD_ALLOC_IN_PROGRESS	0x0001
 #define	CD_ALLOCATED		0x0002
 #define	CD_CLOSE_IN_PROGRESS	0x0010
 
@@ -982,7 +982,7 @@ typedef void (*sdbc_ea_fn_t) (blind_t, nsc_off_t, nsc_size_t, int);
 /*
  * Do not requeue if we fall into the tail 25% of the lru
  */
-#define	LRU_REQ_LIMIT(q) 	(q->sq_inq >> 2)
+#define	LRU_REQ_LIMIT(q)	(q->sq_inq >> 2)
 
 #define	_sd_lru_reinsert(q, ent) \
 	(((q->sq_seq - ent->cc_seq) > LRU_REQ_LIMIT(q)) ?\
@@ -992,7 +992,7 @@ typedef void (*sdbc_ea_fn_t) (blind_t, nsc_off_t, nsc_size_t, int);
 #endif
 
 #if defined(_KERNEL)
-#define	SD_WR_NUMIO 	100
+#define	SD_WR_NUMIO	100
 #define	SD_DCON_THRESH	0x10000	/* Disconnect if io len greater than 64 */
 
 /*

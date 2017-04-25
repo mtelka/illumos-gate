@@ -39,7 +39,7 @@ extern "C" {
  */
 struct aio_req {
 	struct uio	*aio_uio;		/* UIO for this request */
-	void 		*aio_private;
+	void		*aio_private;
 };
 
 extern int aphysio(int (*)(), int (*)(), dev_t, int, void (*)(),

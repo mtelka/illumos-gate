@@ -165,7 +165,7 @@ typedef struct callb_cpr {
  * Any code region between CALLB_CPR_SAFE_BEGIN and CALLB_CPR_SAFE_END
  * is safe for checkpoint/resume.
  */
-#define	CALLB_CPR_SAFE_BEGIN(cp) { 			\
+#define	CALLB_CPR_SAFE_BEGIN(cp) {			\
 		CALLB_CPR_ASSERT(cp)			\
 		(cp)->cc_events |= CALLB_CPR_SAFE;	\
 		if ((cp)->cc_events & CALLB_CPR_START)	\

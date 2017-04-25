@@ -110,7 +110,7 @@ typedef enum {
  */
 
 typedef struct devctl_ap_state {
-	ap_rstate_t	ap_rstate; 	/* receptacle state */
+	ap_rstate_t	ap_rstate;	/* receptacle state */
 	ap_ostate_t	ap_ostate;	/* occupant state */
 	ap_condition_t	ap_condition;	/* condition of AP */
 	time_t		ap_last_change;
@@ -123,7 +123,7 @@ typedef struct devctl_ap_state {
  * Structure to pass/return data from 32-bit program's.
  */
 typedef struct devctl_ap_state32 {
-	ap_rstate_t	ap_rstate; 	/* receptacle state */
+	ap_rstate_t	ap_rstate;	/* receptacle state */
 	ap_ostate_t	ap_ostate;	/* occupant state */
 	ap_condition_t	ap_condition;	/* condition of AP */
 	time32_t	ap_last_change;
@@ -190,7 +190,7 @@ typedef struct devctl_ap_state32 {
  * device itself.  Nexus device nodes contain both Bus and Device state
  * information.
  *
- * 	DEVICE_ONLINE  - Device is available for use by the system.  Mutually
+ *	DEVICE_ONLINE  - Device is available for use by the system.  Mutually
  *                       exclusive with DEVICE_OFFLINE.
  *
  *	DEVICE_OFFLINE - Device is unavailable for use by the system.
@@ -206,7 +206,7 @@ typedef struct devctl_ap_state32 {
  * Bus state is returned as a set of bit-flags which indicates the
  * operational state of a bus associated with the nexus dev_info node.
  *
- * 	BUS_ACTIVE     - The bus associated with the device node is Active.
+ *	BUS_ACTIVE     - The bus associated with the device node is Active.
  *                       I/O requests from child devices attached to the
  *			 are initiated (or queued for initiation) as they
  *			 are received.

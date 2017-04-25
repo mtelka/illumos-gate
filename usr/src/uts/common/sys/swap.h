@@ -24,7 +24,7 @@
  */
 
 /*	Copyright (c) 1983, 1984, 1985, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 /*
  * University Copyright- Copyright (c) 1982, 1986, 1988
@@ -63,11 +63,11 @@ extern "C" {
 typedef struct swapres {
 	char	*sr_name;	/* pathname of the resource specified */
 	off_t	sr_start;	/* starting offset of the swapping resource */
-	off_t 	sr_length;	/* length of the swap area */
+	off_t	sr_length;	/* length of the swap area */
 } swapres_t;
 
 typedef struct swapent {
-	char 	*ste_path;	/* get the name of the swap file */
+	char	*ste_path;	/* get the name of the swap file */
 	off_t	ste_start;	/* starting block for swapping */
 	off_t	ste_length;	/* length of swap area */
 	long	ste_pages;	/* numbers of pages for swapping */
@@ -140,10 +140,10 @@ struct	swapinfo {
 	short	si_flags;		/* flags defined below */
 	pgcnt_t	si_npgs;		/* number of pages of swap space */
 	pgcnt_t	si_nfpgs;		/* number of free pages of swap space */
-	int 	si_pnamelen;		/* swap file name length + 1 */
-	char 	*si_pname;		/* swap file name */
+	int	si_pnamelen;		/* swap file name length + 1 */
+	char	*si_pname;		/* swap file name */
 	ssize_t	si_mapsize;		/* # bytes allocated for bitmap */
-	uint_t 	*si_swapslots;		/* bitmap of slots, unset == free */
+	uint_t	*si_swapslots;		/* bitmap of slots, unset == free */
 	pgcnt_t	si_hint;		/* first page to check if free */
 	ssize_t	si_checkcnt;		/* # of checks to find freeslot */
 	ssize_t	si_alloccnt;		/* used to find ave checks */
@@ -191,7 +191,7 @@ struct	swapinfo {
 #define	swap_alloc(AP)							\
 {									\
 	(AP)->an_vp = swapfs_getvp(((uintptr_t)(AP) >> AN_CACHE_ALIGN_LOG2) \
-	    & AN_VPMASK); 						\
+	    & AN_VPMASK);						\
 	(AP)->an_off = (anoff_t)((((uintptr_t)(AP)) >>			\
 	    AN_VPSHIFT + AN_CACHE_ALIGN_LOG2) << PAGESHIFT);		\
 }
@@ -203,7 +203,7 @@ struct	swapinfo {
 #define	swap_free(AP)
 
 /* Flags for swap_phys_alloc */
-#define	SA_NOT 	0x01 	/* Must have slot from swap dev other than input one */
+#define	SA_NOT	0x01	/* Must have slot from swap dev other than input one */
 
 /* Special error codes for swap_newphysname() */
 #define	SE_NOSWAP	-1	/* No physical swap slots available */

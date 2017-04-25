@@ -120,7 +120,7 @@ typedef struct nstset {
 	volatile int	set_destroy_cnt; /* No. of waiters */
 
 	kcondvar_t	set_res_cv;	/* Resource alloc synchronisation */
-	int 		set_res_cnt;	/* No. of waiters */
+	int		set_res_cnt;	/* No. of waiters */
 } nstset_t;
 
 /*

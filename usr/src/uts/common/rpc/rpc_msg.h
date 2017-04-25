@@ -34,8 +34,6 @@
 #ifndef _RPC_RPC_MSG_H
 #define	_RPC_RPC_MSG_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <rpc/clnt.h>
 /*
  * rpc_msg.h
@@ -167,8 +165,8 @@ struct rpc_msg {
 /*
  * XDR routine to handle a rpc message.
  * xdr_callmsg(xdrs, cmsg)
- * 	XDR *xdrs;
- * 	struct rpc_msg *cmsg;
+ *	XDR *xdrs;
+ *	struct rpc_msg *cmsg;
  */
 #ifdef __STDC__
 extern bool_t	xdr_callmsg(XDR *, struct rpc_msg *);
@@ -180,8 +178,8 @@ extern bool_t	xdr_callmsg();
 /*
  * XDR routine to pre-serialize the static part of a rpc message.
  * xdr_callhdr(xdrs, cmsg)
- * 	XDR *xdrs;
- * 	struct rpc_msg *cmsg;
+ *	XDR *xdrs;
+ *	struct rpc_msg *cmsg;
  */
 #ifdef __STDC__
 extern bool_t	xdr_callhdr(XDR *, struct rpc_msg *);
@@ -193,8 +191,8 @@ extern bool_t	xdr_callhdr();
 /*
  * XDR routine to handle a rpc reply.
  * xdr_replymsg(xdrs, rmsg)
- * 	XDR *xdrs;
- * 	struct rpc_msg *rmsg;
+ *	XDR *xdrs;
+ *	struct rpc_msg *rmsg;
  *
  * xdr_accepted_reply(xdrs, ar)
  *	XDR *xdrs;
@@ -219,8 +217,8 @@ extern bool_t	xdr_rejected_reply();
 /*
  * Fills in the error part of a reply message.
  * _seterr_reply(msg, error)
- * 	struct rpc_msg *msg;
- * 	struct rpc_err *error;
+ *	struct rpc_msg *msg;
+ *	struct rpc_err *error;
  */
 #ifdef __STDC__
 extern void	_seterr_reply(struct rpc_msg *, struct rpc_err *);
@@ -231,8 +229,8 @@ extern void	_seterr_reply();
 /*
  * Fills in the error part of a reply message.
  * __seterr_reply(msg, error)
- * 	struct rpc_msg *msg;
- * 	struct rpc_err *error;
+ *	struct rpc_msg *msg;
+ *	struct rpc_err *error;
  */
 #ifdef __STDC__
 extern void	__seterr_reply(struct rpc_msg *, struct rpc_err *);

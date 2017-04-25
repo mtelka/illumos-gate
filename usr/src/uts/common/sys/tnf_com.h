@@ -26,8 +26,6 @@
 #ifndef	_SYS_TNF_COM_H
 #define	_SYS_TNF_COM_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 
 #ifdef __cplusplus
@@ -170,7 +168,7 @@ struct tnf_tagged_hdr {
 
 struct tnf_array_hdr {
 	tnf_ref32_t	tag;		/* type record */
-	tnf_uint32_t 	self_size;	/* total size */
+	tnf_uint32_t	self_size;	/* total size */
 };
 
 struct tnf_type_hdr {
@@ -219,7 +217,7 @@ typedef struct tnf_file_header {
 	tnf_uint32_t	block_count;
 	tnf_uint32_t	blocks_valid;
 	/* writer-specific information after this	*/
-	/* zero padding to end of block 		*/
+	/* zero padding to end of block			*/
 } tnf_file_header_t;
 
 /*
@@ -246,7 +244,7 @@ typedef struct tnf_block_header {
 
 #define	TNF_N_SCALAR		"tnf_scalar"
 #define	TNF_N_CHAR		"tnf_char"
-#define	TNF_N_INT8 		"tnf_int8"
+#define	TNF_N_INT8		"tnf_int8"
 #define	TNF_N_UINT8		"tnf_uint8"
 #define	TNF_N_INT16		"tnf_int16"
 #define	TNF_N_UINT16		"tnf_uint16"
@@ -258,7 +256,7 @@ typedef struct tnf_block_header {
 #define	TNF_N_FLOAT64		"tnf_float64"
 
 #define	TNF_N_ARRAY		"tnf_array"
-#define	TNF_N_STRING 		"tnf_string"
+#define	TNF_N_STRING		"tnf_string"
 #define	TNF_N_TYPE_ARRAY	"tnf_type_array"
 #define	TNF_N_NAME_ARRAY	"tnf_name_array"
 

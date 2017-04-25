@@ -115,8 +115,8 @@ extern "C" {
 #define	MNTOPT_NOFORCEDIRECTIO "noforcedirectio" /* No Force DirectIO */
 #define	MNTOPT_DISABLEDIRECTIO "disabledirectio" /* Disable DirectIO ioctls */
 #define	MNTOPT_PUBLIC	"public"	/* Use NFS public file handlee */
-#define	MNTOPT_LOGGING "logging" 	/* enable logging */
-#define	MNTOPT_NOLOGGING "nologging" 	/* disable logging */
+#define	MNTOPT_LOGGING "logging"	/* enable logging */
+#define	MNTOPT_NOLOGGING "nologging"	/* disable logging */
 #define	MNTOPT_ATIME	"atime"		/* update atime for files */
 #define	MNTOPT_NOATIME  "noatime"	/* do not update atime for files */
 #define	MNTOPT_GLOBAL	"global"	/* Cluster-wide global mount */

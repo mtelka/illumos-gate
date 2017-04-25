@@ -223,7 +223,7 @@ typedef struct usb_ss_hub_descr {
 #define	CFS_C_PORT_CONNECTION		16
 #define	CFS_C_PORT_ENABLE		17
 #define	CFS_C_PORT_SUSPEND		18
-#define	CFS_C_PORT_OVER_CURRENT 	19
+#define	CFS_C_PORT_OVER_CURRENT		19
 #define	CFS_C_PORT_RESET		20
 #define	CFS_PORT_TEST			21
 #define	CFS_PORT_INDICATOR		22

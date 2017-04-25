@@ -87,10 +87,10 @@ extern "C" {
  * Flags for NetrDfsAdd operation:
  *
  * 0x00000000		This creates a new link or adds a new target to an
- * 			existing link.
+ *			existing link.
  *
  * DFS_ADD_VOLUME	This creates a new link in the DFS namespace if one does
- * 			not already exist or fails if a link already exists.
+ *			not already exist or fails if a link already exists.
  *
  * DFS_RESTORE_VOLUME	This adds a target without verifying its existence.
  */
@@ -163,7 +163,7 @@ typedef struct dfs_target_priority {
  *		each pathname component MUST be a directory
  *
  * t_state	valid states are online/offline (see DFS_STORAGE_STATE_XXX in
- * 		lmdfs.h)
+ *		lmdfs.h)
  *
  * t_priority	priority class and rank
  *

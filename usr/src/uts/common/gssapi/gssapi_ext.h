@@ -83,73 +83,62 @@ typedef struct _qop_num {
 	char *mech;
 } qop_num;
 
-OM_uint32
-__gss_qop_to_num(
+OM_uint32 __gss_qop_to_num(
 	char		*qop,		/* input qop string */
 	char		*mech,		/* input mech string */
 	OM_uint32	*num		/* output qop num */
 );
 
-OM_uint32
-__gss_num_to_qop(
+OM_uint32 __gss_num_to_qop(
 	char		*mech,		/* input mech string */
 	OM_uint32	num,		/* input qop num */
 	char		**qop		/* output qop name */
 );
 
-OM_uint32
-__gss_get_mech_info(
+OM_uint32 __gss_get_mech_info(
 	char		*mech,		/* input mech string */
 	char		**qops		/* buffer for return qops */
 );
 
-OM_uint32
-__gss_mech_qops(
+OM_uint32 __gss_mech_qops(
 	char *mech,			/* input mech */
 	qop_num *mech_qops,		/* mech qops buffer */
 	int *numqops			/* buffer to return numqops */
 );
 
-OM_uint32
-__gss_mech_to_oid(
+OM_uint32 __gss_mech_to_oid(
 	const char *mech,		/* mechanism string name */
 	gss_OID *oid			/* mechanism oid */
 );
 
-const char *
-__gss_oid_to_mech(
+const char *__gss_oid_to_mech(
 	const gss_OID oid		/* mechanism oid */
 );
 
-OM_uint32
-__gss_get_mechanisms(
+OM_uint32 __gss_get_mechanisms(
 	char *mechArray[],		/* array to populate with mechs */
 	int arrayLen			/* length of passed in array */
 );
 
-OM_uint32
-__gss_get_mech_type(
+OM_uint32 __gss_get_mech_type(
 	gss_OID oid,			/* mechanism oid */
 	const gss_buffer_t token	/* token */
 );
 
-OM_uint32
-__gss_userok(
+OM_uint32 __gss_userok(
 	OM_uint32 *,		/* minor status */
 	const gss_name_t,	/* remote user principal name */
 	const char *,		/* local unix user name */
 	int *);			/* remote principal ok to login w/out pw? */
 
-OM_uint32
-gsscred_expname_to_unix_cred(
+OM_uint32 gsscred_expname_to_unix_cred(
 	const gss_buffer_t,	/* export name */
 	uid_t *,		/* uid out */
 	gid_t *,		/* gid out */
 	gid_t *[],		/* gid array out */
 	int *);			/* gid array length */
 
-OM_uint32
-gsscred_name_to_unix_cred(
+OM_uint32 gsscred_name_to_unix_cred(
 	const gss_name_t,	/* gss name */
 	const gss_OID,		/* mechanim type */
 	uid_t *,		/* uid out */
@@ -162,8 +151,7 @@ gsscred_name_to_unix_cred(
  * The following function will be used to resolve group
  * ids from a UNIX uid.
  */
-OM_uint32
-gss_get_group_info(
+OM_uint32 gss_get_group_info(
 	const uid_t,		/* entity UNIX uid */
 	gid_t *,		/* gid out */
 	gid_t *[],		/* gid array */
@@ -179,7 +167,7 @@ gss_acquire_cred_with_password(
 	OM_uint32		time_req,
 	const gss_OID_set	desired_mechs,
 	int			cred_usage,
-	gss_cred_id_t 		*output_cred_handle,
+	gss_cred_id_t		*output_cred_handle,
 	gss_OID_set *		actual_mechs,
 	OM_uint32 *		time_rec);
 

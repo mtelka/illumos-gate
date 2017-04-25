@@ -125,7 +125,7 @@ extern "C" {
 #endif
 #endif
 
-#define	NXGE_TX_RECLAIM 	32
+#define	NXGE_TX_RECLAIM		32
 
 /* per receive DMA channel configuration data structure */
 typedef struct  nxge_rdc_cfg {
@@ -236,7 +236,7 @@ typedef struct  nxge_rdc_cfg {
 typedef struct  nxge_tdc_cfg {
 	uint32_t	flag;		/* 0: not configured 1: configured */
 	struct nxge_hw_list *nxge_hw_p;
-	uint32_t	port; 		/* function number */
+	uint32_t	port;		/* function number */
 	/* partitioning, DMC function zero (All 0s for non-partitioning) */
 	uint32_t	tx_log_page_vld_page0;	/* TRUE or FALSE */
 	uint32_t	tx_log_page_vld_page1;	/* TRUE or FALSE */
@@ -395,7 +395,7 @@ typedef struct nxge_hw_pt_cfg {
 	uint32_t	max_grpids;	 /* max group ID		*/
 	uint32_t	grpids[NXGE_MAX_RDCS]; /* RDC group IDs		*/
 	uint32_t	max_rdc_grpids;	 /* max RDC group ID		*/
-	uint32_t	start_ldg;	 /* starting logical group # 	*/
+	uint32_t	start_ldg;	 /* starting logical group #	*/
 	uint32_t	max_ldgs;	 /* max logical device group	*/
 	uint32_t	max_ldvs;	 /* max logical devices		*/
 	uint32_t	start_mac_entry; /* where to put the first mac	*/
@@ -414,7 +414,7 @@ typedef struct nxge_hw_pt_cfg {
 /* per port configuration */
 typedef struct nxge_dma_pt_cfg {
 	uint8_t		mac_port;	/* MAC port (function)		*/
-	nxge_hw_pt_cfg_t hw_config;	/* hardware configuration 	*/
+	nxge_hw_pt_cfg_t hw_config;	/* hardware configuration	*/
 
 	uint32_t alloc_buf_size;
 	uint32_t rbr_size;
@@ -508,11 +508,11 @@ typedef struct nxge_usr_l3_cls {
 } nxge_usr_l3_cls_t, *p_nxge_usr_l3_cls_t;
 
 typedef struct nxge_hw_list {
-	struct nxge_hw_list 	*next;
-	nxge_os_mutex_t 	nxge_cfg_lock;
-	nxge_os_mutex_t 	nxge_tcam_lock;
-	nxge_os_mutex_t 	nxge_vlan_lock;
-	nxge_os_mutex_t 	nxge_mdio_lock;
+	struct nxge_hw_list	*next;
+	nxge_os_mutex_t		nxge_cfg_lock;
+	nxge_os_mutex_t		nxge_tcam_lock;
+	nxge_os_mutex_t		nxge_vlan_lock;
+	nxge_os_mutex_t		nxge_mdio_lock;
 
 	nxge_dev_info_t		*parent_devp;
 #if defined(sun4v)
@@ -538,14 +538,14 @@ typedef struct nxge_hw_list {
 #endif
 	struct _nxge_t		*nxge_p[NXGE_MAX_FUNCTIONS];
 	uint32_t		ndevs;
-	uint32_t 		flags;
-	uint32_t 		magic;
+	uint32_t		flags;
+	uint32_t		magic;
 	uint32_t		niu_type;
 	uint32_t		platform_type;
 	uint8_t			xcvr_addr[NXGE_MAX_PORTS];
 	uintptr_t		hio;
 	void			*tcam;
-	uint32_t 		tcam_size;
+	uint32_t		tcam_size;
 	uint64_t		tcam_l2_prog_cls[NXGE_L2_PROG_CLS];
 	nxge_usr_l3_cls_t	tcam_l3_prog_cls[NXGE_L3_PROG_CLS];
 } nxge_hw_list_t, *p_nxge_hw_list_t;

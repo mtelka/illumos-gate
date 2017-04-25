@@ -346,10 +346,10 @@ void libsmb_redirect_syslog(__FILE_TAG *fp, int priority);
  * 0x0004 The name is a W2K Domain name (a DNS name).
  */
 #define	SMBAUTH_NAME_TYPE_LIST_END		0x0000
-#define	SMBAUTH_NAME_TYPE_SERVER_NETBIOS 	0x0001
-#define	SMBAUTH_NAME_TYPE_DOMAIN_NETBIOS 	0x0002
+#define	SMBAUTH_NAME_TYPE_SERVER_NETBIOS	0x0001
+#define	SMBAUTH_NAME_TYPE_DOMAIN_NETBIOS	0x0002
 #define	SMBAUTH_NAME_TYPE_SERVER_DNS		0x0003
-#define	SMBAUTH_NAME_TYPE_DOMAIN_DNS 		0x0004
+#define	SMBAUTH_NAME_TYPE_DOMAIN_DNS		0x0004
 
 /*
  * smb_auth_name_entry_t

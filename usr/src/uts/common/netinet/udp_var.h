@@ -11,15 +11,12 @@
 #ifndef	_NETINET_UDP_VAR_H
 #define	_NETINET_UDP_VAR_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-/* udp_var.h 1.8 88/08/19 SMI; from UCB 7.1 6/5/86	*/
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
 struct	udpiphdr {
-	struct 	ipovly ui_i;		/* overlaid ip structure */
+	struct	ipovly ui_i;		/* overlaid ip structure */
 	struct	udphdr ui_u;		/* udp header */
 };
 #define	ui_next		ui_i.ih_next

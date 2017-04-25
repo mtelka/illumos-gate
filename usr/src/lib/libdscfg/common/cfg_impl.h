@@ -115,10 +115,10 @@ struct parser {
  *
  *		  h_cfgs        h_cfgs[3]
  *    head        |-[0]-   /|-l_name  == sndr
- *   	|-       /|-[1]-  / |-l_entry == host dev bmap host..ip sync '\0' ...
+ *	|-       /|-[1]-  / |-l_entry == host dev bmap host..ip sync '\0' ...
  * file |-      / |-[2]- /  |-l_esiz[0..l_nentry - 1] == [130, 132, 135, 133,..]
  *   |--|---------|-[3]---- |-l_enabled[0..l_nentry - 1] == [1,0,0,1,1]
- *	|-    	\ |-[4]- \  |-l_nentry == 5
+ *	|-	\ |-[4]- \  |-l_nentry == 5
  *	|-       \|-[5]-  \ |-l_index == 3
  *                |-[n]-   \|-l_free == 50537
  *			    |-l_size == 663 (130 + 132 + 135 + 133 + 133)
@@ -128,18 +128,18 @@ struct parser {
  * l_name - is set when the parser is read.
  *	It is the first tag of a line of parser text.
  * l_entry - is a pointer to the beginning of the null terminated string
- * 	list that belongs to the cfglist tagged with l_name.
+ *	list that belongs to the cfglist tagged with l_name.
  * l_esiz - is a list of sizes of the strings contained in l_entry.
- * 	l_esiz[0] tells the size of the string at l_entry[0].
+ *	l_esiz[0] tells the size of the string at l_entry[0].
  *	l_esiz[n] is the size of the string that begins
- * 	at l_entry + l_esiz[0] + l_esiz[1]..+ l_esize[n - 1]
+ *	at l_entry + l_esiz[0] + l_esiz[1]..+ l_esize[n - 1]
  * l_enabled - is a list of ones and zeros telling if this entry is alive
- * 	in the kernel. indexing is the same as l_esiz. (not implemented)
+ *	in the kernel. indexing is the same as l_esiz. (not implemented)
  * l_index - is the index of the parser tree that corresponds to l_name
  *	and is set when the parser tree is built
  * l_free - is how memory is managed. Memory is allocated on a
  *	DEFAULT_ENTRY_SIZE boundry.
- * 	the size of the balance of available memory at the end of l_entry
+ *	the size of the balance of available memory at the end of l_entry
  *	is kept here. when this number is lower than the string we need to add,
  *	another block of memory is allocated for l_entry and the balance of
  *	the size is added to l_free.
@@ -152,7 +152,7 @@ typedef struct cfglist {
 	char	*l_entry;	/* start of list */
 	int	*l_esiz;	/* array of sizes of entries */
 	int	l_nentry;	/* number of entries */
-	int 	l_index;	/* index in relation to parser position */
+	int	l_index;	/* index in relation to parser position */
 	uint_t	l_free;		/* num of characters available */
 	int	l_size;		/* size of list */
 } cfglist_t;
@@ -172,10 +172,10 @@ typedef struct cfgheader {
 	int	h_parsesize;	/* parser config size */
 	char	*h_cparse;	/* start of configuration  */
 	int	h_csize;	/* size of config section */
-	int	h_acsize; 	/* size of alternate config section */
-	int 	*h_sizes;	/* sizes of lists */
+	int	h_acsize;	/* size of alternate config section */
+	int	*h_sizes;	/* sizes of lists */
 	int	h_psize;	/* size of persistent section */
-	int	h_apsize; 	/* size of alternate persistent section */
+	int	h_apsize;	/* size of alternate persistent section */
 	char	*h_ccopy1;	/* base of config section 1 */
 	char	*h_ccopy2;	/* base of config section 2 */
 	int	*h_sizes1;	/* sizes of lists on disk 1 */

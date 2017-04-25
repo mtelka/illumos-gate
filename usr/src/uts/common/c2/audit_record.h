@@ -156,8 +156,8 @@ extern "C" {
  * Command token types
  */
 
-#define	AUT_CMD   		((char)0x51)
-#define	AUT_EXIT   		((char)0x52)
+#define	AUT_CMD			((char)0x51)
+#define	AUT_EXIT		((char)0x52)
 
 /*
  * Miscellaneous token types

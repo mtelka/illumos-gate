@@ -60,7 +60,7 @@ typedef enum ipmp_if_linkstate {
 typedef enum ipmp_if_flags {
 	IPMP_IFFLAG_INACTIVE	= 0x1,
 	IPMP_IFFLAG_HWADDRDUP	= 0x2,
-	IPMP_IFFLAG_ACTIVE 	= 0x4,
+	IPMP_IFFLAG_ACTIVE	= 0x4,
 	IPMP_IFFLAG_DOWN	= 0x8
 } ipmp_if_flags_t;
 

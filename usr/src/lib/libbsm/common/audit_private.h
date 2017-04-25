@@ -35,8 +35,6 @@
 #ifndef _AUDIT_PRIVATE_H
 #define	_AUDIT_PRIVATE_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -173,7 +171,7 @@ extern	int	audit_reboot_fail(void);
  * interface users
  * rpc.rexd
  */
-extern	void 	audit_rexd_fail(char *, char *, char *, uid_t, gid_t,
+extern	void	audit_rexd_fail(char *, char *, char *, uid_t, gid_t,
     char *, char **);
 extern	void	audit_rexd_success(char *, char *, uid_t, gid_t,
     char *, char **);

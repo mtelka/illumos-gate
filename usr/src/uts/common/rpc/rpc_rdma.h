@@ -191,7 +191,7 @@ struct mrc {
 	uint32_t	mrc_rmr;	/* Remote MR context, sent OTW */
 	union {
 		struct mr {
-			uint32_t	lmr; 	/* Local MR context */
+			uint32_t	lmr;	/* Local MR context */
 			uint64_t	linfo;	/* Local memory info */
 		} mr;
 	} lhdl;
@@ -245,10 +245,10 @@ struct clist {
 	uint32		c_len;		/* Length */
 	clist_dstsrc	c_regtype;	/* type of registration */
 	struct mrc	c_smemhandle;	/* src memory handle */
-	uint64 		c_ssynchandle;	/* src sync handle */
+	uint64		c_ssynchandle;	/* src sync handle */
 	union {
 		uint64		c_saddr;	/* src address */
-		caddr_t 	c_saddr3;
+		caddr_t		c_saddr3;
 	} w;
 	struct mrc	c_dmemhandle;	/* dst memory handle */
 	uint64		c_dsynchandle;	/* dst sync handle */
@@ -293,10 +293,10 @@ struct rdma_svc_data {
  * module during its initialization.
  */
 typedef struct rdma_mod {
-	char 		*rdma_api;		/* "kvipl", "ibtf", etc */
-	uint_t 		rdma_version;		/* RDMATF API version */
+	char		*rdma_api;		/* "kvipl", "ibtf", etc */
+	uint_t		rdma_version;		/* RDMATF API version */
 	int		rdma_count;		/* # of devices */
-	struct rdmaops 	*rdma_ops;		/* rdma op vector for api */
+	struct rdmaops	*rdma_ops;		/* rdma op vector for api */
 } rdma_mod_t;
 
 /*
@@ -341,7 +341,7 @@ typedef enum {
  */
 typedef struct conn {
 	rdma_mod_t	*c_rdmamod;	/* RDMA transport info for conn */
-	char 		*c_netid;	/* tcp or tcp6 token */
+	char		*c_netid;	/* tcp or tcp6 token */
 	struct netbuf	c_raddr;	/* remote address */
 	struct netbuf	c_laddr;	/* local address */
 	struct netbuf	c_addrmask;	/* Address Mask */
@@ -518,7 +518,7 @@ extern int rdma_modloaded;		/* flag for loading RDMA plugins */
 extern int rdma_dev_available;		/* rdma device is loaded or not */
 extern kmutex_t rdma_modload_lock;	/* protects rdma_modloaded flag */
 extern uint_t rdma_minchunk;
-extern ldi_ident_t rpcmod_li; 		/* needed by layed driver framework */
+extern ldi_ident_t rpcmod_li;		/* needed by layed driver framework */
 
 /*
  * General RDMA routines

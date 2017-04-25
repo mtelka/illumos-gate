@@ -26,8 +26,6 @@
 #ifndef	_SYS_FTRACE_H
 #define	_SYS_FTRACE_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -103,17 +101,17 @@ extern caddr_t caller(void);
 		if (CPU->cpu_ftrace.ftd_state & FTRACE_ENABLED)	\
 			ftrace_0(fmt, caller());		\
 	}
-#define	FTRACE_1(fmt, d1) 					\
+#define	FTRACE_1(fmt, d1)					\
 	{							\
 		if (CPU->cpu_ftrace.ftd_state & FTRACE_ENABLED)	\
 			ftrace_1(fmt, d1, caller());		\
 	}
-#define	FTRACE_2(fmt, d1, d2) 					\
+#define	FTRACE_2(fmt, d1, d2)					\
 	{							\
 		if (CPU->cpu_ftrace.ftd_state & FTRACE_ENABLED)	\
 			ftrace_2(fmt, d1, d2, caller());	\
 	}
-#define	FTRACE_3(fmt, d1, d2, d3) 				\
+#define	FTRACE_3(fmt, d1, d2, d3)				\
 	{							\
 		if (CPU->cpu_ftrace.ftd_state & FTRACE_ENABLED)	\
 			ftrace_3(fmt, d1, d2, d3, caller());	\

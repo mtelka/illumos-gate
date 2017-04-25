@@ -79,8 +79,8 @@ typedef struct smb_idmap_batch {
 	uint16_t		sib_nmap;
 	uint32_t		sib_flags;
 	uint32_t		sib_size;
-	smb_idmap_t 		*sib_maps;
-	idmap_get_handle_t 	*sib_idmaph;
+	smb_idmap_t		*sib_maps;
+	idmap_get_handle_t	*sib_idmaph;
 } smb_idmap_batch_t;
 
 idmap_stat smb_idmap_getsid(uid_t, int, smb_sid_t **);

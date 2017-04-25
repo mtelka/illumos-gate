@@ -66,7 +66,7 @@ typedef struct smb_buf32 {
  *
  * SMB_ATF_GUEST	Token belongs to guest user
  * SMB_ATF_ANON		Token belongs to anonymous user
- * 			and it's only good for IPC Connection.
+ *			and it's only good for IPC Connection.
  * SMB_ATF_POWERUSER	Token belongs to a Power User member
  * SMB_ATF_BACKUPOP	Token belongs to a Power User member
  * SMB_ATF_ADMIN	Token belongs to a Domain Admins member

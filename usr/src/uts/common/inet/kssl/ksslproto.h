@@ -103,9 +103,9 @@ extern "C" {
 /* session state */
 typedef struct sslSessionIDStr {
 	uchar_t		session_id[SSL3_SESSIONID_BYTES];
-	uchar_t 	master_secret[SSL3_MASTER_SECRET_LEN];
-	clock_t 	time;
-	in6_addr_t 	client_addr;
+	uchar_t		master_secret[SSL3_MASTER_SECRET_LEN];
+	clock_t		time;
+	in6_addr_t	client_addr;
 	boolean_t	cached;
 	uint16_t	cipher_suite;
 } sslSessionID;

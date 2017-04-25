@@ -53,12 +53,12 @@ typedef uint16_t in_port_t;
  * priv_policy_choice
  *		determines extend of operation
  *		audit on success
- * 		returns a boolean_t indicating success (B_TRUE) or failure.
+ *		returns a boolean_t indicating success (B_TRUE) or failure.
  *
  * priv_policy_only
  *		when auditing is in appropriate (interrupt context)
  *		to determine context of operation
- * 		returns a boolean_t indicating success (B_TRUE) or failure.
+ *		returns a boolean_t indicating success (B_TRUE) or failure.
  *
  */
 int priv_policy(const cred_t *, int, boolean_t, int, const char *);

@@ -108,7 +108,7 @@ typedef struct nsc_val_s {
 
 typedef struct nsc_devval_s {
 	struct nsc_devval_s *dv_next;		/* Next dev/val header */
-	nsc_val_t 	*dv_values;		/* The values */
+	nsc_val_t	*dv_values;		/* The values */
 	char		dv_path[NSC_MAXPATH];	/* Path name of device */
 	uint64_t	dv_phash;		/* Hash of pathname */
 } nsc_devval_t;

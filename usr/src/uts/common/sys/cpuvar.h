@@ -96,11 +96,11 @@ typedef struct cpu {
 	/*
 	 * Links to other CPUs.  It is safe to walk these lists if
 	 * one of the following is true:
-	 * 	- cpu_lock held
-	 * 	- preemption disabled via kpreempt_disable
-	 * 	- PIL >= DISP_LEVEL
-	 * 	- acting thread is an interrupt thread
-	 * 	- all other CPUs are paused
+	 *	- cpu_lock held
+	 *	- preemption disabled via kpreempt_disable
+	 *	- PIL >= DISP_LEVEL
+	 *	- acting thread is an interrupt thread
+	 *	- all other CPUs are paused
 	 */
 	struct cpu	*cpu_next;		/* next existing CPU */
 	struct cpu	*cpu_prev;		/* prev existing CPU */
@@ -128,7 +128,7 @@ typedef struct cpu {
 	 */
 	char		cpu_runrun;	/* scheduling flag - set to preempt */
 	char		cpu_kprunrun;		/* force kernel preemption */
-	pri_t		cpu_chosen_level; 	/* priority at which cpu */
+	pri_t		cpu_chosen_level;	/* priority at which cpu */
 						/* was chosen for scheduling */
 	kthread_t	*cpu_dispthread; /* thread selected for dispatch */
 	disp_lock_t	cpu_thread_lock; /* dispatcher lock on current thread */
@@ -284,7 +284,7 @@ extern cpu_core_t cpu_core[];
  * list in avintr.c.
  */
 #define	INTR_ACTIVE(cpup, level)	\
-	((level) <= LOCK_LEVEL ? 	\
+	((level) <= LOCK_LEVEL ?	\
 	((cpup)->cpu_intr_actv & (1 << (level))) : (CPU_ON_INTR(cpup)))
 
 /*

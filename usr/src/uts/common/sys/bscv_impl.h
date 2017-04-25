@@ -26,8 +26,6 @@
 #ifndef _SYS_BSCV_IMPL_H
 #define	_SYS_BSCV_IMPL_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * Implementation private header file for bscv driver.
  */
@@ -135,8 +133,8 @@ extern "C" {
  * A nice way to work out the debug value set in bscv.conf is to use mdb
  * Say we want to show 'D' Daemon and 'I' IOCTL processing,
  * you calculate the debug value with the following mdb session :
- * 	# mdb
- * 	> 1<<('D'-'@') | 1<<('I'-'@') = X
+ *	# mdb
+ *	> 1<<('D'-'@') | 1<<('I'-'@') = X
  *			210
  *	> $q
  * When you insert "debug=0x210;" into bscv.conf, it causes the next
@@ -253,7 +251,7 @@ struct {
 					/* 0x8000 set if last buffer */
 	int		image_ptr;	/* ptr to next byte in image buffer */
 					/* for programming */
-	uint8_t 	*image;		/* ptr to image buffer for */
+	uint8_t		*image;		/* ptr to image buffer for */
 					/* programming */
 	boolean_t	image2_processing;	/* boolean to say which of */
 					/* 2 BSC images being processed */
@@ -292,7 +290,7 @@ struct {
 #endif /* __sparc */
 	uint8_t		last_event[8];	/* last event read and reported */
 #if defined(__i386) || defined(__amd64)
-	ddi_periodic_t 	periodic_id; /* watchdog patter periodical callback */
+	ddi_periodic_t	periodic_id; /* watchdog patter periodical callback */
 	callb_id_t	callb_id;	/* Need to store the ID so we can */
 					/* unschedule the panic callback */
 	char		last_nodename[128]; /* copy of last utsname.nodename */

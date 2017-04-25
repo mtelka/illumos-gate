@@ -154,7 +154,7 @@ typedef enum {
 				(a).s6_addr32[0] == 0)
 
 #else
-#define	V6_OR_V4_INADDR_ANY(a)	((a).s6_addr32[3] == 0 && 		\
+#define	V6_OR_V4_INADDR_ANY(a)	((a).s6_addr32[3] == 0 &&		\
 				((a).s6_addr32[2] == 0xffff0000U ||	\
 				(a).s6_addr32[2] == 0) &&		\
 				(a).s6_addr32[1] == 0 &&		\
@@ -207,7 +207,7 @@ typedef enum {
 	(d).s6_addr32[3] = (s).s6_addr32[3] & (m).s6_addr32[3])
 
 #define	ILL_FRAG_HASH_V6(v6addr, i)					\
-	((ntohl((v6addr).s6_addr32[3]) ^ (i ^ (i >> 8))) % 		\
+	((ntohl((v6addr).s6_addr32[3]) ^ (i ^ (i >> 8))) %		\
 						ILL_FRAG_HASH_TBL_COUNT)
 
 

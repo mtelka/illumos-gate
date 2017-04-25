@@ -62,7 +62,7 @@ struct cpucap;
  * The first two fields of this structure must not be reordered.
  */
 typedef struct kproject {
-	projid_t 	kpj_id;		/* project ID		*/
+	projid_t	kpj_id;		/* project ID		*/
 	zoneid_t	kpj_zoneid;	/* zone ID		*/
 	struct zone	*kpj_zone;	/* zone pointer		*/
 	uint_t		kpj_count;	/* reference counter	*/

@@ -110,7 +110,7 @@ typedef struct kmsqid {
 	uint64_t	msg_lowest_type; /* Smallest type on queue */
 	/*
 	 * linked list of routines used to determine what to wake up next.
-	 * 	msg_fnd_sndr:	Routines for waking up readers waiting
+	 *	msg_fnd_sndr:	Routines for waking up readers waiting
 	 *			for a message from the sender.
 	 *	msg_fnd_rdr:	Routines for waking up readers waiting
 	 *			for a copyout to finish.

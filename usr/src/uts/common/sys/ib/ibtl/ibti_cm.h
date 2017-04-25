@@ -98,38 +98,38 @@ typedef enum ibt_cm_reason_e {
 	IBT_CM_NO_RESC		= 3,	/* Remote unable to allocate resource */
 	IBT_CM_TIMEOUT		= 4,	/* CM protocol timed out waiting for */
 					/* a msg */
-	IBT_CM_NOT_SUPPORTED 	= 5,	/* Request not supported */
-	IBT_CM_INVALID_CID 	= 6,	/* Local CID or Remote CID invalid */
+	IBT_CM_NOT_SUPPORTED	= 5,	/* Request not supported */
+	IBT_CM_INVALID_CID	= 6,	/* Local CID or Remote CID invalid */
 	IBT_CM_INVALID_COMM_INS	= 7,	/* Local CID, Remote CID, Channel */
 					/* does not refer to a valid */
 					/* communication Instance. */
-	IBT_CM_INVALID_SID 	= 8,	/* Service not supported or not */
+	IBT_CM_INVALID_SID	= 8,	/* Service not supported or not */
 					/* recognized */
 	IBT_CM_INVALID_SRV_TYPE	= 9,	/* Invalid transport service type */
-	IBT_CM_CONN_STALE 	= 10,	/* Stale connection */
-	IBT_CM_INVALID_RDC 	= 11,	/* RDC does not exist */
-	IBT_CM_PRIM_GID 	= 12,	/* Primary remote port gid rejected. */
-	IBT_CM_PRIM_LID 	= 13,	/* Primary remote port lid rejected. */
-	IBT_CM_INVALID_PRIM_SL 	= 14,	/* Primary Requested SL not supported */
-	IBT_CM_INVALID_PRIM_TC 	= 15,	/* Primary Requested traffic class */
+	IBT_CM_CONN_STALE	= 10,	/* Stale connection */
+	IBT_CM_INVALID_RDC	= 11,	/* RDC does not exist */
+	IBT_CM_PRIM_GID		= 12,	/* Primary remote port gid rejected. */
+	IBT_CM_PRIM_LID		= 13,	/* Primary remote port lid rejected. */
+	IBT_CM_INVALID_PRIM_SL	= 14,	/* Primary Requested SL not supported */
+	IBT_CM_INVALID_PRIM_TC	= 15,	/* Primary Requested traffic class */
 					/* not supported */
 	IBT_CM_INVALID_PRIM_HOP	= 16,	/* Primary Requested hop limit not */
 					/* accepted */
 	IBT_CM_INVALID_PRIM_RATE = 17,	/* Primary Packet rate not accepted */
-	IBT_CM_ALT_GID 		= 18,	/* Alternate remote port gid rejected */
-	IBT_CM_ALT_LID 		= 19,	/* Alternate remote port lid rejected */
-	IBT_CM_INVALID_ALT_SL 	= 20,	/* Alternate Requested SL not */
+	IBT_CM_ALT_GID		= 18,	/* Alternate remote port gid rejected */
+	IBT_CM_ALT_LID		= 19,	/* Alternate remote port lid rejected */
+	IBT_CM_INVALID_ALT_SL	= 20,	/* Alternate Requested SL not */
 					/* supported */
-	IBT_CM_INVALID_ALT_TC 	= 21,	/* Alternate Requested traffic class */
+	IBT_CM_INVALID_ALT_TC	= 21,	/* Alternate Requested traffic class */
 					/* not supported */
-	IBT_CM_INVALID_ALT_HOP 	= 22,	/* Alternate Requested hop limit */
+	IBT_CM_INVALID_ALT_HOP	= 22,	/* Alternate Requested hop limit */
 					/* accepted */
 	IBT_CM_INVALID_ALT_RATE = 23,	/* Alternate Packet rate not accepted */
-	IBT_CM_REDIRECT_CM 	= 24,	/* Port & CM redirected */
-	IBT_CM_PORT_REDIRECT 	= 25,	/* Port redirected */
-	IBT_CM_INVALID_MTU 	= 26,	/* Path MTU not supported */
+	IBT_CM_REDIRECT_CM	= 24,	/* Port & CM redirected */
+	IBT_CM_PORT_REDIRECT	= 25,	/* Port redirected */
+	IBT_CM_INVALID_MTU	= 26,	/* Path MTU not supported */
 	IBT_CM_INSUFF_RESOURCE	= 27,	/* Insufficient responder resources */
-	IBT_CM_CONSUMER 	= 28,	/* Consumer rejected connection */
+	IBT_CM_CONSUMER		= 28,	/* Consumer rejected connection */
 	IBT_CM_RNR_RETRY_CNT_REJ = 29,	/* RNR NAK retry count rejected */
 	IBT_CM_DUP_COM_ID	= 30,	/* Local CID in REQ is duplicated */
 	IBT_CM_CLASS_NO_SUPPORT	= 31,	/* Class version not supported */
@@ -418,9 +418,9 @@ typedef struct ibt_cm_req_rcv_s {
 	uint8_t		req_alt_hca_port;
 	ibt_adds_vect_t	req_prim_addr;
 	ibt_adds_vect_t	req_alt_addr;
-	uint8_t		req_rdma_ra_in;   	/* Offered responder */
+	uint8_t		req_rdma_ra_in;		/* Offered responder */
 						/* resources. */
-	uint8_t		req_rdma_ra_out; 	/* Offered initiator depth */
+	uint8_t		req_rdma_ra_out;	/* Offered initiator depth */
 	clock_t		req_timeout;		/* timeout in microseconds */
 						/* This is the time that the */
 						/* Service handler has to */
@@ -463,7 +463,7 @@ typedef struct ibt_ofuvcm_req_data_s {
  * Operation type in ibt_cm_event_type_t.
  *
  * Note:
- * 	The IBT_CM_EVENT_CONN_EST event has no associated "cm_event"
+ *	The IBT_CM_EVENT_CONN_EST event has no associated "cm_event"
  *	field in the ibt_cm_event_t structure.
  *
  *	The cm_session_id is a CM opaque (to the client) value, that
@@ -481,7 +481,7 @@ typedef struct ibt_cm_event_s {
 	void			*cm_priv_data;		/* data returned */
 	union {
 		ibt_cm_rep_rcv_t		rep;
-		ibt_cm_req_rcv_t 		req;
+		ibt_cm_req_rcv_t		req;
 		ibt_cm_lap_rcv_t		lap;
 		ibt_cm_apr_rcv_t		apr;
 		ibt_cm_mra_rcv_t		mra;

@@ -27,8 +27,6 @@
 #ifndef _SYS_MHD_H
 #define	_SYS_MHD_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -41,8 +39,8 @@ extern "C" {
 #define	MHIOCTKOWN			(MHIOC|2)
 #define	MHIOCRELEASE			(MHIOC|3)
 #define	MHIOCSTATUS			(MHIOC|4)
-#define	MHIOCGRP_INKEYS 		(MHIOC|5)
-#define	MHIOCGRP_INRESV 		(MHIOC|6)
+#define	MHIOCGRP_INKEYS			(MHIOC|5)
+#define	MHIOCGRP_INRESV			(MHIOC|6)
 #define	MHIOCGRP_REGISTER		(MHIOC|7)
 #define	MHIOCGRP_RESERVE		(MHIOC|8)
 #define	MHIOCGRP_PREEMPTANDABORT	(MHIOC|9)

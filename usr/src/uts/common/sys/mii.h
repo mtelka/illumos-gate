@@ -91,12 +91,12 @@ struct mii_ops {
 /*
  * mii_alloc
  *
- * 	Allocate an MII handle.  Called during driver's attach(9e)
+ *	Allocate an MII handle.  Called during driver's attach(9e)
  *	handling, this routine is valid in kernel context only.
  *
  * Arguments
  *
- * 	private		A private state structure, provided back to
+ *	private		A private state structure, provided back to
  *			entry points.
  *	dip		The dev_info node for the MAC driver.
  *	ops		Entry points into the MAC driver.
@@ -109,7 +109,7 @@ mii_handle_t mii_alloc(void *private, dev_info_t *dip, mii_ops_t *ops);
 /*
  * mii_alloc
  *
- * 	Allocate an MII handle.  Called during driver's attach(9e)
+ *	Allocate an MII handle.  Called during driver's attach(9e)
  *	handling, this routine is valid in kernel context only.  This
  *	routine is an alternative to mii_alloc() for use when the
  *	instance number (PPA) is not the same as the devinfo instance
@@ -117,7 +117,7 @@ mii_handle_t mii_alloc(void *private, dev_info_t *dip, mii_ops_t *ops);
  *
  * Arguments
  *
- * 	private		A private state structure, provided back to
+ *	private		A private state structure, provided back to
  *			entry points.
  *	dip		The dev_info node for the MAC driver.
  *	instance	The instance (PPA) of the interface.
@@ -149,7 +149,7 @@ void mii_free(mii_handle_t mii);
  *
  * Arguments
  *
- * 	mii		MII handle.
+ *	mii		MII handle.
  *	cap		B_TRUE if the device supports symmetric of pause.
  *	asym		B_TRUE if the device supports asymmetric pause.
  */
@@ -265,9 +265,9 @@ int mii_get_addr(mii_handle_t mii);
  * Returns
  *
  *	The PHY identifier register contents, encoded with the high
- * 	order (PHYIDH) bits in the upper word and the low order bits
- * 	in the lower word.  If no PHY is active, the value -1 will be
- * 	returned.
+ *	order (PHYIDH) bits in the upper word and the low order bits
+ *	in the lower word.  If no PHY is active, the value -1 will be
+ *	returned.
  */
 uint32_t mii_get_id(mii_handle_t mii);
 
@@ -338,7 +338,7 @@ link_flowctrl_t mii_get_flowctrl(mii_handle_t mii);
  *
  * Arguments
  *
- * 	mii		MII handle.
+ *	mii		MII handle.
  *	modes		Location to receive an array of loopback modes.
  *			Drivers should ensure that enough room is available.
  *			There will never be more than MII_LOOPBACK_MAX modes
@@ -365,7 +365,7 @@ int mii_get_loopmodes(mii_handle_t mii, lb_property_t *modes);
  *
  * Arguments
  *
- * 	mii		MII handle.
+ *	mii		MII handle.
  *	mode		New loopback mode number; MII_LOOPBACK_NONE indicates
  *			a return to normal operation.
  *
@@ -403,7 +403,7 @@ uint32_t mii_get_loopback(mii_handle_t mii);
  *
  * Arguments
  *
- * 	mii		MII handle.
+ *	mii		MII handle.
  *	wq		The write queue supplied to mc_ioctl().
  *	msg		The mblk from the mc_ioctl (contains an iocblk).
  *
@@ -425,7 +425,7 @@ boolean_t mii_m_loop_ioctl(mii_handle_t mii, queue_t *wq, mblk_t *msg);
  *
  * Arguments
  *
- * 	mii		MII handle.
+ *	mii		MII handle.
  *	name		Property name.
  *	id		Property ID.
  *	sz		Size of property in bytes.
@@ -451,7 +451,7 @@ int mii_m_getprop(mii_handle_t mii, const char *name, mac_prop_id_t id,
  *
  * Arguments
  *
- * 	mii		MII handle.
+ *	mii		MII handle.
  *	name		Property name.
  *	id		Property ID.
  *	sz		Size of property in bytes.
@@ -476,7 +476,7 @@ int mii_m_setprop(mii_handle_t mii, const char *name, mac_prop_id_t id,
  *
  * Arguments
  *
- * 	mii		MII handle.
+ *	mii		MII handle.
  *	name		Property name.
  *	id		Property ID.
  *	prh		Property info handle.
@@ -497,7 +497,7 @@ void mii_m_propinfo(mii_handle_t mii, const char *name, mac_prop_id_t id,
  *
  * Arguments
  *
- * 	mii		MII handle.
+ *	mii		MII handle.
  *	stat		Statistic number.
  *	val		Location to receive statistic value.
  *

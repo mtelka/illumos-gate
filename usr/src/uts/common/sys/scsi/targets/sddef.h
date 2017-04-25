@@ -275,7 +275,7 @@ struct sd_lun {
 	 * Various configuration data
 	 */
 	uchar_t	un_ctype;		/* Controller type */
-	char 	*un_node_type;		/* minor node type */
+	char	*un_node_type;		/* minor node type */
 	uchar_t	un_interconnect_type;	/* Interconnect for underlying HBA */
 
 	uint_t	un_notready_retry_count; /* Per disk notready retry count */
@@ -438,7 +438,7 @@ struct sd_lun {
 	    un_f_attach_spinup		:1,	/* spin up once the */
 						/* device is attached */
 	    un_f_log_sense_supported	:1,	/* support log sense */
-	    un_f_pm_supported		:1, 	/* support power-management */
+	    un_f_pm_supported		:1,	/* support power-management */
 	    un_f_cfg_is_lsi		:1,	/* Is LSI device, */
 						/* default to NO */
 	    un_f_wcc_inprog		:1,	/* write cache change in */
@@ -1107,8 +1107,8 @@ struct sd_fi_arq {
 	a->c = ((fi_ ## b)->c);			\
 	SD_INFO(SD_LOG_IOERR, un,		\
 			"sd_fault_injection:"	\
-			"setting %s to %d\n", 	\
-			d, ((fi_ ## b)->c)); 	\
+			"setting %s to %d\n",	\
+			d, ((fi_ ## b)->c));	\
 	}
 
 /* SD FaultInjection ioctls */
@@ -1606,13 +1606,13 @@ struct sd_fm_internal {
 /*
  * The following are the values available for sd_fm_internal::fm_log_level.
  * SD_FM_LOG_NSUP	The driver will log things in traditional way as if
- * 			the SCSI FMA feature is unavailable.
+ *			the SCSI FMA feature is unavailable.
  * SD_FM_LOG_SILENT	The driver will not print out syslog for FMA error
- * 			telemetry, all the error telemetries will go into
- * 			FMA error log.
+ *			telemetry, all the error telemetries will go into
+ *			FMA error log.
  * SD_FM_LOG_EREPORT	The driver will both print the FMA error telemetry
- * 			and post the error report, but the traditional
- * 			syslog for error telemetry will be suppressed.
+ *			and post the error report, but the traditional
+ *			syslog for error telemetry will be suppressed.
  */
 #define		SD_FM_LOG_NSUP		0
 #define		SD_FM_LOG_SILENT	1
@@ -1628,7 +1628,7 @@ struct sd_fm_internal {
  */
 #define	SD_UPDATE_COMMON_KSTATS(kstat_function, kstatp)			\
 	if ((kstat_function)  == kstat_runq_exit ||			\
-	    ((kstat_function) == kstat_runq_back_to_waitq)) { 		\
+	    ((kstat_function) == kstat_runq_back_to_waitq)) {		\
 		if (((kstat_io_t *)(kstatp))->rcnt) {			\
 			kstat_function((kstatp));			\
 		} else {						\
@@ -1923,11 +1923,11 @@ struct sd_fm_internal {
  * sd-config-list and driver table.
  */
 #if defined(__i386) || defined(__amd64)
-#define	SD_CONF_SET_BUSY_RETRIES 	11
+#define	SD_CONF_SET_BUSY_RETRIES	11
 #elif defined(__fibre)
-#define	SD_CONF_SET_BUSY_RETRIES 	2
+#define	SD_CONF_SET_BUSY_RETRIES	2
 #else
-#define	SD_CONF_SET_BUSY_RETRIES 	5
+#define	SD_CONF_SET_BUSY_RETRIES	5
 #endif
 #define	SD_CONF_BSET_BSY_RETRY_COUNT	(1 << SD_CONF_SET_BUSY_RETRIES)
 
@@ -1940,7 +1940,7 @@ struct sd_fm_internal {
 #else
 #define	SD_CONF_SET_FAB_DEVID		3
 #endif
-#define	SD_CONF_BSET_FAB_DEVID   	(1 << SD_CONF_SET_FAB_DEVID)
+#define	SD_CONF_BSET_FAB_DEVID		(1 << SD_CONF_SET_FAB_DEVID)
 
 /*
  * Bit flag telling driver to disable all caching for disk device.
@@ -1961,7 +1961,7 @@ struct sd_fm_internal {
 #else
 #define	SD_CONF_SET_PLAYMSF_BCD		6
 #endif
-#define	SD_CONF_BSET_PLAYMSF_BCD    	(1 << SD_CONF_SET_PLAYMSF_BCD)
+#define	SD_CONF_BSET_PLAYMSF_BCD	(1 << SD_CONF_SET_PLAYMSF_BCD)
 
 /*
  * Bit flag telling driver that the response from the READ SUBCHANNEL command
@@ -2005,7 +2005,7 @@ struct sd_fm_internal {
 #else
 #define	SD_CONF_SET_NO_READ_HEADER	10
 #endif
-#define	SD_CONF_BSET_NO_READ_HEADER 	(1 << SD_CONF_SET_NO_READ_HEADER)
+#define	SD_CONF_BSET_NO_READ_HEADER	(1 << SD_CONF_SET_NO_READ_HEADER)
 
 /*
  * Bit flag telling the driver that for the READ CD command the device uses
@@ -2014,7 +2014,7 @@ struct sd_fm_internal {
 #if defined(__i386) || defined(__amd64)
 #define	SD_CONF_SET_READ_CD_XD4		9
 #else
-#define	SD_CONF_SET_READ_CD_XD4 	11
+#define	SD_CONF_SET_READ_CD_XD4		11
 #endif
 #define	SD_CONF_BSET_READ_CD_XD4	(1 << SD_CONF_SET_READ_CD_XD4)
 

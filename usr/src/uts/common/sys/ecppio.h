@@ -27,8 +27,6 @@
 #ifndef	_SYS_ECPPIO_H
 #define	_SYS_ECPPIO_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -44,7 +42,7 @@ extern "C" {
 #define	ECPPIOC_SETDATA		_IOW('p', 79, uchar_t)
 #define	ECPPIOC_GETDATA		_IOR('p', 80, uchar_t)
 
-#define	ECPP_MAX_TIMEOUT 	604800	/* one week */
+#define	ECPP_MAX_TIMEOUT	604800	/* one week */
 #define	ECPP_W_TIMEOUT_DEFAULT	60	/* 60 seconds */
 
 struct ecpp_regs {

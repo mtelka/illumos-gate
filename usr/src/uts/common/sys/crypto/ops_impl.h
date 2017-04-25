@@ -110,7 +110,7 @@ typedef struct kcf_verify_ops_params {
 } kcf_verify_ops_params_t;
 
 typedef struct kcf_encrypt_mac_ops_params {
-	crypto_session_id_t 		em_sid;
+	crypto_session_id_t		em_sid;
 	crypto_mech_type_t		em_framework_encr_mechtype;
 	crypto_mechanism_t		em_encr_mech;
 	crypto_key_t			*em_encr_key;
@@ -125,7 +125,7 @@ typedef struct kcf_encrypt_mac_ops_params {
 } kcf_encrypt_mac_ops_params_t;
 
 typedef struct kcf_mac_decrypt_ops_params {
-	crypto_session_id_t 		md_sid;
+	crypto_session_id_t		md_sid;
 	crypto_mech_type_t		md_framework_mac_mechtype;
 	crypto_mechanism_t		md_mac_mech;
 	crypto_key_t			*md_mac_key;
@@ -167,7 +167,7 @@ typedef struct kcf_object_ops_params {
 	crypto_session_id_t		oo_sid;
 	crypto_object_id_t		oo_object_id;
 	crypto_object_attribute_t	*oo_template;
-	uint_t 				oo_attribute_count;
+	uint_t				oo_attribute_count;
 	crypto_object_id_t		*oo_object_id_ptr;
 	size_t				*oo_object_size;
 	void				**oo_find_init_pp_ptr;
@@ -214,7 +214,7 @@ typedef struct kcf_key_ops_params {
  * is passed as an argument to kcf_submit_request().
  */
 typedef struct kcf_provmgmt_ops_params {
-	crypto_session_id_t 		po_sid;
+	crypto_session_id_t		po_sid;
 	char				*po_pin;
 	size_t				po_pin_len;
 	char				*po_old_pin;

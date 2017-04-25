@@ -66,7 +66,7 @@
  * defined by the compilation system, not the user of the system.
  */
 
-#include <sys/isa_defs.h> 	/* sys/isa_defs needed for _LP64. */
+#include <sys/isa_defs.h>	/* sys/isa_defs needed for _LP64. */
 
 #ifdef	__cplusplus
 extern "C" {

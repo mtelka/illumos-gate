@@ -19,7 +19,7 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 /*
@@ -408,8 +408,8 @@ typedef	struct _pthread_mutex {		/* = mutex_t in synch.h */
 		uint16_t	__pthread_mutex_flag1;
 		uint8_t		__pthread_mutex_flag2;
 		uint8_t		__pthread_mutex_ceiling;
-		uint16_t 	__pthread_mutex_type;
-		uint16_t 	__pthread_mutex_magic;
+		uint16_t	__pthread_mutex_type;
+		uint16_t	__pthread_mutex_magic;
 	} __pthread_mutex_flags;
 	union {
 		struct {
@@ -427,8 +427,8 @@ typedef	struct _pthread_mutex {		/* = mutex_t in synch.h */
 typedef	struct _pthread_cond {		/* = cond_t in synch.h */
 	struct {
 		uint8_t		__pthread_cond_flag[4];
-		uint16_t 	__pthread_cond_type;
-		uint16_t 	__pthread_cond_magic;
+		uint16_t	__pthread_cond_type;
+		uint16_t	__pthread_cond_magic;
 	} __pthread_cond_flags;
 	upad64_t __pthread_cond_data;
 } pthread_cond_t;

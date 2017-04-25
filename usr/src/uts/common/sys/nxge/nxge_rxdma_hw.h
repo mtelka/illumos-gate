@@ -960,7 +960,7 @@ typedef union _rcr_entry_t {
 #define	RX_DMA_CTL_STAT_RBR_TMOUT		0x0020000000000000ULL
 #define	RX_DMA_CTL_STAT_RBR_TMOUT_MASK	0x0020000000000000ULL
 #define	RX_DMA_CTRL_STAT_ENT_MASK_SHIFT 32
-#define	RX_DMA_CTL_STAT_ERROR 			(RX_DMA_ENT_MSK_ALL << \
+#define	RX_DMA_CTL_STAT_ERROR			(RX_DMA_ENT_MSK_ALL << \
 						RX_DMA_CTRL_STAT_ENT_MASK_SHIFT)
 
 /* the following are write 1 to clear bits */

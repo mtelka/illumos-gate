@@ -44,7 +44,7 @@ extern "C" {
 typedef struct lnode {
 	struct lnode	*lo_next;	/* link for hash chain */
 	struct vnode	*lo_vp;		/* pointer to real vnode */
-	uint_t		lo_looping; 	/* looping flags (see below) */
+	uint_t		lo_looping;	/* looping flags (see below) */
 	struct vnode	*lo_vnode;	/* place holder vnode for file */
 } lnode_t;
 

@@ -26,8 +26,6 @@
 #ifndef _SYS_NDI_IMPLDEFS_H
 #define	_SYS_NDI_IMPLDEFS_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/t_lock.h>
@@ -62,8 +60,8 @@ struct ndi_event_hdl {
 	uint_t			ndi_evthdl_other_plevels;
 
 	uint_t			ndi_evthdl_n_events;
-	ndi_event_cookie_t 	*ndi_evthdl_cookie_list;
-	ndi_event_hdl_t 	ndi_next_hdl;
+	ndi_event_cookie_t	*ndi_evthdl_cookie_list;
+	ndi_event_hdl_t		ndi_next_hdl;
 };
 
 /* prototypes needed by sunndi.c */

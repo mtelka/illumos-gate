@@ -20,7 +20,7 @@
  * CDDL HEADER END
  */
 /*	Copyright (c) 1988 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 /*
@@ -30,8 +30,6 @@
 
 #ifndef	_UTILITY_H
 #define	_UTILITY_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"	/* SVr4.0 1.8	*/
 
 #include <form.h>
 #include <memory.h>
@@ -215,8 +213,8 @@ extern int	_validation(FORM *);		/* REQ_VALIDATION	*/
 extern int	_next_choice(FORM *);		/* REQ_NEXT_CHOICE	*/
 extern int	_prev_choice(FORM *);		/* REQ_PREV_CHOICE	*/
 
-extern char *	_makearg(FIELDTYPE *, va_list *, int *);
-extern char *	_copyarg(FIELDTYPE *, char *, int *);
+extern char	*_makearg(FIELDTYPE *, va_list *, int *);
+extern char	*_copyarg(FIELDTYPE *, char *, int *);
 extern void	_freearg(FIELDTYPE *,  char *);
 extern int	_checkfield(FIELDTYPE *, FIELD *, char *);
 extern int	_checkchar(FIELDTYPE *, int, char *);
@@ -225,10 +223,10 @@ extern int	_prevchoice(FIELDTYPE *, FIELD *, char *);
 
 extern BOOLEAN	_grow_field(FIELD *, int);
 extern FIELD *	_first_active(FORM *);
-extern char *	_data_beg(char *, int);
-extern char *	_data_end(char *, int);
-extern char *	_whsp_beg(char *, int);
-extern char *	_whsp_end(char *, int);
+extern char	*_data_beg(char *, int);
+extern char	*_data_end(char *, int);
+extern char	*_whsp_beg(char *, int);
+extern char	*_whsp_end(char *, int);
 extern void	_buf_to_win(FIELD *, WINDOW *);
 extern void	_win_to_buf(WINDOW *, FIELD *);
 extern void	_adjust_cursor(FORM *, char *);

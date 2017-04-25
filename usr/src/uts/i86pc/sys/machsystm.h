@@ -106,8 +106,8 @@ struct memconf {
 
 struct system_hardware {
 	int		hd_nodes;		/* number of nodes */
-	int		hd_cpus_per_node; 	/* max cpus in a node */
-	struct memconf 	hd_mem[MAXNODES];
+	int		hd_cpus_per_node;	/* max cpus in a node */
+	struct memconf	hd_mem[MAXNODES];
 						/*
 						 * memory layout for each
 						 * node.

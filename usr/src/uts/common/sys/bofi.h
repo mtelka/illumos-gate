@@ -27,8 +27,6 @@
 #ifndef	_SYS_BOFI_H
 #define	_SYS_BOFI_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * header file for bus_ops fault injector
  */
@@ -62,10 +60,10 @@ struct  acc_log_elem {
     hrtime_t	access_time;	/* timestamp */
     uint_t	access_type;	/* the type of access */
     uint_t	_pad;		/* pad struct to multiple of 8 bytes for x86 */
-    offset_t 	offset;		/* the offset into handle */
+    offset_t	offset;		/* the offset into handle */
     uint64_t	value;		/* the value being read or written */
-    uint32_t 	size;		/* the size (in bytes) of the transaction */
-    uint32_t  	repcount;	/* repcount parameter of a ddi_repX routine */
+    uint32_t	size;		/* the size (in bytes) of the transaction */
+    uint32_t	repcount;	/* repcount parameter of a ddi_repX routine */
 };
 
 /* Access logging flags */
@@ -106,13 +104,13 @@ struct  acc_log32 {
 #endif /* _SYSCALL32 */
 
 struct bofi_errdef {
-    uint_t 	namesize;
-    char 	name[NAMESIZE];		/* as returned by ddi_get_name() */
+    uint_t	namesize;
+    char	name[NAMESIZE];		/* as returned by ddi_get_name() */
 				/* pointer to char */
-    int 	instance;	/* as returned by ddi_get_instance() */
+    int		instance;	/* as returned by ddi_get_instance() */
     int		rnumber;	/* as used by ddi_regs_map_setup() */
-    offset_t 	offset;		/* as used by ddi_regs_map_setup() */
-    offset_t 	len;		/* as used by ddi_regs_map_setup() */
+    offset_t	offset;		/* as used by ddi_regs_map_setup() */
+    offset_t	len;		/* as used by ddi_regs_map_setup() */
     uint_t	access_type;
     uint_t	access_count;
     uint_t	fail_count;
@@ -120,7 +118,7 @@ struct bofi_errdef {
     uint_t	optype;
     uint64_t	operand;
     struct acc_log log;
-    uint64_t 	errdef_handle;	/* pointer to void */
+    uint64_t	errdef_handle;	/* pointer to void */
 };
 #if defined(_SYSCALL32)
 
@@ -129,13 +127,13 @@ struct bofi_errdef {
 #endif
 
 struct bofi_errdef32 {
-    uint_t 	namesize;
-    char 	name[NAMESIZE];		/* as returned by ddi_get_name() */
+    uint_t	namesize;
+    char	name[NAMESIZE];		/* as returned by ddi_get_name() */
 				/* pointer to char */
-    int 	instance;	/* as returned by ddi_get_instance() */
+    int		instance;	/* as returned by ddi_get_instance() */
     int		rnumber;	/* as used by ddi_regs_map_setup() */
-    offset_t 	offset;		/* as used by ddi_regs_map_setup() */
-    offset_t 	len;		/* as used by ddi_regs_map_setup() */
+    offset_t	offset;		/* as used by ddi_regs_map_setup() */
+    offset_t	len;		/* as used by ddi_regs_map_setup() */
     uint_t	access_type;
     uint_t	access_count;
     uint_t	fail_count;
@@ -143,7 +141,7 @@ struct bofi_errdef32 {
     uint_t	optype;
     uint64_t	operand;
     struct acc_log32 log;
-    uint64_t 	errdef_handle;	/* pointer to void */
+    uint64_t	errdef_handle;	/* pointer to void */
 };
 
 #if _LONG_LONG_ALIGNMENT == 8 && _LONG_LONG_ALIGNMENT_32 == 4
@@ -153,50 +151,50 @@ struct bofi_errdef32 {
 #endif /* _SYSCALL32 */
 
 struct bofi_errctl {
-    uint_t 	namesize;
-    char 	name[NAMESIZE];		/* as returned by ddi_get_name() */
-    int 	instance;	/* as returned by ddi_get_instance() */
+    uint_t	namesize;
+    char	name[NAMESIZE];		/* as returned by ddi_get_name() */
+    int		instance;	/* as returned by ddi_get_instance() */
 };
 
 struct bofi_get_handles {
-    uint_t 	namesize;
-    char 	name[NAMESIZE];		/* as returned by ddi_get_name() */
-    int 	instance;	/* as returned by ddi_get_instance() */
-    int 	count;
-    caddr_t 	buffer;
+    uint_t	namesize;
+    char	name[NAMESIZE];		/* as returned by ddi_get_name() */
+    int		instance;	/* as returned by ddi_get_instance() */
+    int		count;
+    caddr_t	buffer;
 };
 #if defined(_SYSCALL32)
 struct bofi_get_handles32 {
-    uint_t 	namesize;
-    char 	name[NAMESIZE];		/* as returned by ddi_get_name() */
-    int 	instance;	/* as returned by ddi_get_instance() */
-    int 	count;
-    caddr32_t 	buffer;
+    uint_t	namesize;
+    char	name[NAMESIZE];		/* as returned by ddi_get_name() */
+    int		instance;	/* as returned by ddi_get_instance() */
+    int		count;
+    caddr32_t	buffer;
 };
 #endif /* _SYSCALL32 */
 
 struct handle_info {
-    int 	instance;
-    uint_t 	access_type;
-    int 	rnumber;
+    int		instance;
+    uint_t	access_type;
+    int		rnumber;
     int		_pad;		/* pad to 8 bytes for x86 */
-    offset_t 	len;
-    offset_t 	offset;
-    uint64_t 	addr_cookie;
+    offset_t	len;
+    offset_t	offset;
+    uint64_t	addr_cookie;
 };
 
 struct bofi_get_hdl_info {
-    uint_t 	namesize;
-    char 	name[NAMESIZE];		/* as returned by ddi_get_name() */
-    int 	count;		/* number of handle_info structures */
-    caddr_t 	hdli;		/* pointer to struct handle_info */
+    uint_t	namesize;
+    char	name[NAMESIZE];		/* as returned by ddi_get_name() */
+    int		count;		/* number of handle_info structures */
+    caddr_t	hdli;		/* pointer to struct handle_info */
 };
 #if defined(_SYSCALL32)
 struct bofi_get_hdl_info32 {
-    uint_t 	namesize;
-    char 	name[NAMESIZE];		/* as returned by ddi_get_name() */
-    int 	count;		/* number of handle_info structures */
-    caddr32_t 	hdli;		/* pointer to struct handle_info */
+    uint_t	namesize;
+    char	name[NAMESIZE];		/* as returned by ddi_get_name() */
+    int		count;		/* number of handle_info structures */
+    caddr32_t	hdli;		/* pointer to struct handle_info */
 };
 #endif /* _SYSCALL32 */
 
@@ -230,11 +228,11 @@ struct bofi_errstate {
     uint_t	access_count;
     uint_t	fail_count;
     uint_t	acc_chk;
-    uint_t 	errmsg_count;
-    char 	buffer[ERRMSGSIZE];
+    uint_t	errmsg_count;
+    char	buffer[ERRMSGSIZE];
     ddi_fault_impact_t severity;
     struct acc_log log;
-    uint64_t 	errdef_handle;
+    uint64_t	errdef_handle;
 };
 #if defined(_SYSCALL32)
 
@@ -248,11 +246,11 @@ struct bofi_errstate32 {
     uint_t	access_count;
     uint_t	fail_count;
     uint_t	acc_chk;
-    uint_t 	errmsg_count;
-    char 	buffer[ERRMSGSIZE];
+    uint_t	errmsg_count;
+    char	buffer[ERRMSGSIZE];
     ddi_fault_impact_t severity;
     struct acc_log32 log;
-    uint64_t 	errdef_handle;
+    uint64_t	errdef_handle;
 };
 
 #if _LONG_LONG_ALIGNMENT == 8 && _LONG_LONG_ALIGNMENT_32 == 4

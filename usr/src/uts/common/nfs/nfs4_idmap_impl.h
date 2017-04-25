@@ -96,7 +96,7 @@ struct nfsidmap_globals {
 	kmutex_t		nfsidmap_daemon_lock;
 	/*
 	 * nfsidmap_daemon_lock protects the following:
-	 * 	nfsidmap_daemon_dh
+	 *	nfsidmap_daemon_dh
 	 */
 	door_handle_t		nfsidmap_daemon_dh;
 };

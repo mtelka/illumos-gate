@@ -25,13 +25,11 @@
  */
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef	_SYS_FS_SWAPNODE_H
 #define	_SYS_FS_SWAPNODE_H
-
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #ifdef	__cplusplus
 extern "C" {
@@ -54,7 +52,7 @@ extern struct vnode *swapfs_getvp(ulong_t);
 #ifdef SWAPFS_DEBUG
 extern int swapfs_debug;
 #define	SWAPFS_PRINT(X, S, Y1, Y2, Y3, Y4, Y5)	\
-	if (swapfs_debug & (X)) 		\
+	if (swapfs_debug & (X))			\
 		printf(S, Y1, Y2, Y3, Y4, Y5);
 #define	SWAP_SUBR	0x01
 #define	SWAP_VOPS	0x02

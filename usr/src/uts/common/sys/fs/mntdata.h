@@ -36,8 +36,8 @@ extern "C" {
 
 typedef struct mntelem {
 	/* Metadata. */
-	struct mntelem 	*mnte_next;
-	struct mntelem 	*mnte_prev;
+	struct mntelem	*mnte_next;
+	struct mntelem	*mnte_prev;
 	timespec_t	mnte_birth;
 	timespec_t	mnte_death;
 	timespec_t	mnte_vfs_ctime;

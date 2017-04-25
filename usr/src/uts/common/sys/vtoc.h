@@ -30,7 +30,7 @@
 
 
 /*	Copyright (c) 1984, 1986, 1987, 1988, 1989 AT&T	*/
-/*	  All Rights Reserved  	*/
+/*	  All Rights Reserved	*/
 
 
 #ifndef _SYS_VTOC_H
@@ -61,7 +61,7 @@ extern "C" {
  *	See  dklabel.h, read_vtoc(), and write_vtoc().
  */
 
-#define	V_NUMPAR 	NDKMAP		/* The number of partitions */
+#define	V_NUMPAR	NDKMAP		/* The number of partitions */
 					/* (from dkio.h) */
 
 #define	VTOC_SANE	0x600DDEEE	/* Indicates a sane VTOC */
@@ -293,7 +293,7 @@ struct vtoc32 {
 	for (i = 0; i < V_NUMPAR; i++) {		\
 		if (v.timestamp[i] > TIME32_MAX)	\
 			v32.timestamp[i] = TIME32_MAX;	\
-		else 					\
+		else					\
 			v32.timestamp[i] = (time32_t)v.timestamp[i];	\
 	}						\
 	bcopy(v.v_asciilabel, v32.v_asciilabel, LEN_DKL_ASCII);		\
@@ -322,7 +322,7 @@ struct vtoc32 {
 	for (i = 0; i < V_NUMPAR; i++) {		\
 		if (extv.timestamp[i] > TIME32_MAX)	\
 			v32.timestamp[i] = TIME32_MAX;	\
-		else 					\
+		else					\
 			v32.timestamp[i] = (time32_t)extv.timestamp[i];	\
 	}						\
 	bcopy(extv.v_asciilabel, v32.v_asciilabel, LEN_DKL_ASCII);	\

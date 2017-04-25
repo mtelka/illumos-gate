@@ -84,7 +84,7 @@ extern pool_t	*pool_lookup_pool_by_pset(int);
 /*
  * Configuration routines
  */
-extern void 	pool_init(void);
+extern void	pool_init(void);
 extern int	pool_status(int);
 extern int	pool_create(int, int, id_t *);
 extern int	pool_destroy(int, int, id_t);

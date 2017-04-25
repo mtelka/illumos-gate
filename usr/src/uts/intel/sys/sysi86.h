@@ -30,8 +30,6 @@
 #ifndef _SYS_SYSI86_H
 #define	_SYS_SYSI86_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -188,7 +186,7 @@ struct cmf {
 #define	SI86B_GET		0x0200	/* retrieve badvise bits */
 
 #define	SI86B_PRE_SV		0x0008	/* follow pre-System V x.out behavior */
-#define	SI86B_XOUT		0x0010 	/* follow XENIX x.out behavior */
+#define	SI86B_XOUT		0x0010	/* follow XENIX x.out behavior */
 #define	SI86B_XSDSWTCH		0x0080	/* XENIX small model shared data */
 					/*	context switching enabled */
 

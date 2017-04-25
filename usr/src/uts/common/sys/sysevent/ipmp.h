@@ -48,7 +48,7 @@ extern "C" {
  *	Event Vendor	- com.sun
  *	Event Publisher - in.mpathd
  *
- * 	Attribute Name  - IPMP_EVENT_VERSION
+ *	Attribute Name  - IPMP_EVENT_VERSION
  *	Attribute Type  - SE_DATA_TYPE_UINT32
  *	Attribute Value - <version>
  *
@@ -58,7 +58,7 @@ extern "C" {
  *
  *	Attribute Name  - IPMP_GROUP_SIGNATURE
  *	Attribute Type  - SE_DATA_TYPE_UINT64
- * 	Attribute Value - <group-signature>
+ *	Attribute Value - <group-signature>
  *
  *	Attribute Name  - IPMP_GROUP_STATE
  *	Attribute Type  - SE_DATA_TYPE_UINT32
@@ -155,12 +155,12 @@ typedef enum {
 
 typedef enum {
 	IPMP_IF_ADD,		/* a new interface has joined the group */
-	IPMP_IF_REMOVE 		/* an existing interface has left the group */
+	IPMP_IF_REMOVE		/* an existing interface has left the group */
 } ipmp_if_op_t;
 
 typedef enum {
 	IPMP_IF_STANDBY,	/* the interface is a standby */
-	IPMP_IF_NORMAL 		/* the interface is not a standby */
+	IPMP_IF_NORMAL		/* the interface is not a standby */
 } ipmp_if_type_t;
 
 typedef enum {

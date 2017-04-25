@@ -244,7 +244,7 @@ struct mac_ring_s {
 	(mr)->mr_refcnt++;				\
 }
 
-#define	MR_REFRELE(mr)		{	 		\
+#define	MR_REFRELE(mr)		{			\
 	mutex_enter(&(mr)->mr_lock);			\
 	ASSERT((mr)->mr_refcnt != 0);			\
 	(mr)->mr_refcnt--;				\
@@ -300,7 +300,7 @@ struct mac_group_s {
 	mac_ring_handle_t mrh = rh;					\
 	mac_impl_t *mimpl = (mac_impl_t *)mhp;				\
 	/*								\
-	 * Send packets through a selected tx ring, or through the 	\
+	 * Send packets through a selected tx ring, or through the	\
 	 * default handler if there is no selected ring.		\
 	 */								\
 	if (mrh == NULL)						\
@@ -322,9 +322,9 @@ struct mac_group_s {
 #define	MAC_TX(mip, rh, mp, src_mcip) {					\
 	mac_ring_handle_t	rhandle = (rh);				\
 	/*								\
-	 * If there is a bound Hybrid I/O share, send packets through 	\
+	 * If there is a bound Hybrid I/O share, send packets through	\
 	 * the default tx ring. (When there's a bound Hybrid I/O share,	\
-	 * the tx rings of this client are mapped in the guest domain 	\
+	 * the tx rings of this client are mapped in the guest domain	\
 	 * and not accessible from here.)				\
 	 */								\
 	_NOTE(CONSTANTCONDITION)					\
@@ -333,7 +333,7 @@ struct mac_group_s {
 	if (mip->mi_promisc_list != NULL)				\
 		mac_promisc_dispatch(mip, mp, src_mcip);		\
 	/*								\
-	 * Grab the proper transmit pointer and handle. Special 	\
+	 * Grab the proper transmit pointer and handle. Special		\
 	 * optimization: we can test mi_bridge_link itself atomically,	\
 	 * and if that indicates no bridge send packets through tx ring.\
 	 */								\

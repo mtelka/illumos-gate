@@ -57,7 +57,7 @@ struct core {
 	int	c_magic;		/* Corefile magic number */
 	int	c_len;			/* Sizeof (struct core) */
 	struct	regs c_regs;		/* General purpose registers */
-	struct 	exdata c_exdata;	/* Executable header */
+	struct	exdata c_exdata;	/* Executable header */
 	int	c_signo;		/* Killing signal, if any */
 	int	c_tsize;		/* Text size (bytes) */
 	int	c_dsize;		/* Data size (bytes) */

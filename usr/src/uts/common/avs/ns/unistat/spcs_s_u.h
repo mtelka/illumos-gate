@@ -38,7 +38,7 @@ extern "C" {
 
 /*
  *	Create and initialize local status. Call this prior to invoking
- * 	an ioctl
+ *	an ioctl
  *	@return The status or NULL if malloc failed
  */
 

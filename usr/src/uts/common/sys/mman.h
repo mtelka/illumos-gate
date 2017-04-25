@@ -289,14 +289,14 @@ extern int posix_madvise(void *, size_t, int);
  * structure for memcntl hat advise operations.
  */
 struct memcntl_mha {
-	uint_t 		mha_cmd;	/* command(s) */
+	uint_t		mha_cmd;	/* command(s) */
 	uint_t		mha_flags;
 	size_t		mha_pagesize;
 };
 
 #if defined(_SYSCALL32)
 struct memcntl_mha32 {
-	uint_t 		mha_cmd;	/* command(s) */
+	uint_t		mha_cmd;	/* command(s) */
 	uint_t		mha_flags;
 	size32_t	mha_pagesize;
 };

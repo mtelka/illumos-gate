@@ -384,7 +384,7 @@ struct in_addr {
 
 /* Well known 6to4 Relay Router Anycast address defined in RFC 3068 */
 #if !defined(_XPG4_2) || !defined(__EXTENSIONS__)
-#define	INADDR_6TO4RRANYCAST	0xc0586301U 	/* 192.88.99.1 */
+#define	INADDR_6TO4RRANYCAST	0xc0586301U	/* 192.88.99.1 */
 #endif	/* !defined(_XPG4_2) || !defined(__EXTENSIONS__) */
 
 #define	IN_LOOPBACKNET		127			/* official! */
@@ -469,7 +469,7 @@ struct sockaddr_in6 {
 
 #define	IN6ADDR_ANY_INIT	    {	0, 0, 0, 0,	\
 					0, 0, 0, 0,	\
-					0, 0, 0, 0, 	\
+					0, 0, 0, 0,	\
 					0, 0, 0, 0 }
 
 #define	IN6ADDR_LOOPBACK_INIT	    {	0, 0, 0, 0,	\
@@ -942,8 +942,8 @@ struct sockaddr_in6 {
  */
 
 typedef struct ipsec_req {
-	uint_t 		ipsr_ah_req;		/* AH request */
-	uint_t 		ipsr_esp_req;		/* ESP request */
+	uint_t		ipsr_ah_req;		/* AH request */
+	uint_t		ipsr_esp_req;		/* ESP request */
 	uint_t		ipsr_self_encap_req;	/* Self-Encap request */
 	uint8_t		ipsr_auth_alg;		/* Auth algs for AH */
 	uint8_t		ipsr_esp_alg;		/* Encr algs for ESP */

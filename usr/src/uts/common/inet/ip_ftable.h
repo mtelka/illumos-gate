@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 
-#ifdef 	_KERNEL
+#ifdef	_KERNEL
 
 #include <net/radix.h>
 #include <inet/common.h>
@@ -67,7 +67,7 @@ struct rtfuncarg {
 	uint_t rt_ire_type;
 	ill_t  *rt_ill;
 	zoneid_t rt_zoneid;
-	ip_stack_t *rt_ipst;   	/* Does not have a netstack_hold */
+	ip_stack_t *rt_ipst;	/* Does not have a netstack_hold */
 };
 int rtfunc(struct radix_node *, void *);
 

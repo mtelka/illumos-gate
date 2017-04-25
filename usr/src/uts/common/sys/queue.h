@@ -167,7 +167,7 @@ struct {								\
 #define	LIST_REMOVE(elm, field) do {					\
 	QUEUEDEBUG_LIST_OP((elm), field)				\
 	if ((elm)->field.le_next != NULL)				\
-		(elm)->field.le_next->field.le_prev = 			\
+		(elm)->field.le_next->field.le_prev =			\
 		    (elm)->field.le_prev;				\
 	*(elm)->field.le_prev = (elm)->field.le_next;			\
 	QUEUEDEBUG_LIST_POSTREMOVE((elm), field)			\
@@ -303,7 +303,7 @@ struct {								\
 
 #define	STAILQ_REMOVE_HEAD(head, field) do {				\
 	if (((head)->stqh_first = (head)->stqh_first->field.stqe_next)	\
-	    == NULL) 							\
+	    == NULL)							\
 		(head)->stqh_last = &(head)->stqh_first;		\
 	_NOTE(CONSTCOND)						\
 } while (0)
@@ -503,7 +503,7 @@ struct {								\
 #define	TAILQ_INSERT_AFTER(head, listelm, elm, field) do {		\
 	QUEUEDEBUG_TAILQ_OP((listelm), field)				\
 	if (((elm)->field.tqe_next = (listelm)->field.tqe_next) != NULL)\
-		(elm)->field.tqe_next->field.tqe_prev = 		\
+		(elm)->field.tqe_next->field.tqe_prev =			\
 		    &(elm)->field.tqe_next;				\
 	else								\
 		(head)->tqh_last = &(elm)->field.tqe_next;		\
@@ -525,7 +525,7 @@ struct {								\
 	QUEUEDEBUG_TAILQ_PREREMOVE((head), (elm), field)		\
 	QUEUEDEBUG_TAILQ_OP((elm), field)				\
 	if (((elm)->field.tqe_next) != NULL)				\
-		(elm)->field.tqe_next->field.tqe_prev = 		\
+		(elm)->field.tqe_next->field.tqe_prev =			\
 		    (elm)->field.tqe_prev;				\
 	else								\
 		(head)->tqh_last = (elm)->field.tqe_prev;		\
@@ -542,7 +542,7 @@ struct {								\
 #define	TAILQ_FOREACH_REVERSE(var, head, headname, field)		\
 	for ((var) = (*(((struct headname *)((head)->tqh_last))->tqh_last));\
 		(var);							\
-		(var) = 						\
+		(var) =							\
 		    (*(((struct headname *)((var)->field.tqe_prev))->tqh_last)))
 
 /*

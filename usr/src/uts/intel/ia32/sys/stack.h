@@ -27,8 +27,6 @@
 #ifndef _IA32_SYS_STACK_H
 #define	_IA32_SYS_STACK_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #if !defined(_ASM)
 
 #include <sys/types.h>
@@ -50,11 +48,11 @@ extern "C" {
  *    4(%ebp) ->| return address	   |
  *		|--------------------------|
  *    0(%ebp) ->| previous %ebp (optional) |
- * 		|--------------------------|
+ *		|--------------------------|
  *   -4(%ebp) ->| unspecified		   |	(Current frame)
  *		| ...			   |
  *    0(%esp) ->| variable size		   |
- * 		|--------------------------|
+ *		|--------------------------|
  */
 
 /*
@@ -81,13 +79,13 @@ extern "C" {
  *    8(%rbp) ->| return address	   |
  *		|--------------------------|
  *    0(%rbp) ->| previous %rbp            |
- * 		|--------------------------|
+ *		|--------------------------|
  *   -8(%rbp) ->| unspecified		   |	(Current frame)
  *		| ...			   |
  *    0(%rsp) ->| variable size		   |
- * 		|--------------------------|
+ *		|--------------------------|
  * -128(%rsp) ->| reserved for function	   |
- * 		|--------------------------|
+ *		|--------------------------|
  *
  * The end of the input argument area must be aligned on a 16-byte
  * boundary; i.e. (%rsp - 8) % 16 == 0 at function entry.
@@ -102,7 +100,7 @@ extern "C" {
  */
 
 #define	STACK_ALIGN64		16
-#define	STACK_ENTRY_ALIGN64 	8
+#define	STACK_ENTRY_ALIGN64	8
 #define	STACK_BIAS64		0
 #define	SA64(x)			(((x)+(STACK_ALIGN64-1)) & ~(STACK_ALIGN64-1))
 #define	STACK_RESERVE64		128

@@ -450,8 +450,8 @@ typedef struct usb_string_descr {
 
 /*
  * usb_ep_ss_comp_descr:
- * 	USB SuperSpeed endpoints are required to return this descriptor along
- * 	with the general endpoint descriptor. Refer to USB 3.1/9.6.7.
+ *	USB SuperSpeed endpoints are required to return this descriptor along
+ *	with the general endpoint descriptor. Refer to USB 3.1/9.6.7.
  */
 typedef struct usb_ep_ss_comp_descr {
 	uint8_t		bLength;		/* descriptor size */
@@ -605,7 +605,7 @@ typedef struct usb_client_dev_data {
 
 /*
  * usb_get_dev_data:
- *	returns initialized registration data. 	Most data items are clear.
+ *	returns initialized registration data.  Most data items are clear.
  *	Among the items returned is the tree ofparsed descriptors in dev_cfg;
  *	and the number of configurations parsed in dev_n_cfg.
  *
@@ -622,7 +622,7 @@ typedef struct usb_client_dev_data {
  *	USB_FAILURE		- bad descriptor info or other internal failure
  *
  * Notes:
- * 	1) The non-standard USB descriptors are returned in RAW format.
+ *	1) The non-standard USB descriptors are returned in RAW format.
  *
  *	2) The registration data is unshared. Each client receives its own copy.
  *	(The default control pipe may be shared, even though its tree
@@ -734,7 +734,7 @@ int usb_print_descr_tree(
  *
  * Arguments:
  *	dip		- pointer to devinfo node of the client
- *	version 	- USBA registration version number
+ *	version		- USBA registration version number
  *	flags		- None used
  *
  * Return Values:
@@ -789,7 +789,7 @@ void usb_client_detach(
 
 size_t usb_parse_data(
 	char			*format,
-	uchar_t 		*data,
+	uchar_t			*data,
 	size_t			datalen,
 	void			*structure,
 	size_t			structlen);
@@ -857,9 +857,9 @@ int usb_get_string_descr(
 /*
  * usb_ep_xdescr
  *
- * 	Versioned data structure that's used for usb_pipe_xopen() and should be
- * 	filled in by a call to usb_ep_xdescr_fill(). Drivers should always use
- * 	USB_EP_XDESCR_CURRENT_VERSION.
+ *	Versioned data structure that's used for usb_pipe_xopen() and should be
+ *	filled in by a call to usb_ep_xdescr_fill(). Drivers should always use
+ *	USB_EP_XDESCR_CURRENT_VERSION.
  */
 
 #define	USB_EP_XDESCR_VERSION_ONE	1
@@ -883,10 +883,10 @@ typedef struct usb_ep_xdescr {
  * configuration tree.
  *
  * Arguments:
- * 	version		- Should be USB_EP_XDESCR_CURRENT_VERSION
- * 	dip		- devinfo pointer
- * 	ep_data		- endpoint data pointer
- * 	ep_xdesc	- An extended descriptor structure, filled upon
+ *	version		- Should be USB_EP_XDESCR_CURRENT_VERSION
+ *	dip		- devinfo pointer
+ *	ep_data		- endpoint data pointer
+ *	ep_xdesc	- An extended descriptor structure, filled upon
  *                        successful completion.
  *
  * Return values:
@@ -894,7 +894,7 @@ typedef struct usb_ep_xdescr {
  *	USB_INVALID_ARGS - invalid arguments
  */
 int usb_ep_xdescr_fill(
-	uint_t 		version,
+	uint_t		version,
 	dev_info_t	*dip,
 	usb_ep_data_t	*ep_data,
 	usb_ep_xdescr_t	*ep_xdesc);
@@ -1169,7 +1169,7 @@ void usb_pipe_close(
  * Arguments:
  *	dip		- devinfo pointer
  *	pipe_handle	- opaque pipe handle
- *	timeout 	- timeout in seconds
+ *	timeout		- timeout in seconds
  *	flags		- USB_FLAGS_SLEEP:
  *				wait for completion.
  *	cb		- if USB_FLAGS_SLEEP has not been specified
@@ -2267,7 +2267,7 @@ typedef struct usb_isoc_req {
 	 * Supported values are: USB_ATTRS_ISOC_START_FRAME,
 	 * USB_ATTRS_ISOC_XFER_ASAP.
 	 */
-	usb_req_attrs_t 	isoc_attributes;
+	usb_req_attrs_t		isoc_attributes;
 
 	/*
 	 * Isochronous OUT:
@@ -2526,7 +2526,7 @@ typedef enum {
  */
 
 int usb_reset_device(
-	dev_info_t 		*dip,
+	dev_info_t		*dip,
 	usb_dev_reset_lvl_t	reset_level);
 
 

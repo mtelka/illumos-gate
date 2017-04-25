@@ -60,8 +60,6 @@
 #ifndef _NETINET_PIM_H
 #define	_NETINET_PIM_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -95,7 +93,7 @@ typedef struct pim {
 #define	PIM_MINLEN	8		/* The header min. length is 8 */
 
 /* Register message + inner IPheader */
-#define	PIM_REG_MINLEN 	(PIM_MINLEN + IP_SIMPLE_HDR_LENGTH)
+#define	PIM_REG_MINLEN	(PIM_MINLEN + IP_SIMPLE_HDR_LENGTH)
 
 /*
  * From the PIM protocol spec (RFC 2362), the following PIM message types

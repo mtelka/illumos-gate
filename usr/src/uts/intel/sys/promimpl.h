@@ -27,8 +27,6 @@
 #ifndef	_SYS_PROMIMPL_H
 #define	_SYS_PROMIMPL_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
 /*
  * Promif implementation functions and variables.
  *
@@ -63,7 +61,7 @@ extern int promif_debug;		/* externally patchable */
 
 #ifdef PROMIF_DEBUG
 #define	PROMIF_DPRINTF(args)				\
-	if (promif_debug) { 				\
+	if (promif_debug) {				\
 		if (promif_debug == PROMIF_DMSG_VERBOSE)	\
 			prom_printf("file %s line %d: ", __FILE__, __LINE__); \
 		prom_printf args;			\

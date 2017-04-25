@@ -34,9 +34,6 @@
 #ifndef _RPC_PMAP_CLNT_H
 #define	_RPC_PMAP_CLNT_H
 
-#pragma ident	"%Z%%M%	%I%	%E% SMI"
-
-
 /*
  * pmap_clnt.h
  * Supplies C routines to get to portmap services.
@@ -61,7 +58,7 @@ extern "C" {
  *	clnt_stat = pmap_rmtcall(address, program, version, procedure,
  *		xdrargs, argsp, xdrres, resp, tout, port_ptr)
  *		(works for udp only.)
- * 	clnt_stat = clnt_broadcast(program, version, procedure,
+ *	clnt_stat = clnt_broadcast(program, version, procedure,
  *		xdrargs, argsp,	xdrres, resp, eachresult)
  *		(like pmap_rmtcall, except the call is broadcasted to all
  *		locally connected nets.  For each valid response received,
