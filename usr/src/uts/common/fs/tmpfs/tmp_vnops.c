@@ -233,13 +233,15 @@ wrtmp(
 
 				if (tm->tm_vfsp->vfs_zone->zone_id !=
 				    GLOBAL_ZONEID) {
-
-					vfs_t *vfs = tm->tm_vfsp;
+					char *path = vn_getpath(
+					    tm->tm_vfsp->vfs_vnodecovered);
 
 					zcmn_err(GLOBAL_ZONEID,
 					    CE_WARN, "%s: File system full, "
-					    "swap space limit exceeded",
-					    vfs->vfs_vnodecovered->v_path);
+					    "swap space limit exceeded", path);
+
+					if (path != NULL)
+						strfree(path);
 				}
 				error = ENOSPC;
 				break;

@@ -154,6 +154,34 @@ vn_free(vnode_t *vp)
 	kmem_cache_free(vn_cache, vp);
 }
 
+char *
+vn_getpath(vnode_t *vp)
+{
+	size_t len;
+	char *ret;
+
+	mutex_enter(&vp->v_lock);
+	if (vp->v_path == NULL) {
+		mutex_exit(&vp->v_lock);
+		return (NULL);
+	}
+	len = strlen(vp->v_path) + 1;
+	mutex_exit(&vp->v_lock);
+
+	ret = kmem_alloc(len, KM_SLEEP);
+
+	mutex_enter(&vp->v_lock);
+	if (vp->v_path == NULL || strlen(vp->v_path) + 1 != len) {
+		mutex_exit(&vp->v_lock);
+		kmem_free(ret, len);
+		return (NULL);
+	}
+	bcopy(vp->v_path, ret, len);
+	mutex_exit(&vp->v_lock);
+
+	return (ret);
+}
+
 int
 vncache_cmp(const void *v1, const void *v2)
 {
@@ -213,9 +241,13 @@ vncache_enter(struct stat *st, vnode_t *dvp, char *name, int fd)
 		vfs = rootvfs;
 	} else {
 		/* add to length for parent path + "/" */
-		len += (strlen(dvp->v_path) + 1);
+		char *dvpath = vn_getpath(dvp);
+		len += (dvpath != NULL ? strlen(dvpath) : 1) + 1;
 		vpath = kmem_alloc(len, KM_SLEEP);
-		(void) snprintf(vpath, len, "%s/%s", dvp->v_path, name);
+		(void) snprintf(vpath, len, "%s/%s",
+		    dvpath != NULL ? dvpath : "?", name);
+		if (dvpath != NULL)
+			strfree(dvpath);
 		vfs = dvp->v_vfsp;
 	}
 
@@ -250,22 +282,28 @@ vncache_enter(struct stat *st, vnode_t *dvp, char *name, int fd)
 void
 vncache_renamed(vnode_t *vp, vnode_t *to_dvp, char *to_name)
 {
+	char *dvpath;
 	char *vpath;
 	char *ovpath;
 	int len;
 
 	len = strlen(to_name) + 1;
 	/* add to length for parent path + "/" */
-	len += (strlen(to_dvp->v_path) + 1);
+	dvpath = vn_getpath(to_dvp);
+	len += (dvpath != NULL ? strlen(dvpath) : 1) + 1;
 	vpath = kmem_alloc(len, KM_SLEEP);
-	(void) snprintf(vpath, len, "%s/%s", to_dvp->v_path, to_name);
+	(void) snprintf(vpath, len, "%s/%s", dvpath != NULL ? dvpath : "?",
+	    to_name);
+	if (dvpath != NULL)
+		strfree(dvpath);
 
-	mutex_enter(&vncache_lock);
+	mutex_enter(&vp->v_lock);
 	ovpath = vp->v_path;
 	vp->v_path = vpath;
-	mutex_exit(&vncache_lock);
+	mutex_exit(&vp->v_lock);
 
-	strfree(ovpath);
+	if (ovpath != NULL)
+		strfree(ovpath);
 }
 
 /*

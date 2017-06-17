@@ -891,11 +891,13 @@ zfs_link_destroy(zfs_dirlock_t *dl, znode_t *zp, dmu_tx_t *tx, int flag,
 		}
 
 		if (zp->z_links <= zp_is_dir) {
+			char *path = vn_getpath(zp->z_vnode);
 			zfs_panic_recover("zfs: link count on %s is %u, "
 			    "should be at least %u",
-			    zp->z_vnode->v_path ? zp->z_vnode->v_path :
-			    "<unknown>", (int)zp->z_links,
+			    path != NULL ? path : "<unknown>", (int)zp->z_links,
 			    zp_is_dir + 1);
+			if (path != NULL)
+				strfree(path);
 			zp->z_links = zp_is_dir + 1;
 		}
 		if (--zp->z_links == zp_is_dir) {

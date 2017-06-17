@@ -1822,9 +1822,11 @@ sdev_call_dircallback(struct sdev_node *ddv, struct sdev_node **dvp, char *nm,
 			return (rv);
 
 	} else {
+		char *path = vn_getpath(SDEVTOV(ddv));
 		impossible(("lookup: %s/%s by %s not supported (%d)\n",
-		    SDEVTOV(ddv)->v_path, nm, curproc->p_user.u_comm,
-		    __LINE__));
+		    path, nm, curproc->p_user.u_comm, __LINE__));
+		if (path != NULL)
+			strfree(path);
 		rv = -1;
 	}
 

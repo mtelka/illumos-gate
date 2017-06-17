@@ -9760,6 +9760,7 @@ fetch_referral(vnode_t *vp, cred_t *cr)
 	size_t bufsize;
 	XDR xdr;
 	int err;
+	char *path;
 
 	/*
 	 * Check attrs to ensure it's a reparse point
@@ -9807,7 +9808,10 @@ fetch_referral(vnode_t *vp, cred_t *cr)
 	/*
 	 * Look at path to recover fs_root, ignoring the leading '/'
 	 */
-	(void) make_pathname4(vp->v_path, &result->fs_root);
+	path = vn_getpath(vp);
+	(void) make_pathname4(path, &result->fs_root);
+	if (path != NULL)
+		strfree(path);
 
 	return (result);
 }

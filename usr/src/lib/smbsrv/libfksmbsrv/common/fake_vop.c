@@ -35,6 +35,7 @@
 #include <sys/fcntl.h>
 #include <sys/poll.h>
 #include <sys/time.h>
+#include <sys/sunddi.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -483,14 +484,17 @@ fop_link(
 	caller_context_t *ct,
 	int flags)
 {
+	char *path;
 	int err;
 
 	/*
 	 * Would prefer to specify "from" as the combination:
 	 * (fr_vp->v_fd, NULL) but linkat does not permit it.
 	 */
-	err = linkat(AT_FDCWD, fr_vp->v_path, to_dvp->v_fd, to_name,
-	    AT_SYMLINK_FOLLOW);
+	path = vn_getpath(fr_vp);
+	err = linkat(AT_FDCWD, path, to_dvp->v_fd, to_name, AT_SYMLINK_FOLLOW);
+	if (path != NULL)
+		strfree(path);
 	if (err == -1)
 		err = errno;
 
@@ -1248,7 +1252,7 @@ stat_to_vattr(const struct stat *st, vattr_t *vap)
 /* ARGSUSED */
 void
 flk_init_callback(flk_callback_t *flk_cb,
-	callb_cpr_t *(*cb_fcn)(flk_cb_when_t, void *), void *cbdata)
+    callb_cpr_t *(*cb_fcn)(flk_cb_when_t, void *), void *cbdata)
 {
 }
 

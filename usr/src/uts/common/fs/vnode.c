@@ -3090,35 +3090,51 @@ void
 vn_copypath(struct vnode *src, struct vnode *dst)
 {
 	char *buf;
-	int alloc;
 
-	mutex_enter(&src->v_lock);
-	if (src->v_path == NULL) {
-		mutex_exit(&src->v_lock);
+	buf = vn_getpath(src);
+	if (buf == NULL)
 		return;
-	}
-	alloc = strlen(src->v_path) + 1;
-
-	/* avoid kmem_alloc() with lock held */
-	mutex_exit(&src->v_lock);
-	buf = kmem_alloc(alloc, KM_SLEEP);
-	mutex_enter(&src->v_lock);
-	if (src->v_path == NULL || strlen(src->v_path) + 1 != alloc) {
-		mutex_exit(&src->v_lock);
-		kmem_free(buf, alloc);
-		return;
-	}
-	bcopy(src->v_path, buf, alloc);
-	mutex_exit(&src->v_lock);
 
 	mutex_enter(&dst->v_lock);
 	if (dst->v_path != NULL) {
 		mutex_exit(&dst->v_lock);
-		kmem_free(buf, alloc);
+		strfree(buf);
 		return;
 	}
 	dst->v_path = buf;
 	mutex_exit(&dst->v_lock);
+}
+
+/*
+ * Get safely a copy of the v_path for the vnode.  In a case a non-NULL value
+ * is returned the caller is expected to strfree() it.
+ */
+char *
+vn_getpath(vnode_t *vp)
+{
+	size_t len;
+	char *ret;
+
+	mutex_enter(&vp->v_lock);
+	if (vp->v_path == NULL) {
+		mutex_exit(&vp->v_lock);
+		return (NULL);
+	}
+	len = strlen(vp->v_path) + 1;
+	mutex_exit(&vp->v_lock);
+
+	ret = kmem_alloc(len, KM_SLEEP);
+
+	mutex_enter(&vp->v_lock);
+	if (vp->v_path == NULL || strlen(vp->v_path) + 1 != len) {
+		mutex_exit(&vp->v_lock);
+		kmem_free(ret, len);
+		return (NULL);
+	}
+	bcopy(vp->v_path, ret, len);
+	mutex_exit(&vp->v_lock);
+
+	return (ret);
 }
 
 /*

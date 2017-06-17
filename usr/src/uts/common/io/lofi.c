@@ -2713,17 +2713,29 @@ done:
 static void
 lofi_create_inquiry(struct lofi_state *lsp, struct scsi_inquiry *inq)
 {
-	char *p = NULL;
+	vnode_t *vp;
+	char *path;
 
 	(void) strlcpy(inq->inq_vid, LOFI_DRIVER_NAME, sizeof (inq->inq_vid));
+	(void) strlcpy(inq->inq_revision, "1.0", sizeof (inq->inq_revision));
 
 	mutex_enter(&lsp->ls_vp_lock);
-	if (lsp->ls_vp != NULL)
-		p = strrchr(lsp->ls_vp->v_path, '/');
-	if (p != NULL)
-		(void) strncpy(inq->inq_pid, p + 1, sizeof (inq->inq_pid));
+	if ((vp = lsp->ls_vp) != NULL)
+		VN_HOLD(vp);
 	mutex_exit(&lsp->ls_vp_lock);
-	(void) strlcpy(inq->inq_revision, "1.0", sizeof (inq->inq_revision));
+
+	if (vp == NULL)
+		return;
+
+	if ((path = vn_getpath(vp)) != NULL) {
+		char *p = strrchr(path, '/');
+		if (p != NULL)
+			(void) strncpy(inq->inq_pid, p + 1,
+			    sizeof (inq->inq_pid));
+		strfree(path);
+	}
+
+	VN_RELE(vp);
 }
 
 /*

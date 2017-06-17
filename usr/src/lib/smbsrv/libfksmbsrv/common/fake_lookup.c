@@ -544,17 +544,25 @@ traverse(vnode_t **cvpp)
 int
 vnodetopath(vnode_t *vrootp, vnode_t *vp, char *buf, size_t buflen, cred_t *cr)
 {
-	int len, rvp_len = 0;
-	const char *p = vp->v_path;
+	int rvp_len = 0;
+	char *path;
+	const char *p;
 
-	if (vrootp)
-		rvp_len = strlen(vrootp->v_path);
-	len = strlen(p);
-	if (rvp_len < len)
-		p += rvp_len;
+	if (vrootp != NULL) {
+		if ((path = vn_getpath(vrootp)) != NULL) {
+			rvp_len = strlen(path);
+			strfree(path);
+		}
+	}
+
+	path = vn_getpath(vp);
+	if (path != NULL && rvp_len < strlen(path))
+		p = path + rvp_len;
 	else
 		p = "/";
 
 	(void) strlcpy(buf, p, buflen);
+	if (path != NULL)
+		strfree(path);
 	return (0);
 }

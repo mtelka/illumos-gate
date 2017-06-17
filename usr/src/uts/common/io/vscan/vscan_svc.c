@@ -259,7 +259,7 @@ static vscan_req_t *vscan_svc_reql_next; /* next pending scan request */
 /* local functions */
 int vscan_svc_scan_file(vnode_t *, cred_t *, int);
 static void vscan_svc_taskq_callback(void *);
-static int vscan_svc_exempt_file(vnode_t *, boolean_t *);
+static int vscan_svc_exempt_file(vnode_t *, char *, boolean_t *);
 static int vscan_svc_exempt_filetype(char *);
 static int vscan_svc_match_ext(char *, char *, int);
 static void vscan_svc_do_scan(vscan_req_t *);
@@ -460,14 +460,17 @@ vscan_svc_scan_file(vnode_t *vp, cred_t *cr, int async)
 	vscan_req_t *req;
 	boolean_t allow;
 	clock_t timeout, time_left;
+	char *path;
 
-	if ((vp == NULL) || (vp->v_path == NULL) || cr == NULL)
+	if ((vp == NULL) || cr == NULL || (path = vn_getpath(vp)) == NULL)
 		return (0);
 
-	DTRACE_PROBE2(vscan__scan__file, char *, vp->v_path, int, async);
+	DTRACE_PROBE2(vscan__scan__file, char *, path, int, async);
 
 	/* check if size or type exempts file from scanning */
-	if (vscan_svc_exempt_file(vp, &allow)) {
+	if (vscan_svc_exempt_file(vp, path, &allow)) {
+		strfree(path);
+
 		if ((allow == B_TRUE) || (async != 0))
 			return (0);
 
@@ -480,12 +483,14 @@ vscan_svc_scan_file(vnode_t *vp, cred_t *cr, int async)
 		DTRACE_PROBE1(vscan__svc__state__violation,
 		    int, vscan_svc_state);
 		mutex_exit(&vscan_svc_mutex);
+		strfree(path);
 		return (0);
 	}
 
 	/* insert (or find) request in list */
 	if ((req = vscan_svc_reql_insert(vp)) == NULL) {
 		mutex_exit(&vscan_svc_mutex);
+		strfree(path);
 		cmn_err(CE_WARN, "Virus scan request list full");
 		return ((async != 0) ? 0 : EACCES);
 	}
@@ -493,6 +498,7 @@ vscan_svc_scan_file(vnode_t *vp, cred_t *cr, int async)
 	/* asynchronous request: return 0 */
 	if (async) {
 		mutex_exit(&vscan_svc_mutex);
+		strfree(path);
 		return (0);
 	}
 
@@ -507,9 +513,11 @@ vscan_svc_scan_file(vnode_t *vp, cred_t *cr, int async)
 
 	if (time_left == -1) {
 		cmn_err(CE_WARN, "Virus scan request timeout %s (%d) \n",
-		    vp->v_path, req->vsr_seqnum);
+		    path, req->vsr_seqnum);
 		DTRACE_PROBE1(vscan__scan__timeout, vscan_req_t *, req);
 	}
+
+	strfree(path);
 
 	ASSERT(req->vsr_magic == VS_REQ_MAGIC);
 	if (vscan_svc_state == VS_SVC_DISABLED)
@@ -646,8 +654,10 @@ vscan_svc_do_scan(vscan_req_t *req)
 	}
 
 	if (vscan_svc_getattr(idx) != 0) {
-		cmn_err(CE_WARN, "Can't access xattr for %s\n",
-		    req->vsr_vp->v_path);
+		char *path = vn_getpath(req->vsr_vp);
+		cmn_err(CE_WARN, "Can't access xattr for %s\n", path);
+		if (path != NULL)
+			strfree(path);
 		node->vsn_access = VS_ACCESS_DENY;
 		return;
 	}
@@ -688,6 +698,7 @@ vscan_svc_populate_req(int idx)
 	vs_scan_req_t *scan_req;
 	vscan_req_t *req;
 	vscan_svc_node_t *node;
+	char *path;
 
 	ASSERT(MUTEX_HELD(&vscan_svc_mutex));
 
@@ -697,7 +708,10 @@ vscan_svc_populate_req(int idx)
 
 	scan_req->vsr_idx = idx;
 	scan_req->vsr_seqnum = req->vsr_seqnum;
-	(void) strncpy(scan_req->vsr_path, req->vsr_vp->v_path, MAXPATHLEN);
+	if ((path = vn_getpath(req->vsr_vp)) != NULL) {
+		(void) strncpy(scan_req->vsr_path, path, MAXPATHLEN);
+		strfree(path);
+	}
 	scan_req->vsr_size = node->vsn_size;
 	scan_req->vsr_modified = node->vsn_modified;
 	scan_req->vsr_quarantined = node->vsn_quarantined;
@@ -1075,12 +1089,12 @@ vscan_svc_configure(vs_config_t *conf)
  *          0 scan required
  */
 static int
-vscan_svc_exempt_file(vnode_t *vp, boolean_t *allow)
+vscan_svc_exempt_file(vnode_t *vp, char *path, boolean_t *allow)
 {
 	struct vattr attr;
 
 	ASSERT(vp != NULL);
-	ASSERT(vp->v_path != NULL);
+	ASSERT(path != NULL);
 
 	attr.va_mask = AT_SIZE;
 
@@ -1093,15 +1107,15 @@ vscan_svc_exempt_file(vnode_t *vp, boolean_t *allow)
 
 	if (attr.va_size > vscan_svc_config.vsc_max_size) {
 		DTRACE_PROBE2(vscan__exempt__filesize, char *,
-		    vp->v_path, int, *allow);
+		    path, int, *allow);
 
 		*allow = (vscan_svc_config.vsc_allow) ? B_TRUE : B_FALSE;
 		mutex_exit(&vscan_svc_cfg_mutex);
 		return (1);
 	}
 
-	if (vscan_svc_exempt_filetype(vp->v_path)) {
-		DTRACE_PROBE1(vscan__exempt__filetype, char *, vp->v_path);
+	if (vscan_svc_exempt_filetype(path)) {
+		DTRACE_PROBE1(vscan__exempt__filetype, char *, path);
 		*allow = B_TRUE;
 		mutex_exit(&vscan_svc_cfg_mutex);
 		return (1);

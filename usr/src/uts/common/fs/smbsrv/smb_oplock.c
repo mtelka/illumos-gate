@@ -75,9 +75,11 @@ smb_oplock_install_fem(smb_node_t *node)
 
 	if (node->n_oplock.ol_fem == B_FALSE) {
 		if (smb_fem_oplock_install(node) != 0) {
+			char *path = vn_getpath(node->vp);
 			cmn_err(CE_NOTE, "No oplock granted: "
-			    "failed to install fem monitor %s",
-			    node->vp->v_path);
+			    "failed to install fem monitor %s", path);
+			if (path != NULL)
+				strfree(path);
 			return (-1);
 		}
 		node->n_oplock.ol_fem = B_TRUE;

@@ -150,6 +150,7 @@ pseudo_exportfs(vnode_t *vp, fid_t *fid, struct exp_visible *vis_head,
 	fsid_t fsid;
 	int vpathlen;
 	int i;
+	char *path;
 
 	ASSERT(RW_WRITE_HELD(&exported_lock));
 
@@ -178,12 +179,15 @@ pseudo_exportfs(vnode_t *vp, fid_t *fid, struct exp_visible *vis_head,
 	kex = &exi->exi_export;
 	kex->ex_flags = EX_PSEUDO;
 
-	vpathlen = vp->v_path ? strlen(vp->v_path) : 0;
+	path = vn_getpath(vp);
+	vpathlen = path != NULL ? strlen(path) : 0;
 	kex->ex_pathlen = vpathlen + strlen(PSEUDOFS_SUFFIX);
 	kex->ex_path = kmem_alloc(kex->ex_pathlen + 1, KM_SLEEP);
 
 	if (vpathlen)
-		(void) strcpy(kex->ex_path, vp->v_path);
+		(void) strcpy(kex->ex_path, path);
+	if (path != NULL)
+		strfree(path);
 	(void) strcpy(kex->ex_path + vpathlen, PSEUDOFS_SUFFIX);
 
 	/* Transfer the secinfo data from exdata to this new pseudo node */
