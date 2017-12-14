@@ -24,7 +24,7 @@ set name=variant.arch value=i386
 dir path=kernel group=sys
 dir path=kernel/drv group=sys
 dir path=kernel/drv/$(ARCH64) group=sys
-driver name=smrt class=scsi \
+driver name=smrt class=scsi-self-identifying \
     alias=pci103c,1920 \
     alias=pci103c,1921 \
     alias=pci103c,1922 \
