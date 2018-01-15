@@ -95,13 +95,16 @@ nfs4_vget_pseudo(struct exportinfo *exi, vnode_t **vpp, fid_t *fidp)
 
 	/* check if the given fid is in the visible list */
 
+	rw_enter(&exported_lock, RW_READER);
 	for (visp = exi->exi_visible; visp; visp = visp->vis_next) {
 		if (EQFID(fidp, &visp->vis_fid)) {
 			VN_HOLD(visp->vis_vp);
 			*vpp = visp->vis_vp;
+			rw_exit(&exported_lock);
 			return (0);
 		}
 	}
+	rw_exit(&exported_lock);
 
 	/* check if the given fid is the same as the exported node */
 
@@ -657,8 +660,8 @@ treeclimb_export(struct exportinfo *exip)
 				 * then continue .. traversal until we hit a
 				 * VROOT export (pseudo or real).
 				 */
-				exi = checkexport4(&vp->v_vfsp->vfs_fsid, &fid,
-				    vp);
+				exi = checkexport_nohold(&vp->v_vfsp->vfs_fsid,
+				    &fid, vp);
 				if (exi != NULL) {
 					/*
 					 * Found an export info
@@ -925,12 +928,16 @@ untraverse(vnode_t *vp)
  * If d is shared, then c will be put into a's visible list.
  * Note: visible list is per filesystem and is attached to the
  * VROOT exportinfo.
+ *
+ * Returns NULL if the given exportinfo is no longer shared.
  */
-struct exportinfo *
+static struct exportinfo *
 get_root_export(struct exportinfo *exip)
 {
 	treenode_t *tnode = exip->exi_tree;
 	exportinfo_t *exi = NULL;
+
+	ASSERT(RW_LOCK_HELD(&exported_lock));
 
 	while (tnode) {
 		if (TREE_ROOT(tnode)) {
@@ -939,7 +946,7 @@ get_root_export(struct exportinfo *exip)
 		}
 		tnode = tnode->tree_parent;
 	}
-	ASSERT(exi);
+
 	return (exi);
 }
 
@@ -952,16 +959,22 @@ has_visible(struct exportinfo *exi, vnode_t *vp)
 	struct exp_visible *visp;
 	fid_t fid;
 	bool_t vp_is_exported;
+	int ret = 0;
 
 	vp_is_exported = VN_CMP(vp, exi->exi_vp);
+
+	rw_enter(&exported_lock, RW_READER);
 
 	/*
 	 * An exported root vnode has a sub-dir shared if it has a visible list.
 	 * i.e. if it does not have a visible list, then there is no node in
 	 * this filesystem leads to any other shared node.
 	 */
-	if (vp_is_exported && (vp->v_flag & VROOT))
-		return (exi->exi_visible ? 1 : 0);
+	if (vp_is_exported && (vp->v_flag & VROOT)) {
+		if (exi->exi_visible != NULL)
+			ret = 1;
+		goto out;
+	}
 
 	/*
 	 * Only the exportinfo of a fs root node may have a visible list.
@@ -969,15 +982,14 @@ has_visible(struct exportinfo *exi, vnode_t *vp)
 	 */
 	exi = get_root_export(exi);
 
-	if (!exi->exi_visible)
-		return (0);
+	if (exi == NULL || exi->exi_visible == NULL)
+		goto out;
 
 	/* Get the fid of the vnode */
 	bzero(&fid, sizeof (fid));
 	fid.fid_len = MAXFIDSZ;
-	if (vop_fid_pseudo(vp, &fid) != 0) {
-		return (0);
-	}
+	if (vop_fid_pseudo(vp, &fid) != 0)
+		goto out;
 
 	/*
 	 * See if vp is in the visible list of the root node exportinfo.
@@ -992,11 +1004,15 @@ has_visible(struct exportinfo *exi, vnode_t *vp)
 			if (vp_is_exported && visp->vis_count < 2)
 				break;
 
-			return (1);
+			ret = 1;
+			break;
 		}
 	}
 
-	return (0);
+out:
+	rw_exit(&exported_lock);
+
+	return (ret);
 }
 
 /*
@@ -1009,6 +1025,9 @@ nfs_visible(struct exportinfo *exi, vnode_t *vp, int *expseudo)
 {
 	struct exp_visible *visp;
 	fid_t fid;
+
+	int ret = 0;
+	*expseudo = 0;
 
 	/*
 	 * First check to see if vp is export root.
@@ -1025,26 +1044,27 @@ nfs_visible(struct exportinfo *exi, vnode_t *vp, int *expseudo)
 	 * the export root special case handles the rootdir
 	 * case also.
 	 */
-	if (VN_CMP(vp, exi->exi_vp)) {
-		*expseudo = 0;
+	if (VN_CMP(vp, exi->exi_vp))
 		return (1);
-	}
+
+	rw_enter(&exported_lock, RW_READER);
 
 	/*
 	 * Only a PSEUDO node has a visible list or an exported VROOT
 	 * node may have a visible list.
 	 */
-	if (! PSEUDO(exi))
+	if (! PSEUDO(exi)) {
 		exi = get_root_export(exi);
+		if (exi == NULL)
+			goto out;
+	}
 
 	/* Get the fid of the vnode */
 
 	bzero(&fid, sizeof (fid));
 	fid.fid_len = MAXFIDSZ;
-	if (vop_fid_pseudo(vp, &fid) != 0) {
-		*expseudo = 0;
-		return (0);
-	}
+	if (vop_fid_pseudo(vp, &fid) != 0)
+		goto out;
 
 	/*
 	 * We can't trust VN_CMP() above because of LOFS.
@@ -1057,8 +1077,8 @@ nfs_visible(struct exportinfo *exi, vnode_t *vp, int *expseudo)
 	 */
 	if (EQFID(&exi->exi_fid, &fid) &&
 	    EQFSID(&exi->exi_fsid, &vp->v_vfsp->vfs_fsid)) {
-		*expseudo = 0;
-		return (1);
+		ret = 1;
+		goto out;
 	}
 
 
@@ -1067,13 +1087,15 @@ nfs_visible(struct exportinfo *exi, vnode_t *vp, int *expseudo)
 	for (visp = exi->exi_visible; visp; visp = visp->vis_next) {
 		if (EQFID(&fid, &visp->vis_fid)) {
 			*expseudo = visp->vis_exported;
-			return (1);
+			ret = 1;
+			break;
 		}
 	}
 
-	*expseudo = 0;
+out:
+	rw_exit(&exported_lock);
 
-	return (0);
+	return (ret);
 }
 
 /*
@@ -1085,6 +1107,7 @@ nfs_exported(struct exportinfo *exi, vnode_t *vp)
 {
 	struct exp_visible *visp;
 	fid_t fid;
+	int ret;
 
 	/*
 	 * First check to see if vp is the export root
@@ -1116,12 +1139,17 @@ nfs_exported(struct exportinfo *exi, vnode_t *vp)
 
 	/* See if it matches any fid in the visible list */
 
+	ret = 0;
+	rw_enter(&exported_lock, RW_READER);
 	for (visp = exi->exi_visible; visp; visp = visp->vis_next) {
-		if (EQFID(&fid, &visp->vis_fid))
-			return (visp->vis_exported);
+		if (EQFID(&fid, &visp->vis_fid)) {
+			ret = visp->vis_exported;
+			break;
+		}
 	}
+	rw_exit(&exported_lock);
 
-	return (0);
+	return (ret);
 }
 
 /*
@@ -1138,19 +1166,30 @@ int
 nfs_visible_inode(struct exportinfo *exi, ino64_t ino,
     struct exp_visible **visp)
 {
+	int ret = 0;
+
+	rw_enter(&exported_lock, RW_READER);
+
 	/*
 	 * Only a PSEUDO node has a visible list or an exported VROOT
 	 * node may have a visible list.
 	 */
-	if (! PSEUDO(exi))
+	if (! PSEUDO(exi)) {
 		exi = get_root_export(exi);
+		if (exi == NULL)
+			goto out;
+	}
 
 	for (*visp = exi->exi_visible; *visp != NULL; *visp = (*visp)->vis_next)
 		if ((u_longlong_t)ino == (*visp)->vis_ino) {
-			return (1);
+			ret = 1;
+			break;
 		}
 
-	return (0);
+out:
+	rw_exit(&exported_lock);
+
+	return (ret);
 }
 
 /*
@@ -1171,6 +1210,9 @@ nfs_visible_change(struct exportinfo *exi, vnode_t *vp, timespec_t *change)
 	struct exp_visible *visp;
 	fid_t fid;
 	treenode_t *node;
+	bool_t ret = FALSE;
+
+	rw_enter(&exported_lock, RW_READER);
 
 	/*
 	 * First check to see if vp is export root.
@@ -1182,14 +1224,17 @@ nfs_visible_change(struct exportinfo *exi, vnode_t *vp, timespec_t *change)
 	 * Only a PSEUDO node has a visible list or an exported VROOT
 	 * node may have a visible list.
 	 */
-	if (!PSEUDO(exi))
+	if (!PSEUDO(exi)) {
 		exi = get_root_export(exi);
+		if (exi == NULL)
+			goto out;
+	}
 
 	/* Get the fid of the vnode */
 	bzero(&fid, sizeof (fid));
 	fid.fid_len = MAXFIDSZ;
 	if (vop_fid_pseudo(vp, &fid) != 0)
-		return (FALSE);
+		goto out;
 
 	/*
 	 * We can't trust VN_CMP() above because of LOFS.
@@ -1206,15 +1251,20 @@ nfs_visible_change(struct exportinfo *exi, vnode_t *vp, timespec_t *change)
 	for (visp = exi->exi_visible; visp; visp = visp->vis_next) {
 		if (EQFID(&fid, &visp->vis_fid)) {
 			*change = visp->vis_change;
-			return (TRUE);
+			ret = TRUE;
+
+			break;
 		}
 	}
 
-	return (FALSE);
+	goto out;
 
 exproot:
 	/* The VROOT export have its visible available through treenode */
 	node = exi->exi_tree;
+	if (node == NULL)
+		goto out;
+
 	if (node != ns_root) {
 		ASSERT(node->tree_vis != NULL);
 		*change = node->tree_vis->vis_change;
@@ -1222,8 +1272,12 @@ exproot:
 		ASSERT(node->tree_vis == NULL);
 		*change = ns_root_change;
 	}
+	ret = TRUE;
 
-	return (TRUE);
+out:
+	rw_exit(&exported_lock);
+
+	return (ret);
 }
 
 /*
@@ -1237,6 +1291,8 @@ void
 tree_update_change(treenode_t *tnode, timespec_t *change)
 {
 	timespec_t *vis_change;
+
+	ASSERT(RW_WRITE_HELD(&exported_lock));
 
 	ASSERT(tnode != NULL);
 	ASSERT((tnode != ns_root && tnode->tree_vis != NULL) ||

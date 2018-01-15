@@ -2717,7 +2717,7 @@ rfs3_rename(RENAME3args *args, RENAME3res *resp, struct exportinfo *exi,
 	favap = fbvap;
 
 	fh3 = &args->to.dir;
-	to_exi = checkexport(&fh3->fh3_fsid, FH3TOXFIDP(fh3));
+	to_exi = checkexport(&fh3->fh3_fsid, FH3TOXFIDP(fh3), NULL);
 	if (to_exi == NULL) {
 		resp->status = NFS3ERR_ACCES;
 		goto err1;
@@ -2927,7 +2927,7 @@ rfs3_link(LINK3args *args, LINK3res *resp, struct exportinfo *exi,
 	vap = VOP_GETATTR(vp, &va, 0, cr, NULL) ? NULL : &va;
 
 	fh3 = &args->link.dir;
-	to_exi = checkexport(&fh3->fh3_fsid, FH3TOXFIDP(fh3));
+	to_exi = checkexport(&fh3->fh3_fsid, FH3TOXFIDP(fh3), NULL);
 	if (to_exi == NULL) {
 		resp->status = NFS3ERR_ACCES;
 		goto out1;

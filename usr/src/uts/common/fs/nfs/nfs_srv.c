@@ -2051,7 +2051,7 @@ rfs_rename(struct nfsrnmargs *args, enum nfsstat *status,
 	}
 
 	fh = args->rna_to.da_fhandle;
-	to_exi = checkexport(&fh->fh_fsid, (fid_t *)&fh->fh_xlen);
+	to_exi = checkexport(&fh->fh_fsid, (fid_t *)&fh->fh_xlen, NULL);
 	if (to_exi == NULL) {
 		VN_RELE(fromvp);
 		*status = NFSERR_ACCES;
@@ -2197,7 +2197,7 @@ rfs_link(struct nfslinkargs *args, enum nfsstat *status,
 	}
 
 	fh = args->la_to.da_fhandle;
-	to_exi = checkexport(&fh->fh_fsid, (fid_t *)&fh->fh_xlen);
+	to_exi = checkexport(&fh->fh_fsid, (fid_t *)&fh->fh_xlen, NULL);
 	if (to_exi == NULL) {
 		VN_RELE(fromvp);
 		*status = NFSERR_ACCES;

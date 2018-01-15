@@ -324,11 +324,12 @@ nfs_srv_quiesce_all(void)
 }
 
 static void
-nfs_srv_shutdown_all(int quiesce) {
+nfs_srv_shutdown_all(int quiesce)
+{
 	mutex_enter(&nfs_server_upordown_lock);
 	if (quiesce) {
 		if (nfs_server_upordown == NFS_SERVER_RUNNING ||
-			nfs_server_upordown == NFS_SERVER_OFFLINE) {
+		    nfs_server_upordown == NFS_SERVER_OFFLINE) {
 			nfs_server_upordown = NFS_SERVER_QUIESCED;
 			cv_signal(&nfs_server_upordown_cv);
 
@@ -355,7 +356,7 @@ nfs_srv_shutdown_all(int quiesce) {
 
 static int
 nfs_srv_set_sc_versions(struct file *fp, SVC_CALLOUT_TABLE **sctpp,
-			rpcvers_t versmin, rpcvers_t versmax)
+    rpcvers_t versmin, rpcvers_t versmax)
 {
 	struct strioctl strioc;
 	struct T_info_ack tinfo;
@@ -1474,8 +1475,7 @@ auth_tooweak(struct svc_req *req, char *res)
 
 static void
 common_dispatch(struct svc_req *req, SVCXPRT *xprt, rpcvers_t min_vers,
-		rpcvers_t max_vers, char *pgmname,
-		struct rpc_disptable *disptable)
+    rpcvers_t max_vers, char *pgmname, struct rpc_disptable *disptable)
 {
 	int which;
 	rpcvers_t vers;
@@ -1647,7 +1647,7 @@ common_dispatch(struct svc_req *req, SVCXPRT *xprt, rpcvers_t min_vers,
 		}
 #endif
 
-		exi = checkexport(fsid, xfid);
+		exi = checkexport(fsid, xfid, NULL);
 
 		if (exi != NULL) {
 			publicfh_ok = PUBLICFH_CHECK(disp, exi, fsid, xfid);
@@ -2373,12 +2373,13 @@ checkauth4(struct compound_state *cs, struct svc_req *req)
 			(void) crsetgroups(cr, 0, NULL);
 		} else if (crgetuid(cr) == 0 && access & NFSAUTH_ROOT) {
 			/*
-			 * It is root, so apply rootid to get real UID
+			 * It is root, so apply rootid to get real UID.
 			 * Find the secinfo structure.  We should be able
 			 * to find it by the time we reach here.
 			 * nfsauth_access() has done the checking.
 			 */
 			secp = NULL;
+			rw_enter(&exported_lock, RW_READER);
 			for (i = 0; i < exi->exi_export.ex_seccnt; i++) {
 				struct secinfo *sptr;
 				sptr = &exi->exi_export.ex_secinfo[i];
@@ -2392,6 +2393,7 @@ checkauth4(struct compound_state *cs, struct svc_req *req)
 				    secp->s_rootid);
 				(void) crsetgroups(cr, 0, NULL);
 			}
+			rw_exit(&exported_lock);
 		} else if (crgetuid(cr) != uid || crgetgid(cr) != gid) {
 			if (crsetugid(cr, uid, gid) != 0)
 				anon_res = crsetugid(cr,
@@ -2413,6 +2415,7 @@ checkauth4(struct compound_state *cs, struct svc_req *req)
 		 *  nfsauth_access() has done the checking.
 		 */
 		secp = NULL;
+		rw_enter(&exported_lock, RW_READER);
 		for (i = 0; i < exi->exi_export.ex_seccnt; i++) {
 			if (exi->exi_export.ex_secinfo[i].s_secinfo.sc_nfsnum ==
 			    nfsflavor) {
@@ -2421,7 +2424,8 @@ checkauth4(struct compound_state *cs, struct svc_req *req)
 			}
 		}
 
-		if (!secp) {
+		if (secp == NULL) {
+			rw_exit(&exported_lock);
 			cmn_err(CE_NOTE, "nfs_server: client %s%shad "
 			    "no secinfo data for flavor %d",
 			    client_name(req), client_addr(req, buf),
@@ -2430,6 +2434,7 @@ checkauth4(struct compound_state *cs, struct svc_req *req)
 		}
 
 		if (!checkwin(rpcflavor, secp->s_window, req)) {
+			rw_exit(&exported_lock);
 			cmn_err(CE_NOTE,
 			    "nfs_server: client %s%sused invalid "
 			    "auth window value",
@@ -2444,10 +2449,14 @@ checkauth4(struct compound_state *cs, struct svc_req *req)
 		 */
 		if (principal && sec_svc_inrootlist(rpcflavor, principal,
 		    secp->s_rootcnt, secp->s_rootnames)) {
-			if (crgetuid(cr) == 0 && secp->s_rootid == 0)
+			if (crgetuid(cr) == 0 && secp->s_rootid == 0) {
+				rw_exit(&exported_lock);
 				return (1);
+			}
 
 			(void) crsetugid(cr, secp->s_rootid, secp->s_rootid);
+
+			rw_exit(&exported_lock);
 
 			/*
 			 * NOTE: If and when kernel-land privilege tracing is
@@ -2461,6 +2470,8 @@ checkauth4(struct compound_state *cs, struct svc_req *req)
 
 			return (1);
 		}
+
+		rw_exit(&exported_lock);
 
 		/*
 		 * Not a root princ, or not in root list, map UID 0/nobody to

@@ -294,7 +294,9 @@ nfsauth4_access(struct exportinfo *exi, vnode_t *vp, struct svc_req *req,
 {
 	int access;
 
+	rw_enter(&exported_lock, RW_READER);
 	access = nfsauth_access(exi, req, cr, uid, gid, ngids, gids);
+	rw_exit(&exported_lock);
 
 	/*
 	 * There are cases that the server needs to allow the client

@@ -652,7 +652,7 @@ nfslog_record_alloc(
  */
 void
 nfslog_record_put(void *cookie, size_t size, bool_t sync,
-	unsigned int which_buffers)
+    unsigned int which_buffers)
 {
 	struct lr_alloc *lrp = (struct lr_alloc *)cookie;
 	struct log_buffer *lbp = lrp->lb;
@@ -768,8 +768,8 @@ nfslog_records_flush_to_disk_nolock(struct log_buffer *lbp)
  * them to the end of the log file.
  */
 static int
-nfslog_write_logrecords(struct log_file *lfp,
-	struct lr_alloc *lrp_writers, int num_recs)
+nfslog_write_logrecords(struct log_file *lfp, struct lr_alloc *lrp_writers,
+    int num_recs)
 {
 	struct uio uio;
 	struct iovec *iovp;
@@ -1580,7 +1580,7 @@ nfslog_get_exi(
 			    (((LOOKUP3res *)res)->status == NFS3_OK)) {
 				fh3 = &((LOOKUP3res *)res)->res_u.ok.object;
 				exi_ret = checkexport(&fh3->fh3_fsid,
-				    FH3TOXFIDP(fh3));
+				    FH3TOXFIDP(fh3), NULL);
 			}
 			break;
 
@@ -1591,7 +1591,7 @@ nfslog_get_exi(
 				fh =  &((struct nfsdiropres *)res)->
 				    dr_u.dr_drok_u.drok_fhandle;
 				exi_ret = checkexport(&fh->fh_fsid,
-				    (fid_t *)&fh->fh_xlen);
+				    (fid_t *)&fh->fh_xlen, NULL);
 			}
 			break;
 		default:
@@ -1624,9 +1624,9 @@ static long long rfslog_records_ignored = 0;
  * needs to be logged.
  */
 void
-nfslog_write_record(struct exportinfo *exi, struct svc_req *req,
-	caddr_t args, caddr_t res, cred_t *cr, struct netbuf *pnb,
-	unsigned int record_id, unsigned int which_buffers)
+nfslog_write_record(struct exportinfo *exi, struct svc_req *req, caddr_t args,
+    caddr_t res, cred_t *cr, struct netbuf *pnb, unsigned int record_id,
+    unsigned int which_buffers)
 {
 	struct nfslog_prog_disp	*progtable;	/* prog struct */
 	struct nfslog_vers_disp	*verstable;	/* version struct */
@@ -1870,11 +1870,8 @@ nfslog_unshare_record(struct exportinfo *exi, cred_t *cr)
 
 
 void
-nfslog_getfh(struct exportinfo *exi,
-	fhandle *fh,
-	char *fname,
-	enum uio_seg seg,
-	cred_t *cr)
+nfslog_getfh(struct exportinfo *exi, fhandle *fh, char *fname, enum uio_seg seg,
+    cred_t *cr)
 {
 	struct svc_req	req;
 	int		res = 0;

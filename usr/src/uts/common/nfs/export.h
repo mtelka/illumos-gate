@@ -616,8 +616,9 @@ extern int	makefh3(nfs_fh3 *, struct vnode *, struct exportinfo *);
 extern int	makefh3_ol(nfs_fh3 *, struct exportinfo *, uint_t);
 extern vnode_t *nfs_fhtovp(fhandle_t *, struct exportinfo *);
 extern vnode_t *nfs3_fhtovp(nfs_fh3 *, struct exportinfo *);
-extern struct	exportinfo *checkexport(fsid_t *, struct fid *);
-extern struct	exportinfo *checkexport4(fsid_t *, struct fid *, vnode_t *);
+extern struct	exportinfo *checkexport(fsid_t *, struct fid *, vnode_t *);
+extern struct	exportinfo *checkexport_nohold(fsid_t *, struct fid *,
+    vnode_t *);
 extern void	exi_hold(struct exportinfo *);
 extern void	exi_rele(struct exportinfo *);
 extern struct exportinfo *nfs_vptoexi(vnode_t *, vnode_t *, cred_t *, int *,

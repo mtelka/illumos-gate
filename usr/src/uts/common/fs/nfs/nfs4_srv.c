@@ -872,6 +872,7 @@ do_rfs4_op_secinfo(struct compound_state *cs, char *nm, SECINFO4res *resp)
 	int error, different_export = 0;
 	vnode_t *dvp, *vp;
 	struct exportinfo *exi = NULL;
+	struct exportinfo *oexi = NULL;
 	fid_t fid;
 	uint_t count, i;
 	secinfo4 *resok_val;
@@ -963,7 +964,7 @@ do_rfs4_op_secinfo(struct compound_state *cs, char *nm, SECINFO4res *resp)
 		 * If vp isn't a mountpoint and the vfs ptrs aren't the same,
 		 * then vp is probably an LOFS object.  We don't need the
 		 * realvp, we just need to know that we might have crossed
-		 * a server fs boundary and need to call checkexport4.
+		 * a server fs boundary and need to call checkexport.
 		 * (LOFS lookup hides server fs mountpoints, and actually calls
 		 * traverse)
 		 */
@@ -984,11 +985,11 @@ do_rfs4_op_secinfo(struct compound_state *cs, char *nm, SECINFO4res *resp)
 		}
 
 		if (dotdot)
-			exi = nfs_vptoexi(NULL, vp, cs->cr, &walk, NULL, TRUE);
+			oexi = nfs_vptoexi(NULL, vp, cs->cr, &walk, NULL, TRUE);
 		else
-			exi = checkexport4(&vp->v_vfsp->vfs_fsid, &fid, vp);
+			oexi = checkexport(&vp->v_vfsp->vfs_fsid, &fid, vp);
 
-		if (exi == NULL) {
+		if (oexi == NULL) {
 			if (did_traverse == TRUE) {
 				/*
 				 * If this vnode is a mounted-on vnode,
@@ -1002,6 +1003,8 @@ do_rfs4_op_secinfo(struct compound_state *cs, char *nm, SECINFO4res *resp)
 				VN_RELE(vp);
 				return (puterrno4(EACCES));
 			}
+		} else {
+			exi = oexi;
 		}
 	} else {
 		exi = cs->exi;
@@ -1017,7 +1020,7 @@ do_rfs4_op_secinfo(struct compound_state *cs, char *nm, SECINFO4res *resp)
 	 * For a real export node, return the flavor that the client
 	 * has access with.
 	 */
-	ASSERT(RW_LOCK_HELD(&exported_lock));
+	rw_enter(&exported_lock, RW_READER);
 	if (PSEUDO(exi)) {
 		count = exi->exi_export.ex_seccnt; /* total sec count */
 		resok_val = kmem_alloc(count * sizeof (secinfo4), KM_SLEEP);
@@ -1110,6 +1113,9 @@ do_rfs4_op_secinfo(struct compound_state *cs, char *nm, SECINFO4res *resp)
 		resp->SECINFO4resok_val = resok_val;
 		kmem_free(flavor_list, count * sizeof (int));
 	}
+	rw_exit(&exported_lock);
+	if (oexi != NULL)
+		exi_rele(oexi);
 
 	VN_RELE(vp);
 	return (NFS4_OK);
@@ -1954,13 +1960,17 @@ is_exported_sec(int flavor, struct exportinfo *exi)
 	int	i;
 	struct secinfo *sp;
 
+	rw_enter(&exported_lock, RW_READER);
 	sp = exi->exi_export.ex_secinfo;
 	for (i = 0; i < exi->exi_export.ex_seccnt; i++) {
 		if (flavor == sp[i].s_secinfo.sc_nfsnum ||
 		    sp[i].s_secinfo.sc_nfsnum == AUTH_NONE) {
-			return (SEC_REF_EXPORTED(&sp[i]));
+			int ret = SEC_REF_EXPORTED(&sp[i]);
+			rw_exit(&exported_lock);
+			return (ret);
 		}
 	}
+	rw_exit(&exported_lock);
 
 	/* Should not reach this point based on the assumption */
 	return (0);
@@ -1983,12 +1993,16 @@ secinfo_match_or_authnone(struct compound_state *cs)
 	 * Check cs->nfsflavor (from the request) against
 	 * the current export data in cs->exi.
 	 */
+	rw_enter(&exported_lock, RW_READER);
 	sp = cs->exi->exi_export.ex_secinfo;
 	for (i = 0; i < cs->exi->exi_export.ex_seccnt; i++) {
 		if (cs->nfsflavor == sp[i].s_secinfo.sc_nfsnum ||
-		    sp[i].s_secinfo.sc_nfsnum == AUTH_NONE)
+		    sp[i].s_secinfo.sc_nfsnum == AUTH_NONE) {
+			rw_exit(&exported_lock);
 			return (1);
+		}
 	}
+	rw_exit(&exported_lock);
 
 	return (0);
 }
@@ -2705,7 +2719,7 @@ do_rfs4_op_lookup(char *nm, struct svc_req *req, struct compound_state *cs)
 
 		/*
 		 * hold pre_tvp to counteract rele by traverse.  We will
-		 * need pre_tvp below if checkexport4 fails
+		 * need pre_tvp below if checkexport fails
 		 */
 		VN_HOLD(pre_tvp);
 		if ((error = traverse(&vp)) != 0) {
@@ -2741,7 +2755,7 @@ do_rfs4_op_lookup(char *nm, struct svc_req *req, struct compound_state *cs)
 		if (dotdot)
 			exi = nfs_vptoexi(NULL, vp, cs->cr, &walk, NULL, TRUE);
 		else
-			exi = checkexport4(&vp->v_vfsp->vfs_fsid, &fid, vp);
+			exi = checkexport(&vp->v_vfsp->vfs_fsid, &fid, vp);
 
 		if (exi == NULL) {
 			if (pre_tvp) {
@@ -2755,6 +2769,8 @@ do_rfs4_op_lookup(char *nm, struct svc_req *req, struct compound_state *cs)
 				VN_RELE(vp);
 				vp = pre_tvp;
 				exi = pre_exi;
+				if (exi != NULL)
+					exi_hold(exi);
 			} else {
 				VN_RELE(vp);
 				return (puterrno4(EACCES));
@@ -2764,6 +2780,8 @@ do_rfs4_op_lookup(char *nm, struct svc_req *req, struct compound_state *cs)
 			VN_RELE(pre_tvp);
 		}
 
+		if (cs->exi != NULL)
+			exi_rele(cs->exi);
 		cs->exi = exi;
 
 		/*
@@ -3422,19 +3440,29 @@ rfs4_op_putpubfh(nfs_argop4 *args, nfs_resop4 *resop, struct svc_req *req,
 
 	cs->cr = crdup(cs->basecr);
 
-	vp = exi_public->exi_vp;
+	rw_enter(&exported_lock, RW_READER);
+	exi = exi_public;
+	exi_hold(exi);
+	rw_exit(&exported_lock);
+
+	vp = exi->exi_vp;
 	if (vp == NULL) {
+		exi_rele(exi);
 		*cs->statusp = resp->status = NFS4ERR_SERVERFAULT;
 		goto out;
 	}
 
-	error = makefh4(&cs->fh, vp, exi_public);
+	error = makefh4(&cs->fh, vp, exi);
 	if (error != 0) {
+		exi_rele(exi);
 		*cs->statusp = resp->status = puterrno4(error);
 		goto out;
 	}
+
 	sav_exi = cs->exi;
-	if (exi_public == exi_root) {
+	cs->exi = exi;
+
+	if (cs->exi == exi_root) {
 		/*
 		 * No filesystem is actually shared public, so we default
 		 * to exi_root. In this case, we must check whether root
@@ -3444,17 +3472,15 @@ rfs4_op_putpubfh(nfs_argop4 *args, nfs_resop4 *resop, struct svc_req *req,
 
 		/*
 		 * if root filesystem is exported, the exportinfo struct that we
-		 * should use is what checkexport4 returns, because root_exi is
+		 * should use is what checkexport returns, because exi_root is
 		 * actually a mostly empty struct.
 		 */
-		exi = checkexport4(&fh_fmtp->fh4_fsid,
+		exi = checkexport(&fh_fmtp->fh4_fsid,
 		    (fid_t *)&fh_fmtp->fh4_xlen, NULL);
-		cs->exi = ((exi != NULL) ? exi : exi_public);
-	} else {
-		/*
-		 * it's a properly shared filesystem
-		 */
-		cs->exi = exi_public;
+		if (exi != NULL) {
+			exi_rele(cs->exi);
+			cs->exi = exi;
+		}
 	}
 
 	if (is_system_labeled()) {
@@ -3470,6 +3496,8 @@ rfs4_op_putpubfh(nfs_argop4 *args, nfs_resop4 *resop, struct svc_req *req,
 			    cs->exi)) {
 				*cs->statusp = resp->status =
 				    NFS4ERR_SERVERFAULT;
+				if (sav_exi != NULL)
+					exi_rele(sav_exi);
 				goto out;
 			}
 		}
@@ -3481,9 +3509,12 @@ rfs4_op_putpubfh(nfs_argop4 *args, nfs_resop4 *resop, struct svc_req *req,
 	if ((resp->status = call_checkauth4(cs, req)) != NFS4_OK) {
 		VN_RELE(cs->vp);
 		cs->vp = NULL;
+		exi_rele(cs->exi);
 		cs->exi = sav_exi;
 		goto out;
 	}
+	if (sav_exi != NULL)
+		exi_rele(sav_exi);
 
 	*cs->statusp = resp->status = NFS4_OK;
 out:
@@ -3536,7 +3567,9 @@ rfs4_op_putfh(nfs_argop4 *argop, nfs_resop4 *resop, struct svc_req *req,
 	}
 
 	fh_fmtp = (nfs_fh4_fmt_t *)args->object.nfs_fh4_val;
-	cs->exi = checkexport4(&fh_fmtp->fh4_fsid, (fid_t *)&fh_fmtp->fh4_xlen,
+	if (cs->exi != NULL)
+		exi_rele(cs->exi);
+	cs->exi = checkexport(&fh_fmtp->fh4_fsid, (fid_t *)&fh_fmtp->fh4_xlen,
 	    NULL);
 
 	if (cs->exi == NULL) {
@@ -3610,11 +3643,13 @@ rfs4_op_putrootfh(nfs_argop4 *argop, nfs_resop4 *resop, struct svc_req *req,
 	 * one or more exports further down in the server's
 	 * file tree.
 	 */
-	exi = checkexport4(&rootdir->v_vfsp->vfs_fsid, &fid, NULL);
+	exi = checkexport(&rootdir->v_vfsp->vfs_fsid, &fid, NULL);
 	if (exi == NULL || exi->exi_export.ex_flags & EX_PUBLIC) {
 		NFS4_DEBUG(rfs4_debug,
 		    (CE_WARN, "rfs4_op_putrootfh: export check failure"));
 		*cs->statusp = resp->status = NFS4ERR_SERVERFAULT;
+		if (exi != NULL)
+			exi_rele(exi);
 		goto out;
 	}
 
@@ -3625,6 +3660,7 @@ rfs4_op_putrootfh(nfs_argop4 *argop, nfs_resop4 *resop, struct svc_req *req,
 	error = makefh4(&cs->fh, rootdir, exi);
 	if (error != 0) {
 		*cs->statusp = resp->status = puterrno4(error);
+		exi_rele(exi);
 		goto out;
 	}
 
@@ -3637,9 +3673,12 @@ rfs4_op_putrootfh(nfs_argop4 *argop, nfs_resop4 *resop, struct svc_req *req,
 	if ((resp->status = call_checkauth4(cs, req)) != NFS4_OK) {
 		VN_RELE(rootdir);
 		cs->vp = NULL;
+		exi_rele(exi);
 		cs->exi = sav_exi;
 		goto out;
 	}
+	if (sav_exi != NULL)
+		exi_rele(sav_exi);
 
 	*cs->statusp = resp->status = NFS4_OK;
 	cs->deleg = FALSE;
@@ -4817,7 +4856,11 @@ rfs4_op_restorefh(nfs_argop4 *args, nfs_resop4 *resop, struct svc_req *req,
 	}
 	cs->vp = cs->saved_vp;
 	cs->saved_vp = NULL;
+	if (cs->exi != NULL)
+		exi_rele(cs->exi);
 	cs->exi = cs->saved_exi;
+	if (cs->exi != NULL)
+		exi_hold(cs->exi);
 	nfs_fh4_copy(&cs->saved_fh, &cs->fh);
 	*cs->statusp = resp->status = NFS4_OK;
 	cs->deleg = FALSE;
@@ -4846,7 +4889,11 @@ rfs4_op_savefh(nfs_argop4 *argop, nfs_resop4 *resop, struct svc_req *req,
 	}
 	cs->saved_vp = cs->vp;
 	VN_HOLD(cs->saved_vp);
+	if (cs->saved_exi != NULL)
+		exi_rele(cs->saved_exi);
 	cs->saved_exi = cs->exi;
+	if (cs->saved_exi != NULL)
+		exi_hold(cs->saved_exi);
 	/*
 	 * since SAVEFH is fairly rare, don't alloc space for its fh
 	 * unless necessary.
@@ -5811,18 +5858,6 @@ rfs4_compound(COMPOUND4args *args, COMPOUND4res *resp, struct exportinfo *exi,
 	    COMPOUND4args *, args);
 
 	/*
-	 * For now, NFS4 compound processing must be protected by
-	 * exported_lock because it can access more than one exportinfo
-	 * per compound and share/unshare can now change multiple
-	 * exinfo structs.  The NFS2/3 code only refs 1 exportinfo
-	 * per proc (excluding public exinfo), and exi_count design
-	 * is sufficient to protect concurrent execution of NFS2/3
-	 * ops along with unexport.  This lock will be removed as
-	 * part of the NFSv4 phase 2 namespace redesign work.
-	 */
-	rw_enter(&exported_lock, RW_READER);
-
-	/*
 	 * If this is the first compound we've seen, we need to start all
 	 * new instances' grace periods.
 	 */
@@ -5891,16 +5926,19 @@ rfs4_compound(COMPOUND4args *args, COMPOUND4res *resp, struct exportinfo *exi,
 		}
 	}
 
-	rw_exit(&exported_lock);
 
 	DTRACE_NFSV4_2(compound__done, struct compound_state *, &cs,
 	    COMPOUND4res *, resp);
 
-	if (cs.vp)
+	if (cs.exi != NULL)
+		exi_rele(cs.exi);
+	if (cs.saved_exi != NULL)
+		exi_rele(cs.saved_exi);
+	if (cs.vp != NULL)
 		VN_RELE(cs.vp);
-	if (cs.saved_vp)
+	if (cs.saved_vp != NULL)
 		VN_RELE(cs.saved_vp);
-	if (cs.saved_fh.nfs_fh4_val)
+	if (cs.saved_fh.nfs_fh4_val != NULL)
 		kmem_free(cs.saved_fh.nfs_fh4_val, NFS4_FHSIZE);
 
 	if (cs.basecr)
@@ -7497,7 +7535,9 @@ out:
 			nfs_fh4_fmt_t *fh_fmtp =
 			    (nfs_fh4_fmt_t *)oo->ro_reply_fh.nfs_fh4_val;
 
-			cs->exi = checkexport4(&fh_fmtp->fh4_fsid,
+			if (cs->exi != NULL)
+				exi_rele(cs->exi);
+			cs->exi = checkexport(&fh_fmtp->fh4_fsid,
 			    (fid_t *)&fh_fmtp->fh4_xlen, NULL);
 
 			if (cs->exi == NULL) {

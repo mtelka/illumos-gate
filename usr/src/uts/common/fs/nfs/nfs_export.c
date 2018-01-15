@@ -1560,6 +1560,7 @@ exportfs(struct exportfs_args *args, model_t model, cred_t *cr)
 			srv_secinfo_exp2exp(&exi->exi_export, oldsec, oldcnt);
 			srv_secinfo_treeclimb(ex, oldsec, oldcnt, FALSE);
 		}
+		ex->exi_tree = NULL;
 	}
 
 	/*
@@ -1686,10 +1687,11 @@ unexport(struct exportinfo *exi)
 		newexi->exi_tree->tree_exi = newexi;
 
 		/* Update the change timestamp */
-		tree_update_change(exi->exi_tree, NULL);
+		tree_update_change(newexi->exi_tree, NULL);
 	} else {
 		treeclimb_unexport(exi);
 	}
+	exi->exi_tree = NULL;
 
 	rw_exit(&exported_lock);
 
@@ -1929,11 +1931,8 @@ nfs_vptoexi(vnode_t *dvp, vnode_t *vp, cred_t *cr, int *walk,
 			break;
 		}
 
-		if (v4srv)
-			exi = checkexport4(&vp->v_vfsp->vfs_fsid, &fid, vp);
-		else
-			exi = checkexport(&vp->v_vfsp->vfs_fsid, &fid);
-
+		exi = checkexport(&vp->v_vfsp->vfs_fsid, &fid,
+		    v4srv ? vp : NULL);
 		if (exi != NULL) {
 			/*
 			 * Found the export info
@@ -2440,47 +2439,10 @@ nfs4_fhtovp(nfs_fh4 *fh, struct exportinfo *exi, nfsstat4 *statp)
 
 /*
  * Find the export structure associated with the given filesystem.
- * If found, then increment the ref count (exi_count).
+ * The exported_lock must be already held by caller.
  */
 struct exportinfo *
-checkexport(fsid_t *fsid, fid_t *fid)
-{
-	struct exportinfo *exi;
-
-	rw_enter(&exported_lock, RW_READER);
-	for (exi = exptable[exptablehash(fsid, fid)];
-	    exi != NULL;
-	    exi = exi->fid_hash.next) {
-		if (exportmatch(exi, fsid, fid)) {
-			/*
-			 * If this is the place holder for the
-			 * public file handle, then return the
-			 * real export entry for the public file
-			 * handle.
-			 */
-			if (exi->exi_export.ex_flags & EX_PUBLIC) {
-				exi = exi_public;
-			}
-
-			exi_hold(exi);
-			rw_exit(&exported_lock);
-			return (exi);
-		}
-	}
-	rw_exit(&exported_lock);
-	return (NULL);
-}
-
-
-/*
- * "old school" version of checkexport() for NFS4.  NFS4
- * rfs4_compound holds exported_lock for duration of compound
- * processing.  This version doesn't manipulate exi_count
- * since NFS4 breaks fundamental assumptions in the exi_count
- * design.
- */
-struct exportinfo *
-checkexport4(fsid_t *fsid, fid_t *fid, vnode_t *vp)
+checkexport_nohold(fsid_t *fsid, fid_t *fid, vnode_t *vp)
 {
 	struct exportinfo *exi;
 
@@ -2509,12 +2471,30 @@ checkexport4(fsid_t *fsid, fid_t *fid, vnode_t *vp)
 			 * node for lofs and (pseudo) ufs may have
 			 * the same fsid and fid.
 			 */
-			if (vp == NULL || vp == exi->exi_vp)
+			if (vp == NULL || vp == exi->exi_vp) {
 				return (exi);
+			}
 		}
 	}
-
 	return (NULL);
+}
+
+/*
+ * Find the export structure associated with the given filesystem.
+ * If found, then increment the ref count (exi_count).
+ */
+struct exportinfo *
+checkexport(fsid_t *fsid, fid_t *fid, vnode_t *vp)
+{
+	struct exportinfo *exi;
+
+	rw_enter(&exported_lock, RW_READER);
+	exi = checkexport_nohold(fsid, fid, vp);
+	if (exi != NULL)
+		exi_hold(exi);
+	rw_exit(&exported_lock);
+
+	return (exi);
 }
 
 /*

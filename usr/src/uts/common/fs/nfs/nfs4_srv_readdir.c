@@ -192,7 +192,7 @@ nfs4_readdir_getvp(vnode_t *dvp, char *d_name, vnode_t **vpp,
 		return (0);
 	}
 
-	newexi = checkexport4(&vp->v_vfsp->vfs_fsid, &fid, vp);
+	newexi = checkexport(&vp->v_vfsp->vfs_fsid, &fid, vp);
 	if (newexi == NULL) {
 		if (ismntpt == 0) {
 			*vpp = vp;
@@ -225,6 +225,7 @@ nfs4_readdir_getvp(vnode_t *dvp, char *d_name, vnode_t **vpp,
 
 	if (status != NFS4_OK) {
 		VN_RELE(vp);
+		exi_rele(newexi);
 		if (status == NFS4ERR_DELAY)
 			status = NFS4ERR_ACCESS;
 		return (status);
@@ -695,8 +696,10 @@ readagain:
 			vp = NULL;
 		}
 
-		if (newexi)
+		if (newexi != NULL) {
+			exi_rele(newexi);
 			newexi = NULL;
+		}
 
 		rddir_result_size -= dp->d_reclen;
 
@@ -1496,6 +1499,11 @@ reencode_attrs:
 		lastentry_ptr = ptr;
 		nents++;
 		rddir_next_offset = dp->d_off;
+	}
+
+	if (newexi != NULL) {
+		exi_rele(newexi);
+		newexi = NULL;
 	}
 
 	/*
