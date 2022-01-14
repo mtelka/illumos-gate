@@ -131,12 +131,13 @@ clobber_local:
 	@cd common/mapfiles; pwd; $(MAKE) clobber
 	@cd msg; pwd; $(MAKE) clobber
 
-# If the tarballs are included inside ON_CLOSED_BINS, use those to extract and
-# preserve the permissions (in case a distro ships them).
+# If there is no pre-populated CLOSED_ROOT hierarchy and there are tarballs
+# included inside ON_CLOSED_BINS, use those to extract and preserve the
+# permissions (in case a distro ships them).
 
 closedbins: bldtools $(ROOTDIRS) FRC
 	@CLOSED_ROOT="$$ON_CLOSED_BINS/root_$(MACH)$${RELEASE_BUILD+-nd}"; \
-	if [ -f "$$ON_CLOSED_BINS/on-closed-bins$${RELEASE_BUILD+-nd}.$(MACH).tar.bz2" ]; then \
+	if [ ! -d "$$CLOSED_ROOT" -a -f "$$ON_CLOSED_BINS/on-closed-bins$${RELEASE_BUILD+-nd}.$(MACH).tar.bz2" ]; then \
 		$(ECHO) "Extracting tarball $$ON_CLOSED_BINS/on-closed-bins$${RELEASE_BUILD+-nd}.$(MACH).tar.bz2"; \
 		(cd $(CODEMGR_WS); \
 		   $(TAR) xjpf $$ON_CLOSED_BINS/on-closed-bins$${RELEASE_BUILD+-nd}.$(MACH).tar.bz2); \
