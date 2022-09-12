@@ -14,3 +14,4 @@
 # Manual pages are documentation, and more specifically 'man' documentation
 <transform dir file link path=usr/share/man/.* -> default facet.doc.man true>
 <transform dir file link path=usr/has/man/.* -> default facet.doc.man true>
+<transform dir file link path=usr/perl5/.*/man/.* -> default facet.doc.man true>

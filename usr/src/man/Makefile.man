@@ -17,6 +17,7 @@
 MANDOC=		$(ONBLD_TOOLS)/bin/${MACH}/mandoc
 ROOTMAN=	$(ROOT)/usr/share/man
 ROOTHASMAN=	$(ROOT)/usr/has/man
+ROOTPERLMAN=	$(ROOT)/usr/perl5/$(PERL_VERSION)/man
 FILEMODE=	0444
 
 # The manual section being built, client Makefiles must set this to, for e.g.
@@ -28,13 +29,18 @@ MANCHECKS=	$(MANFILES:%=%.check)
 ROOTMANFILES=	$(MANFILES:%=$(ROOTMAN)/man$(MANSECT)/%)
 ROOTMANLINKS=	$(MANLINKS:%=$(ROOTMAN)/man$(MANSECT)/%)
 
-$(ROOTMAN)/man$(MANSECT) $(ROOTHASMAN)/man$(MANSECT):
+$(ROOTMAN)/man$(MANSECT) \
+$(ROOTHASMAN)/man$(MANSECT) \
+$(ROOTPERLMAN)/man$(MANSECT):
 		$(INS.dir)
 
 $(ROOTHASMAN)/man$(MANSECT)/%: % $(ROOTHASMAN)/man$(MANSECT)
 		$(INS.file)
 
 $(ROOTMAN)/man$(MANSECT)/% : % $(ROOTMAN)/man$(MANSECT)
+		$(INS.file)
+
+$(ROOTPERLMAN)/man$(MANSECT)/%: % $(ROOTPERLMAN)/man$(MANSECT)
 		$(INS.file)
 
 #
