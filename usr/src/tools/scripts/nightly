@@ -448,13 +448,14 @@ function do_wsdiff {
 	label=$1
 	oldproto=$2
 	newproto=$3
+	results=$4
 
 	wsdiff="wsdiff"
 	[ "$t_FLAG" = y ] && wsdiff="wsdiff -t"
 
 	echo "\n==== Getting object changes since last build at `date`" \
 	    "($label) ====\n" | tee -a $LOGFILE >> $mail_msg_file
-	$wsdiff -s -r ${TMPDIR}/wsdiff.results $oldproto $newproto 2>&1 | \
+	$wsdiff -s -r ${TMPDIR}/$results $oldproto $newproto 2>&1 | \
 		    tee -a $LOGFILE >> $mail_msg_file
 	echo "\n==== Object changes determined at `date` ($label) ====\n" | \
 	    tee -a $LOGFILE >> $mail_msg_file
@@ -988,6 +989,10 @@ function logshuffle {
 		if [ -f $TMPDIR/wsdiff-nd.results ]; then
 			mv $TMPDIR/wsdiff-nd.results $LLOG
 		fi
+
+		if [ -f $TMPDIR/wsdiff-tools.results ]; then
+			mv $TMPDIR/wsdiff-tools.results $LLOG
+		fi
 	fi
 
 	#
@@ -1260,6 +1265,14 @@ if [ "$w_FLAG" = "y" -a "$MULTI_PROTO" = yes -a -d "$ROOT-nd" ]; then
 		rm -rf $ROOT-nd.prev
 	fi
 	mv $ROOT-nd $ROOT-nd.prev
+fi
+
+# Same for tools proto area
+if [ "$w_FLAG" = "y" -a "$t_FLAG" == "y" -a -d "$TOOLS_PROTO" ]; then
+	if [ -d "$TOOLS_PROTO.prev" ]; then
+		rm -rf $TOOLS_PROTO.prev
+	fi
+	mv $TOOLS_PROTO $TOOLS_PROTO.prev
 fi
 
 #
@@ -2025,11 +2038,15 @@ fi
 
 if [ "$w_FLAG" = "y" -a "$build_ok" = "y" ]; then
 	if [[ "$MULTI_PROTO" == no || "$D_FLAG" == y ]]; then
-		do_wsdiff DEBUG $ROOT.prev $ROOT
+		do_wsdiff DEBUG $ROOT.prev $ROOT wsdiff.results
 	fi
 
 	if [[ "$MULTI_PROTO" == yes && "$F_FLAG" == n ]]; then
-		do_wsdiff non-DEBUG $ROOT-nd.prev $ROOT-nd
+		do_wsdiff non-DEBUG $ROOT-nd.prev $ROOT-nd wsdiff-nd.results
+	fi
+
+	if [[ "$t_FLAG" == "y" ]]; then
+		do_wsdiff tools $TOOLS_PROTO.prev $TOOLS_PROTO wsdiff-tools.results
 	fi
 fi
 
